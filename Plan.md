@@ -1,7 +1,7 @@
 # Development Plan
 
 1. Utilize the VQO code (https://github.com/inQWIRE/VQO) to make a Haskell interpreter for an effective quantum simulator.
-2. Build symbolic interpreter of Qafny on top of VQO.
+2. Build symbolic interpreter of Qafny on top of VQO. We can view the symbolic execution as a form of generating predicates, and then the tool will the the predicates to generate test cases, each of which can simulate in the VQO simulator.
 3. Develop other subset of quantum operators that can be effectively simulatable.
 
 # Example Benchmarks
