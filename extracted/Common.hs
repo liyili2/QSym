@@ -9,7 +9,7 @@ type Posi = Prod Var Nat
 
 data Prod a b =
    Pair a b
-  deriving (Eq)
+  deriving (Eq, Show)
 
 type Nat = Int
 -- data Nat =
@@ -38,4 +38,5 @@ data Exp =
  | QFT Var Nat
  | RQFT Var Nat
  | Seq Exp Exp
+ deriving (Show)
 

@@ -1,10 +1,11 @@
 module Main where
 
 import qualified Prelude
-import Prelude (IO, undefined)
+import Prelude (IO, undefined, ($), print, Show, const)
 
 import Tests
 import Common
+import Equiv
 
 data Bool =
    True
@@ -382,5 +383,14 @@ exp_sem env e st =
    Seq e1 e2 -> exp_sem env e2 (exp_sem env e1 st)}
 
 main :: IO ()
-main = undefined
+main = do
+  let expr1 = app_div_mod_aout 2 3
+  print expr1
+  print $ exp_sem (const 0) expr1 (const (Nval True (const False))) (Pair 1 7)
+
+  let z = st_equivb undefined undefined
+             (exp_sem undefined undefined undefined undefined)
+             undefined
+
+  undefined
 
