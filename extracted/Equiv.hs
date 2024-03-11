@@ -2,11 +2,13 @@
 -- {-# OPTIONS_GHC -cpp -XMagicHash #-}
 {- For Hugs, use the Maybe -F"cpp -P -traditional" -}
 
-module Equiv (st_equivb) where
+module Equiv (st_equivb, Tree (..), State) where
 
 import qualified Prelude
-import Prelude (Bool (..), Int, Maybe (..), min, max, succ, Eq (..), Num (..), (&&), (||), mod, Ord ((<), (>), (>=), (<=)))
+import Prelude (Bool (..), Int, Maybe (..), min, max, succ, Eq (..), Num (..), (&&), (||), mod, Ord ((<), (>), (>=), (<=)), Show)
 import Data.Bits (shiftR)
+
+import Common
 
 #ifdef __GLASGOW_HASKELL__
 import qualified GHC.Base
@@ -322,10 +324,6 @@ beq_reflect :: Int -> Int -> Reflect
 beq_reflect x y =
   iff_reflect (eqb x y)
 
-type Var = Int
-
-type Posi = ( , ) Var Int
-
 compare2 :: Int -> Int -> Compare Int
 compare2 x y =
   case compare x y of {
@@ -452,6 +450,7 @@ type Key = ( , ) Int Int
 data Tree elt =
    Leaf
  | Node (Tree elt) Key elt (Tree elt) T
+ deriving (Show)
 
 tree_rect :: a2 -> ((Tree a1) -> a2 -> Key -> a1 -> (Tree a1) -> a2 -> T ->
              a2) -> (Tree a1) -> a2
@@ -2113,6 +2112,7 @@ type Elt = Int
 data Tree0 =
    Leaf0
  | Node0 T Tree0 Int Tree0
+ deriving (Show)
 
 empty2 :: Tree0
 empty2 =
@@ -2832,12 +2832,6 @@ min_elt0 s =
 max_elt0 :: T19 -> Maybe Elt0
 max_elt0 s =
   max_elt (this0 s)
-
-type Rz_val = Int
-
-data Val =
-   Nval Bool Rz_val
- | Qval Rz_val Rz_val
 
 type State = T11 Val
 

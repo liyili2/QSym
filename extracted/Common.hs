@@ -7,9 +7,11 @@ module Common
 type Var = Nat
 type Posi = Prod Var Nat
 
-data Prod a b =
-   Pair a b
-  deriving (Eq, Show)
+type Prod = (,)
+
+-- data Prod a b =
+--    Pair a b
+--   deriving (Eq, Show)
 
 type Nat = Int
 -- data Nat =
@@ -38,5 +40,12 @@ data Exp =
  | QFT Var Nat
  | RQFT Var Nat
  | Seq Exp Exp
+ deriving (Show)
+
+type Rz_val = Int
+
+data Val =
+   Nval Bool Rz_val
+ | Qval Rz_val Rz_val
  deriving (Show)
 
