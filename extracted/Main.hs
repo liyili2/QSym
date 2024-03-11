@@ -1,12 +1,14 @@
 module Main where
 
 import qualified Prelude
-import Prelude (IO, mod, undefined, ($), print, Show, const, Bool (..), Int, Maybe (..), succ, max, (+), div, (-), (*), Eq (..), Ord ((<), (>), (<=), (>=)), (&&))
+import Prelude (IO, mod, undefined, ($), print, Show, const, Bool (..), Int, Maybe (..), succ, min, max, (^), (+), div, (-), (*), Eq (..), Ord ((<), (>), (<=), (>=)), (&&))
 import Data.Bits (shiftR)
 import Unsafe.Coerce
 
+import Test.QuickCheck hiding (elements)
+
 import qualified Tests
-import Tests hiding (Tree (..))
+import Tests hiding (Tree (..), T)
 import Common
 import Equiv
 
@@ -2697,18 +2699,50 @@ exp_sem env rmax e st =
 --    RQFT x b -> turn_rqft st x b (env x);
 --    Seq e1 e2 -> exp_sem env e2 (exp_sem env e1 st)}
 
+prop :: Property
+prop =
+  forAll (choose (60, 60)) $ \n ->
+  forAll (choose (1, 2 ^ min n 30 - 1)) $ \m ->
+  -- forAllShrink arbitrary shrink $ \(vx :: Bvector) ->
+  forAll arbitrary $ \(vx :: Bvector) ->
+  let x_var = 0
+      y_var = 1
+      z_var = 2
+  in
+
+  let env = div_mod_env n
+      vars = div_mod_vars n
+      expr = rz_div_mod_out n m
+  in
+  st_equivb vars env
+             (exp_sem env (succ n) expr (update_var 1 empty x_var vx))
+             (update_vars
+              2
+              empty
+              [(x_var, vx .%. m)
+              ,(y_var, vx ./. m)])
+
+
 main :: IO ()
 main = do
-  let n = 5
-      m = 3
-  let expr1 = rz_div_mod_out n m
-  print expr1
-  -- print $ exp_sem (const 0) expr1 (const (Nval True (const False))) ((,) 1 7)
-  print $ exp_sem (div_mod_env n) (succ n) expr1 empty
-
-  let z = st_equivb undefined undefined
-             (exp_sem undefined undefined undefined undefined)
-             undefined
-
-  undefined
-
+  quickCheck prop
+  -- let x_var = 0
+  --     y_var = 1
+  --     z_var = 2
+  --
+  -- let n = 5
+  --     m = 3
+  -- let expr1 = rz_div_mod_out n m
+  -- print expr1
+  -- -- print $ exp_sem (const 0) expr1 (const (Nval True (const False))) ((,) 1 7)
+  -- print $ exp_sem (div_mod_env n) (succ n) expr1 empty
+  --
+  -- let env = div_mod_env n
+  --     vars = div_mod_vars n
+  --
+  -- let z = st_equivb vars env
+  --            (exp_sem env (succ n) expr1 undefined)
+  --            undefined
+  --
+  -- undefined
+  --

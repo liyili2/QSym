@@ -2,7 +2,7 @@
 -- {-# OPTIONS_GHC -cpp -XMagicHash #-}
 {- For Hugs, use the Maybe -F"cpp -P -traditional" -}
 
-module Equiv (st_equivb, Tree (..), State) where
+module Equiv (st_equivb, Tree (..), Tree0 (..), State) where
 
 import qualified Prelude
 import Prelude (Bool (..), Int, Maybe (..), min, max, succ, Eq (..), Num (..), (&&), (||), mod, Ord ((<), (>), (>=), (<=)), Show)
