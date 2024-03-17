@@ -1,7 +1,10 @@
 module QSym.QState
-  (QState
+  (QState (..)
   ,atPosi
   ,update
+  ,QEnv
+  ,atVar
+  ,envUpdate
   )
   where
 
@@ -18,4 +21,16 @@ update st i new = QState $
     if j == i
     then new
     else atPosi st j
+
+newtype QEnv a = QEnv (Var -> a)
+
+atVar :: QEnv a -> Var -> a
+atVar (QEnv f) = f
+
+envUpdate :: QEnv a -> Var -> a -> QEnv a
+envUpdate env i new = QEnv $
+  \j ->
+    if j == i
+    then new
+    else atVar env j
 

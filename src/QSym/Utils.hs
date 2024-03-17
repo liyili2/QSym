@@ -9,6 +9,12 @@ data Posi = Posi Var Int
 
 newtype RzValue = RzValue (Int -> Bool)
 
+(!) :: RzValue -> Int -> Bool
+RzValue f ! i = f i
+
+-- indexRzValue :: RzValue -> Int -> Bool
+-- indexRzValue (RzValue f) = f
+
 data Value
   = NVal Bool RzValue
   | QVal RzValue RzValue

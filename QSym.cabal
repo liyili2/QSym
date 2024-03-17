@@ -62,7 +62,10 @@ executable QSym
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: QSym.QState
+                   QSym.Syntax
+                   QSym.Interpret
+                   QSym.Utils
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
