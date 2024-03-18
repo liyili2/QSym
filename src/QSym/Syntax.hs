@@ -8,6 +8,7 @@ data Expr
   | X Posi
   | CU Posi Expr
   | RZ Int Posi
+  | RRZ Int Posi
   | SR Int Var
   | SRR Int Var
   | Lshift Var
@@ -16,4 +17,7 @@ data Expr
   | QFT Var Int
   | RQFT Var Int
   | Seq Expr Expr
+
+instance Semigroup Expr where
+  (<>) = Seq
 

@@ -23,6 +23,7 @@ interpret env expr st =
       then interpret env e' st
       else st
     RZ q p -> update st p (timesRotate (atPosi st p) q)
+    RRZ q p -> update st p (timesRotateR (atPosi st p) q)
     SR n x -> srRotate st x n
     SRR n x -> srrRotate st x n
     Lshift x -> lshift st x (atVar env x)
@@ -31,6 +32,26 @@ interpret env expr st =
     QFT x b -> turnQFT st x b (atVar env x)
     RQFT x b -> turnRQFT st x b (atVar env x)
     Seq e1 e2 -> interpret env e2 (interpret env e1 st)
+
+invExpr :: Expr -> Expr
+invExpr p =
+  case p of
+    SKIP a -> SKIP a
+    X n -> X n
+    CU n p -> CU n (invExpr p)
+    SR n x -> SRR n x
+    SRR n x -> SR n x
+    Lshift x -> Rshift x
+    Rshift x -> Lshift x
+    Rev x -> Rev x
+    RZ q p -> RRZ q p
+    RRZ q p -> RZ q p
+    QFT x b -> RQFT x b
+    RQFT x b -> QFT x b
+    Seq p1 p2 -> Seq (invExpr p1) (invExpr p2)
+
+cnot :: Posi -> Posi -> Expr
+cnot x y = CU x (X y)
 
 exchange :: Value -> Value
 exchange (NVal b r) = NVal (not b) r
@@ -239,15 +260,6 @@ pos2fb n =
   let (b, n') = unconsBit n
   in
   fbPush b (pos2fb n')
-
-unconsBit :: (Num a, Bits a) => a -> (Bool, a)
-unconsBit n =
-  (n .&. 1 == 1
-  ,n `shiftR` 1
-  )
-
-allFalse :: RzValue
-allFalse = RzValue $ \_ -> False
 
 fbPush :: Bool -> RzValue -> RzValue
 fbPush b f = RzValue $ \case

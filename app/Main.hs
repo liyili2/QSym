@@ -1,4 +1,8 @@
 module Main where
 
+import QSym.Tests.Arithmetic
+import Test.QuickCheck
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main =
+  quickCheck checkDivMod

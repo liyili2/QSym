@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -prof -fprof-auto
 
 executable QSym
     -- Import common warning flags.
@@ -66,12 +66,15 @@ executable QSym
                    QSym.Syntax
                    QSym.Interpret
                    QSym.Utils
+                   QSym.Tests.Arithmetic
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base ^>=4.17.2.1,
+                      containers,
+                      QuickCheck
 
     -- Directories containing source files.
     hs-source-dirs:   app, src
