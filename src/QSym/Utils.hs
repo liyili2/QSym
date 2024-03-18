@@ -3,6 +3,7 @@ module QSym.Utils
 
 import Test.QuickCheck (Gen, choose)
 import Data.Bits
+import Data.Word
 
 newtype Var = Var Int
   deriving (Show, Eq, Ord)
@@ -40,7 +41,7 @@ basisVal :: Bool -> Value
 basisVal b = NVal b allFalse
 
 data Bvector = Bvector Int -- Bit length
-                       Int -- Actual bits
+                       Word64 -- Actual bits
   deriving (Show, Eq, Ord)
 
 genBvector :: Int -> Gen Bvector
@@ -52,15 +53,15 @@ unconsBvector (Bvector 0 _) = Nothing
 unconsBvector (Bvector sz v) =
   Just $ fmap (Bvector (sz - 1)) (unconsBit v)
 
-bvector2Int :: Bvector -> Int
+bvector2Int :: Bvector -> Word64
 bvector2Int (Bvector _ i) = i
 
-int2Bvector :: Int -> Bvector
-int2Bvector = \i -> Bvector (getMaxBitSet i) i
+int2Bvector :: (FiniteBits a, Integral a) => a -> Bvector
+int2Bvector = \i -> Bvector (getMaxBitSet i) (fromIntegral i)
   where
     getMaxBitSet j = finiteBitSize j - countLeadingZeros j
 
-liftBinaryIntOp :: (Int -> Int -> Int) -> Bvector -> Bvector -> Bvector
+liftBinaryIntOp :: (Word64 -> Word64 -> Word64) -> Bvector -> Bvector -> Bvector
 liftBinaryIntOp op vx vy =
   int2Bvector (op (bvector2Int vx) (bvector2Int vy))
 
