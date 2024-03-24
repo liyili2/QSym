@@ -48,7 +48,7 @@ invExpr p =
     RRZ q p -> RZ q p
     QFT x b -> RQFT x b
     RQFT x b -> QFT x b
-    Seq p1 p2 -> Seq (invExpr p1) (invExpr p2)
+    Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
 
 cnot :: Posi -> Posi -> Expr
 cnot x y = CU x (X y)

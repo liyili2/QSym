@@ -12,6 +12,8 @@ import Test.QuickCheck
 
 import qualified Data.Set as Set
 
+import Debug.Trace
+
 -- Get the variables in an exp
 getVars :: Expr -> [Var]
 getVars = Set.toList . go
@@ -39,6 +41,7 @@ divModEnv n = QEnv $ \_ -> n + 1
 
 interpretDivMod :: Int -> Int -> QState Value -> QState Value
 interpretDivMod n m =
+  -- trace (pprExpr (rzDivModOut n m)) $
   interpret (divModEnv n)
     (rzDivModOut n m)
 
@@ -46,6 +49,7 @@ checkDivMod :: Property
 checkDivMod =
   -- forAll (choose (0, 60)) $ \n ->
   forAll (pure 10) $ \n ->
+  -- forAll (pure 60) $ \n ->
   forAll (choose (1, 2^min n 30 - 1)) $ \m ->
   forAll (genBvector n) $ \vx ->
   stEquiv (divModVars n) (divModEnv n)
@@ -89,9 +93,14 @@ rzCompareHalf3 x n c m =
   in
   rzSub x n m <>
   RQFT x n <>
-  X p <>
-  cnot p c <>
-  X p
+  cnot p c
+  -- let p = Posi x 0
+  -- in
+  -- rzSub x n m <>
+  -- RQFT x n <>
+  -- X p <>
+  -- cnot p c <>
+  -- X p
 
 rzSub' :: Var -> Int -> Int -> RzValue -> Expr
 rzSub' x 0 _size _fm = SKIP (Posi x 0)
