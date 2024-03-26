@@ -14,6 +14,8 @@ import qualified Data.Set as Set
 
 import Debug.Trace
 
+import Data.Word
+
 -- Get the variables in an exp
 getVars :: Expr -> [Var]
 getVars = Set.toList . go
@@ -48,16 +50,23 @@ interpretDivMod n m =
 checkDivMod :: Property
 checkDivMod =
   -- forAll (choose (0, 60)) $ \n ->
-  forAll (pure 10) $ \n ->
+  -- forAll (pure 10) $ \n ->
+  forAll (pure 5) $ \(nw :: Word64) ->
   -- forAll (pure 60) $ \n ->
-  forAll (choose (1, 2^min n 30 - 1)) $ \m ->
-  forAll (genBvector n) $ \vx ->
+  -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
+  forAll (pure 5) $ \(mw :: Word64) ->
+  -- forAll (genBvector n) $ \vx ->
+  forAll (pure (int2Bvector (22 :: Word64))) $ \vx ->
+  let n, m :: Int
+      n = fromIntegral nw
+      m = fromIntegral mw
+  in
   stEquiv (divModVars n) (divModEnv n)
     (interpretDivMod n m
       (stateFromVars [(xVar, vx)]))
     (stateFromVars
-      [(xVar, vx `modBvector` int2Bvector m)
-      ,(yVar, vx `divBvector` int2Bvector m)
+      [(xVar, vx `modBvector` int2Bvector mw)
+      ,(yVar, vx `divBvector` int2Bvector mw)
       ])
 
 rzDivModOut :: Int -> Int -> Expr

@@ -1,7 +1,7 @@
 module QSym.Utils
   where
 
-import Test.QuickCheck (Gen, choose)
+import Test.QuickCheck (Gen, choose, Property, forAll, chooseAny, (===))
 import Data.Bits
 import Data.Word
 
@@ -56,10 +56,23 @@ unconsBvector (Bvector sz v) =
 bvector2Int :: Bvector -> Word64
 bvector2Int (Bvector _ i) = i
 
-int2Bvector :: (FiniteBits a, Integral a) => a -> Bvector
+-- int2Bvector :: (FiniteBits a, Integral a) => a -> Bvector
+int2Bvector :: Word64 -> Bvector
 int2Bvector = \i -> Bvector (getMaxBitSet i) (fromIntegral i)
   where
     getMaxBitSet j = finiteBitSize j - countLeadingZeros j
+
+bvectorIntTest :: Property
+bvectorIntTest =
+  forAll chooseAny $ \(x :: Word64) ->
+  x === bvector2Int (int2Bvector x)
+
+intBvectorTest :: Property
+intBvectorTest =
+  forAll (genBvector 63) $ \bv ->
+  getActualBits bv === getActualBits (int2Bvector (bvector2Int bv))
+  where
+    getActualBits (Bvector _ b) = b
 
 liftBinaryIntOp :: (Word64 -> Word64 -> Word64) -> Bvector -> Bvector -> Bvector
 liftBinaryIntOp op vx vy =

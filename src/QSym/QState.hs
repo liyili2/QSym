@@ -67,7 +67,15 @@ envUpdate env i new = QEnv $
 stEquiv :: [Var] -> QEnv Int -> QState Value -> QState Value -> Property
 stEquiv vars env st st' =
   forAll (elements vars) $ \x ->
+    counterexample (show (showVar st x, showVar st' x)) $
     varEquiv st st' x (atVar env x)
+
+showVar :: QState Value -> Var -> String
+showVar st x = go 0
+  where
+    go n | n >= 5 = ""
+    go n =
+      showValue (atPosi st (Posi x n)) ++ ", " ++ go (n + 1)
 
 varEquiv :: QState Value -> QState Value -> Var -> Int -> Property
 varEquiv st st' var n =
@@ -75,17 +83,35 @@ varEquiv st st' var n =
     let n' = n - 1
         p = Posi var n'
     in
-    valueEqualUpToCutOff (atPosi st p) (atPosi st' p) === True
+    (counterexample (show (p, showValue (atPosi st p), showValue (atPosi st' p)))
+      (valueEqualUpToCutOff (atPosi st p) (atPosi st' p)))
       .&.
     varEquiv st st' var n'
 
-equalUpToCutoff :: RzValue -> RzValue -> Bool
-equalUpToCutoff f g = all go [0..bitCheckCutoff]
-  where
-    go x = (f ! x) == (g ! x)
+showValue :: Value -> String
+showValue (NVal b v) =
+  "NVal " ++ show b ++ " " ++ show (toInt v)
+showValue (QVal v1 v2) =
+  "QVal " ++ show (toInt v1) ++ show (toInt v2)
 
-valueEqualUpToCutOff :: Value -> Value -> Bool
-valueEqualUpToCutOff (NVal b v) (NVal b' v') = b == b' && equalUpToCutoff v v'
-valueEqualUpToCutOff (QVal v1 v2) (QVal v1' v2') = equalUpToCutoff v1 v1' && equalUpToCutoff v2 v2'
-valueEqualUpToCutOff _ _ = False
+upToCutoff :: RzValue -> [Bool]
+upToCutoff = zipWith (flip (!)) [0..bitCheckCutoff] . repeat
+
+toInt :: RzValue -> Int
+toInt = go 0 . upToCutoff
+  where
+    go i [] = 0
+    go i (False : xs) =           go (i+1) xs
+    go i (True  : xs) = (2 ^ i) + go (i+1) xs
+
+-- equalUpToCutoff :: RzValue -> RzValue -> Bool
+-- equalUpToCutoff f g = all go [0..bitCheckCutoff]
+--   where
+--     go x = (f ! x) == (g ! x)
+
+valueEqualUpToCutOff :: Value -> Value -> Property
+valueEqualUpToCutOff (NVal b v) (NVal b' v') =
+  b === b' .&&. upToCutoff v === upToCutoff v'
+valueEqualUpToCutOff (QVal v1 v2) (QVal v1' v2') = upToCutoff v1 == upToCutoff v1' .&&. upToCutoff v2 === upToCutoff v2'
+valueEqualUpToCutOff _ _ = counterexample "QVal /= NVal" (False === True)
 

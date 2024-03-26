@@ -16,4 +16,6 @@ main = do
   -- -- putStrLn $ pprExpr $ rzModer' (i + 1) n xVar yVar (nat2fb ((2^i) * m))
   -- -- putStrLn $ pprExpr $ rzSub (Var 0) 5 (RzValue (==3))
   -- putStrLn $ pprExpr $ rzDivModOut 1 1
+  quickCheck bvectorIntTest
+  quickCheck intBvectorTest
   quickCheck checkDivMod
