@@ -1,9 +1,35 @@
 module QSym.Utils
+  (Var (..)
+  ,xVar, yVar, zVar
+  ,Posi (..)
+  ,getPosiVar
+  ,nextPos
+  ,RzValue
+  ,(!)
+  ,rzSetBit
+  ,nOnes
+  ,mapBitsBelow
+  ,bool2RzValue
+  ,Value (..)
+  ,basisVal
+  ,allFalse
+  ,Bvector
+  ,genBvector
+  ,unconsBvector
+  ,bvector2Int
+  ,int2Bvector
+  ,bvectorIntTest
+  ,intBvectorTest
+  ,modBvector
+  ,divBvector
+  ,unconsBit
+  )
   where
 
 import Test.QuickCheck (Gen, choose, Property, forAll, chooseAny, (===))
 import Data.Bits
 import Data.Word
+import Numeric.Natural
 
 newtype Var = Var Int
   deriving (Show, Eq, Ord)
@@ -22,20 +48,39 @@ getPosiVar (Posi x _) = x
 nextPos :: Posi -> Posi
 nextPos (Posi x i) = Posi x (i + 1)
 
-newtype RzValue = RzValue (Int -> Bool)
+newtype RzValue = RzValue Natural
+  deriving (Eq, Ord, Num, Bits, Show)
 
 (!) :: RzValue -> Int -> Bool
-RzValue f ! i = f i
+(!) (RzValue v) i = testBit v i
 
--- indexRzValue :: RzValue -> Int -> Bool
--- indexRzValue (RzValue f) = f
+rzSetBit :: RzValue -> Int -> Bool -> RzValue
+rzSetBit (RzValue f) i b = RzValue $
+  if b
+  then setBit f i
+  else clearBit f i
+
+nOnes :: Int -> RzValue
+nOnes n = (1 `shiftL` n) - 1
+
+-- Apply the function to bits below the given index
+mapBitsBelow :: Int -> RzValue -> (Int -> Bool) -> RzValue
+mapBitsBelow i0 v0 f = go i0 v0
+  where
+    go i v
+      | i < 0     = v
+      | otherwise = rzSetBit (go (i - 1) v) i (f i)
+
+bool2RzValue :: Bool -> RzValue
+bool2RzValue False = 0
+bool2RzValue True = 1
 
 data Value
   = NVal Bool RzValue
   | QVal RzValue RzValue
 
 allFalse :: RzValue
-allFalse = RzValue $ \_ -> False
+allFalse = RzValue 0
 
 basisVal :: Bool -> Value
 basisVal b = NVal b allFalse

@@ -12,6 +12,7 @@ import QSym.QState
 import QSym.Utils
 
 import Data.Bits hiding (xor, rotate, rotateR)
+import qualified Data.Bits as Bits
 
 interpret :: QEnv Int -> Expr -> QState Value -> QState Value
 interpret env expr st =
@@ -102,32 +103,35 @@ timesRotateR (NVal False r) q = NVal False r
 timesRotateR (QVal rc r) q = QVal rc (rotateR r q)
 
 addTo :: RzValue -> Int -> RzValue
-addTo r n = RzValue $ \i ->
-  if i < n
-  then (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (nat2fb 1))) n) ! i
-  else r ! i
+addTo r n =
+  mapBitsBelow n r $ \i ->
+    (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (nat2fb 1))) n) ! i
 
 addToN :: RzValue -> Int -> RzValue
-addToN r n = RzValue $ \i ->
-  if i < n
-  then (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (negatem n (nat2fb 0)))) n) ! i
-  else r ! i
+addToN r n =
+  mapBitsBelow n r $ \i ->
+    (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (negatem n (nat2fb 0)))) n) ! i
 
 cutN :: RzValue -> Int -> RzValue
-cutN r n = RzValue $ \i ->
-  if i < n
-  then r ! i
-  else False
+cutN r n = r .&. nOnes n
+-- RzValue $ \i ->
+--   if i < n
+--   then r ! i
+--   else False
 
 fbrev :: Int -> RzValue -> RzValue
-fbrev n r = RzValue $ \x ->
-  if x < n
-  then r ! (n - 1 - x)
-  else r ! x
+fbrev n r =
+  mapBitsBelow n r $ \i ->
+    r ! (n - 1 - i)
+-- RzValue $ \x ->
+--   if x < n
+--   then r ! (n - 1 - x)
+--   else r ! x
 
 sumfb :: Bool -> RzValue -> RzValue -> RzValue
-sumfb b f g = RzValue $ \x ->
-  carry b x f g `xor` (f ! x) `xor` (g ! x)
+sumfb b f g = undefined -- TODO: Implement
+-- RzValue $ \x ->
+--   carry b x f g `xor` (f ! x) `xor` (g ! x)
 
 carry :: Bool -> Int -> RzValue -> RzValue -> Bool
 carry b n f g =
@@ -181,13 +185,18 @@ turnRQFT st x b rmax =
   assignHR (assignSeq st x (getRQFT st x) b) x b (rmax - b)
 
 getCUS :: Int -> QState Value -> Var -> RzValue
-getCUS n f x = RzValue $ \i ->
-  if i < n
-  then
-    case atPosi f (Posi x i) of
+getCUS n v x =
+  mapBitsBelow n allFalse $ \i ->
+    case atPosi v (Posi x i) of
       NVal b r -> b
-      _ -> False
-  else False
+      QVal {} -> False
+-- RzValue $ \i ->
+--   if i < n
+--   then
+--     case atPosi f (Posi x i) of
+--       NVal b r -> b
+--       _ -> False
+--   else False
 
 assignSeq :: QState Value -> Var -> RzValue -> Int -> QState Value
 assignSeq st x vals 0 = st
@@ -210,7 +219,7 @@ getRQFT :: QState Value -> Var -> RzValue
 getRQFT st x =
   case atPosi st (Posi x 0) of
     QVal rc g -> g
-    _ -> allFalse
+    NVal {} -> allFalse
 
 assignR :: QState Value -> Var -> RzValue -> Int -> QState Value
 assignR st _x _r 0 = st
@@ -236,17 +245,21 @@ upH (NVal False r) = QVal r allFalse
 upH (QVal r f) = NVal (f ! 0) r
 
 lshiftFun :: RzValue -> Int -> RzValue
-lshiftFun f n = RzValue $ \i -> f ! (i+n)
+lshiftFun = shiftR
+-- lshiftFun f n = f `shiftL` n --RzValue $ \i -> f ! (i+n)
 
 upQFT :: Value -> RzValue -> Value
 upQFT (NVal b r) f = QVal r f
 upQFT a          _ = a
 
 negatem :: Int -> RzValue -> RzValue
-negatem i f = RzValue $ \x ->
-  if x < i
-  then not (f ! x)
-  else f ! x
+negatem i f =
+  mapBitsBelow i f $ \x ->
+    not (f ! x)
+-- RzValue $ \x ->
+--   if x < i
+--   then not (f ! x)
+--   else f ! x
 
 nat2fb :: Int -> RzValue
 nat2fb 0 = allFalse
@@ -262,7 +275,8 @@ pos2fb n =
   fbPush b (pos2fb n')
 
 fbPush :: Bool -> RzValue -> RzValue
-fbPush b f = RzValue $ \case
-  0 -> b
-  n -> f ! (n - 1)
+fbPush b v = rzSetBit (v `shiftL` 1) 0 b
+-- RzValue $ \case
+--   0 -> b
+--   n -> f ! (n - 1)
 

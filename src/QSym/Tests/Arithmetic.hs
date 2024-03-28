@@ -15,6 +15,7 @@ import qualified Data.Set as Set
 import Debug.Trace
 
 import Data.Word
+import Data.Bits
 
 -- Get the variables in an exp
 getVars :: Expr -> [Var]
@@ -51,11 +52,11 @@ checkDivMod :: Property
 checkDivMod =
   -- forAll (choose (0, 60)) $ \n ->
   -- forAll (pure 10) $ \n ->
-  forAll (pure 5) $ \(nw :: Word64) ->
   -- forAll (pure 60) $ \n ->
   -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
-  forAll (pure 5) $ \(mw :: Word64) ->
   -- forAll (genBvector n) $ \vx ->
+  forAll (pure 5) $ \(nw :: Word64) ->
+  forAll (pure 5) $ \(mw :: Word64) ->
   forAll (pure (int2Bvector (22 :: Word64))) $ \vx ->
   let n, m :: Int
       n = fromIntegral nw
@@ -93,7 +94,8 @@ rzModer' i n x ex m =
   rzModer' j n x ex (cutN (divTwoSpec m) n)
 
 divTwoSpec :: RzValue -> RzValue
-divTwoSpec f = RzValue $ \i -> f ! (i + 1)
+divTwoSpec v = v `shiftR` 1
+  --RzValue $ \i -> f ! (i + 1)
 
 -- compare x < m
 rzCompareHalf3 :: Var -> Int -> Posi -> RzValue -> Expr
