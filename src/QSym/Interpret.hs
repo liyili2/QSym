@@ -18,20 +18,20 @@ interpret :: QEnv Int -> Expr -> QState Value -> QState Value
 interpret env expr st =
   case expr of
     SKIP _ -> st
-    X p -> update st p (exchange (atPosi st p))
+    X p -> update st (fst p) (exchange (atPosi st (fst p)) (snd p))
     CU p e' ->
-      if getCUA (atPosi st p)
+      if getCUA (atPosi st (fst p)) (snd p)
       then interpret env e' st
       else st
-    RZ q p -> update st p (timesRotate (atPosi st p) q)
-    RRZ q p -> update st p (timesRotateR (atPosi st p) q)
-    SR n x -> srRotate st x n
+    RZ q p -> update st (fst p) (timesRotate (atPosi st (fst p)) q)
+    RRZ q p -> update st (fst p) (timesRotateR (atPosi st p) q)
+    SR n x -> update st (fst p) (srRotate (atPosi st x) n)
     SRR n x -> srrRotate st x n
-    Lshift x -> lshift st x (atVar env x)
-    Rshift x -> rshift st x (atVar env x)
-    Rev x -> reverse st x (atVar env x)
-    QFT x b -> turnQFT st x b (atVar env x)
-    RQFT x b -> turnRQFT st x b (atVar env x)
+    Lshift x -> update st x (lshift (atPosi st x) x)
+    Rshift x -> update st x (rshift (atPosi st x) x)
+    Rev x -> update st x (reverse (atPosi st x) x)
+    QFT x b -> let n = atVar env x in update st x (turnQFT (atPosi st x) (n-b))
+    RQFT x b -> let n = atVar env x in update st x (turnRQFT (atPosi st x) (n-b))
     Seq e1 e2 -> interpret env e2 (interpret env e1 st)
 
 invExpr :: Expr -> Expr
@@ -54,149 +54,86 @@ invExpr p =
 cnot :: Posi -> Posi -> Expr
 cnot x y = CU x (X y)
 
-exchange :: Value -> Value
-exchange (NVal b r) = NVal (not b) r
+exchange :: Value -> Int -> Value
+exchange (NVal b r) p = NVal (complementBit b p) r
 exchange v = v
 
-srRotate' :: QState Value -> Var -> Int -> Int -> QState Value
-srRotate' st _x 0 _size = st
-srRotate' st x  n size =
-  let m = n - 1
-      p = Posi x m
-  in
-  update (srRotate' st x m size) p
-    (timesRotate (atPosi st p) (size - m))
+srRotate :: Value -> Int -> Value
+srRotate (NVal b r) q = (NVal b r)
+srRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r+(2^(n-1-q)))
 
-srRotate :: QState Value -> Var -> Int -> QState Value
-srRotate st x n = srRotate' st x (n + 1) (n + 1)
+srrRotate :: Value -> Int -> Value
+srrRotate (NVal b r) q = (NVal b r)
+srrRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
 
-srrRotate' :: QState Value -> Var -> Int -> Int -> QState Value
-srrRotate' st _x 0 _size = st
-srrRotate' st x  n size =
-  let m = n - 1
-      p = Posi x m
-  in
-  update (srrRotate' st x m size) p
-    (timesRotateR (atPosi st p) (size - m))
-
-srrRotate :: QState Value -> Var -> Int -> QState Value
-srrRotate st x n = srrRotate' st x (n + 1) (n + 1)
-
-getCUA :: Value -> Bool
-getCUA (NVal b _) = b
-getCUA (QVal {}) = False
+getCUA :: Value -> Int -> Bool
+getCUA (NVal b _) p = testBit b p
+getCUA (QVal {}) p = False
 
 timesRotate :: Value -> Int -> Value
-timesRotate (NVal True r) q = NVal True (rotate r q)
-timesRotate (NVal False r) q = NVal False r
-timesRotate (QVal rc r) q = QVal rc (rotate r q)
-
-rotate :: RzValue -> Int -> RzValue
-rotate = addTo
-
-rotateR :: RzValue -> Int -> RzValue
-rotateR = addToN
+timesRotate (NVal b r) p q = let n = (atVar env x) in if testBit b p then NVal b (r+(2^(n-1-q))) else NVal b q
+timesRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r+(2^(n-1-q)))
 
 timesRotateR :: Value -> Int -> Value
-timesRotateR (NVal True r) q = NVal True (rotateR r q)
-timesRotateR (NVal False r) q = NVal False r
-timesRotateR (QVal rc r) q = QVal rc (rotateR r q)
+timesRotateR (NVal b r) q = let n = (atVar env x) in if testBit b p then NVal b (r-(2^(n-1-q))) else NVal b q
+timesRotateR (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
 
-addTo :: RzValue -> Int -> RzValue
-addTo r n =
-  mapBitsBelow n r $ \i ->
-    (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (nat2fb 1))) n) ! i
 
-addToN :: RzValue -> Int -> RzValue
-addToN r n =
-  mapBitsBelow n r $ \i ->
-    (cutN (fbrev n (sumfb False (cutN (fbrev n r) n) (negatem n (nat2fb 0)))) n) ! i
-
-cutN :: RzValue -> Int -> RzValue
-cutN r n = r .&. nOnes n
+-- cutN :: RzValue -> Int -> RzValue
+-- cutN r n = r .&. nOnes n
 -- RzValue $ \i ->
 --   if i < n
 --   then r ! i
 --   else False
 
-fbrev :: Int -> RzValue -> RzValue
-fbrev n r =
-  mapBitsBelow n r $ \i ->
+-- fbrev :: Int -> RzValue -> RzValue
+-- fbrev n r =
+--  mapBitsBelow n r $ \i ->
     r ! (n - 1 - i)
 -- RzValue $ \x ->
 --   if x < n
 --   then r ! (n - 1 - x)
 --   else r ! x
 
-sumfb :: Bool -> RzValue -> RzValue -> RzValue
-sumfb b f g = undefined -- TODO: Implement
+-- sumfb :: Bool -> RzValue -> RzValue -> RzValue
+-- sumfb b f g = undefined -- TODO: Implement
 -- RzValue $ \x ->
 --   carry b x f g `xor` (f ! x) `xor` (g ! x)
 
-carry :: Bool -> Int -> RzValue -> RzValue -> Bool
-carry b n f g =
-  case n of
-    0 -> b
-    _ ->
-      let n' = n - 1
-          c = carry b n' f g
-          a = f ! n'
-          b = g ! n'
-      in
-      (a && b) `xor` (b && c) `xor` (a && c)
+-- carry :: Bool -> Int -> RzValue -> RzValue -> Bool
+-- carry b n f g =
+--  case n of
+--    0 -> b
+--    _ ->
+--      let n' = n - 1
+--          c = carry b n' f g
+--          a = f ! n'
+--          b = g ! n'
+--      in
+--      (a && b) `xor` (b && c) `xor` (a && c)
 
-xor :: Bool -> Bool -> Bool
-xor = (/=)
+--xor :: Bool -> Bool -> Bool
+--xor = (/=)
 
-lshift' :: Int -> Int -> QState Value -> Var -> QState Value
-lshift' 0 size st x =
-  update st (Posi x 0) (atPosi st (Posi x size))
-lshift' n size st x =
-  let m = n - 1
-  in
-  update (lshift' m size st x) (Posi x n) (atPosi st (Posi x m))
+lshift :: Value -> Var -> Value
+lshift (NVal v r) x = let n = (atVar env x) in NVal (shift v n) r
+lshift (QVal v r) x = (QVal v r)
 
-lshift :: QState Value -> Var -> Int -> QState Value
-lshift st x n = lshift' (n - 1) (n - 1) st x
+rshift :: Value -> Var -> Value
+rshift (NVal v r) x = let n = (atVar env x) in NVal (rotate v n) r
+rshift (QVal v r) x = (QVal v r)
 
-rshift' :: Int -> Int -> QState Value -> Var -> QState Value
-rshift' 0 size st x =
-  update st (Posi x size) (atPosi st (Posi x 0))
-rshift' n size st x =
-  let m = n - 1
-  in
-  update (rshift' m size st x) (Posi x m) (atPosi st (Posi x n))
+reverse :: Value -> Var -> Value
+reverse (NVal v r) x = let n = (atVar env x) in NVal (complementBit v n) r
+reverse (QVal v r) x = (QVal v r)
 
-rshift :: QState Value -> Var -> Int -> QState Value
-rshift st x n = rshift' (n - 1) (n - 1) st x
+turnQFT :: Value -> Value
+turnQFT (NVal v r) n = (QVal r (rotate v n))
+turnQFT (QVal v r) n = (QVal v f)
 
-reverse :: QState Value -> Var -> Int -> QState Value
-reverse st x n = QState $ \a@(Posi y m) ->
-  if y == x && m < n
-  then atPosi st (Posi x ((n-1) - m))
-  else atPosi st a
-
-turnQFT :: QState Value -> Var -> Int -> Int -> QState Value
-turnQFT st x b rmax =
-  assignH (assignR st x (getCUS b st x) b) x b (rmax - b)
-
-turnRQFT :: QState Value -> Var -> Int -> Int -> QState Value
-turnRQFT st x b rmax =
-  assignHR (assignSeq st x (getRQFT st x) b) x b (rmax - b)
-
-getCUS :: Int -> QState Value -> Var -> RzValue
-getCUS n v x =
-  mapBitsBelow n allFalse $ \i ->
-    case atPosi v (Posi x i) of
-      NVal b r -> b
-      QVal {} -> False
--- RzValue $ \i ->
---   if i < n
---   then
---     case atPosi f (Posi x i) of
---       NVal b r -> b
---       _ -> False
---   else False
+turnRQFT :: Value -> Value
+turnRQFT (NVal v r) n = (NVal v r)
+turnRQFT (QVal rc r) n = (NVal (shift r n) rc)
 
 assignSeq :: QState Value -> Var -> RzValue -> Int -> QState Value
 assignSeq st x vals 0 = st

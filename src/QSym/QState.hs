@@ -20,7 +20,7 @@ bitCheckCutoff = 63
 
 newtype QState a = QState (Posi -> a)
 
-atPosi :: QState a -> Posi -> a
+atPosi :: QState a -> Var -> a
 atPosi (QState f) = f
 
 update :: QState a -> Posi -> a -> QState a
