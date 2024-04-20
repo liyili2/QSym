@@ -8,31 +8,47 @@ module QSym.Interpret
 import Prelude hiding (reverse)
 
 import QSym.Syntax
-import QSym.QState
+-- import QSym.QState
 import QSym.Utils
+import QSym.Monad
 
 import Data.Bits hiding (xor, rotate, rotateR)
 import qualified Data.Bits as Bits
 
-interpret :: QEnv Int -> Expr -> QState Value -> QState Value
-interpret env expr st =
+interpret :: Expr -> QSym ()
+interpret expr =
   case expr of
-    SKIP _ -> st
-    X p -> update st (fst p) (exchange (atPosi st (fst p)) (snd p))
-    CU p e' ->
-      if getCUA (atPosi st (fst p)) (snd p)
-      then interpret env e' st
-      else st
-    RZ q p -> update st (fst p) (timesRotate (atPosi st (fst p)) q)
-    RRZ q p -> update st (fst p) (timesRotateR (atPosi st p) q)
-    SR n x -> update st (fst p) (srRotate (atPosi st x) n)
-    SRR n x -> srrRotate st x n
-    Lshift x -> update st x (lshift (atPosi st x) x)
-    Rshift x -> update st x (rshift (atPosi st x) x)
-    Rev x -> update st x (reverse (atPosi st x) x)
-    QFT x b -> let n = atVar env x in update st x (turnQFT (atPosi st x) (n-b))
-    RQFT x b -> let n = atVar env x in update st x (turnRQFT (atPosi st x) (n-b))
-    Seq e1 e2 -> interpret env e2 (interpret env e1 st)
+    SKIP _ -> pure ()
+
+    X p -> do
+      v <- at (posiVar p)
+      update (posiVar p) (exchange v (posiInt p))
+
+    CU p e' -> do
+      v <- at (posiVar p)
+      if getCUA v (posiInt p)
+      then interpret e'
+      else pure ()
+
+    RZ q p0 -> do
+      p <- at (posiVar p0)
+      update p0 =<< (timesRotate p (posiInt p) q)
+
+    RRZ q p0 -> do
+      p <- at (posiVar p0)
+      update (posiVar p) =<< (timesRotateR p (posiInt p) q)
+
+    SR n x -> do
+      -- p <- atPosi st x
+      update x =<< (srRotate x n)
+
+    -- SRR n x -> srrRotate st x n
+    -- Lshift x -> update st x (lshift (atPosi st x) x)
+    -- Rshift x -> update st x (rshift (atPosi st x) x)
+    -- Rev x -> update st x (reverse (atPosi st x) x)
+    -- QFT x b -> let n = atVar env x in update st x (turnQFT (atPosi st x) (n-b))
+    -- RQFT x b -> let n = atVar env x in update st x (turnRQFT (atPosi st x) (n-b))
+    -- Seq e1 e2 -> interpret env e2 (interpret env e1 st)
 
 invExpr :: Expr -> Expr
 invExpr p =
@@ -56,27 +72,35 @@ cnot x y = CU x (X y)
 
 exchange :: Value -> Int -> Value
 exchange (NVal b r) p = NVal (complementBit b p) r
-exchange v = v
+exchange v _ = v
 
-srRotate :: Value -> Int -> Value
-srRotate (NVal b r) q = (NVal b r)
-srRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r+(2^(n-1-q)))
+srRotate :: Value -> Posi -> Int -> Value
+srRotate (NVal b r) q _ = (NVal b r)
+srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 
-srrRotate :: Value -> Int -> Value
-srrRotate (NVal b r) q = (NVal b r)
-srrRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
+srrRotate :: Value -> Posi -> Int -> Value
+srrRotate (NVal b r) q _ = (NVal b r)
+srrRotate (QVal rc r) q n = QVal rc (r-(2^(n-1-q)))
 
 getCUA :: Value -> Int -> Bool
 getCUA (NVal b _) p = testBit b p
 getCUA (QVal {}) p = False
 
-timesRotate :: Value -> Int -> Value
-timesRotate (NVal b r) p q = let n = (atVar env x) in if testBit b p then NVal b (r+(2^(n-1-q))) else NVal b q
-timesRotate (QVal rc r) q = let n = (atVar env x) in QVal rc (r+(2^(n-1-q)))
+-- timesRotate :: Value -> Int -> Value
+timesRotate :: Value -> Int -> Int -> QSym Value
+timesRotate (NVal b r) n q = do
+  -- n <- atVar (posiVar p)
+  if testBit b n
+    then pure $ NVal b (r+(2^(n-1-q)))
+    else pure $ NVal b q
+
+timesRotate (QVal rc r) n q= do
+  -- n <- atVar (posiVar p)
+  pure $ QVal rc (r+(2^(n-1-q)))
 
 timesRotateR :: Value -> Int -> Value
-timesRotateR (NVal b r) q = let n = (atVar env x) in if testBit b p then NVal b (r-(2^(n-1-q))) else NVal b q
-timesRotateR (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
+timesRotateR (NVal b r) n p q = if testBit b p then NVal b (r-(2^(n-1-q))) else NVal b q
+timesRotateR (QVal rc r) n p q = QVal rc (r-(2^(n-1-q)))
 
 
 -- cutN :: RzValue -> Int -> RzValue
@@ -89,7 +113,7 @@ timesRotateR (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
 -- fbrev :: Int -> RzValue -> RzValue
 -- fbrev n r =
 --  mapBitsBelow n r $ \i ->
-    r ! (n - 1 - i)
+    -- r ! (n - 1 - i)
 -- RzValue $ \x ->
 --   if x < n
 --   then r ! (n - 1 - x)
@@ -115,66 +139,81 @@ timesRotateR (QVal rc r) q = let n = (atVar env x) in QVal rc (r-(2^(n-1-q)))
 --xor :: Bool -> Bool -> Bool
 --xor = (/=)
 
-lshift :: Value -> Var -> Value
-lshift (NVal v r) x = let n = (atVar env x) in NVal (shift v n) r
-lshift (QVal v r) x = (QVal v r)
+lshift :: Value -> Var -> QSym Value
+lshift (NVal v r) x = do
+  n <- atVar x
+  pure $ NVal (shift v n) r
 
-rshift :: Value -> Var -> Value
-rshift (NVal v r) x = let n = (atVar env x) in NVal (rotate v n) r
-rshift (QVal v r) x = (QVal v r)
+lshift (QVal v r) x = do
+  pure $ QVal v r
 
-reverse :: Value -> Var -> Value
-reverse (NVal v r) x = let n = (atVar env x) in NVal (complementBit v n) r
-reverse (QVal v r) x = (QVal v r)
+rshift :: Value -> Var -> QSym Value
+rshift (NVal v r) x = do
+  n <- atVar x
+  pure $ NVal (rotate v n) r
 
-turnQFT :: Value -> Value
+rshift (QVal v r) x = QVal v r
+
+reverse :: Value -> Var -> QSym Value
+reverse (NVal v r) x = do
+  n <- atVar x
+  pure $ NVal (complementBit v n) r
+reverse (QVal v r) x = pure (QVal v r)
+
+turnQFT :: Value -> Int -> Value
 turnQFT (NVal v r) n = (QVal r (rotate v n))
-turnQFT (QVal v r) n = (QVal v f)
+turnQFT (QVal v r) n = (QVal v r)
 
 turnRQFT :: Value -> Value
 turnRQFT (NVal v r) n = (NVal v r)
 turnRQFT (QVal rc r) n = (NVal (shift r n) rc)
 
-assignSeq :: QState Value -> Var -> RzValue -> Int -> QState Value
-assignSeq st x vals 0 = st
-assignSeq st x vals n =
+assignSeq :: Var -> RzValue -> Int -> QSym ()
+assignSeq x vals 0 = pure ()
+assignSeq x vals n = do
   let m = n - 1
       p = Posi x m
-  in
-  update (assignSeq st x vals m) p
-    (NVal (vals ! m) (getR (atPosi st p)))
+
+  r <- getR <$> atPosi p
+  assignSeq x vals m
+  update p (NVal (vals ! m) r)
 
 -- A function to get the rotation angle of a state.
 getR :: Value -> RzValue
 getR (NVal _ r) = r
 getR (QVal rc _) = rc
 
-assignHR :: QState Value -> Var -> Int -> Int -> QState Value
+assignHR :: Var -> Int -> Int -> QSym ()
 assignHR = assignH -- TODO: Is this right?
 
-getRQFT :: QState Value -> Var -> RzValue
+getRQFT :: Var -> QSym RzValue
 getRQFT st x =
   case atPosi st (Posi x 0) of
     QVal rc g -> g
     NVal {} -> allFalse
 
-assignR :: QState Value -> Var -> RzValue -> Int -> QState Value
-assignR st _x _r 0 = st
-assignR st x r n =
+assignR :: Var -> RzValue -> Int -> QSym ()
+assignR _x _r 0 = pure ()
+assignR x r n = do
   let m = n - 1
       p = Posi x m
-  in
-  update (assignR st x r m) p
-    (upQFT (atPosi st p) (lshiftFun r m))
 
-assignH :: QState Value -> Var -> Int -> Int -> QState Value
+  assignR x r m
+
+  y <- atPosi p
+
+  update p (upQFT y (lshiftFun r m))
+
+assignH :: Var -> Int -> Int -> QSym ()
 assignH f _x _n 0 = f
-assignH f x n i =
+assignH f x n i = do
   let m = n - 1
       p = Posi x (n+m)
-  in
-  update (assignH f x n m) p
-    (upH (atPosi f p))
+
+  y <- atPosi f p
+  assignH f x n m
+
+  update p (upH y)
 
 upH :: Value -> Value
 upH (NVal True r) = QVal r (rotate allFalse 1)

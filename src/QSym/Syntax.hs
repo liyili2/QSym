@@ -14,8 +14,8 @@ data Expr
   | Lshift Var
   | Rshift Var
   | Rev Var
-  | QFT Var Int
-  | RQFT Var Int
+  | QFT Var Int -- QFT x i means "for array named x, change its type from Nor to Phi i"
+  | RQFT Var Int -- RQFT x i means "for array named x, change its type from Phi i to Nor"
   | Seq Expr Expr
   -- deriving (Show)
 
