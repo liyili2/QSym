@@ -3,6 +3,14 @@ module QSym.Syntax
 
 import QSym.Utils
 
+data AExp
+  = Int | Var | Minus AExp AExp | Plus AExp AExp
+
+data BExp
+  = GBit AExp AExp
+  | BLt AExp AExp
+  | BEq AExp AExp
+
 data Expr
   = SKIP Posi 
   | X Posi
@@ -17,6 +25,9 @@ data Expr
   | QFT Var Int -- QFT x i means "for array named x, change its type from Nor to Phi i"
   | RQFT Var Int -- RQFT x i means "for array named x, change its type from Phi i to Nor"
   | Seq Expr Expr
+  | App Var [AExp]
+  | Fix Var Int [Var] Expr
+  | IFExp BExp Expr Expr
   -- deriving (Show)
 
 pprExpr :: Expr -> String

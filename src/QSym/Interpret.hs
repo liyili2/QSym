@@ -15,6 +15,10 @@ import QSym.Monad
 import Data.Bits hiding (xor, rotate, rotateR)
 import qualified Data.Bits as Bits
 
+-- need to add an other map, one is a function map, mapping from fvar to closure
+-- modify env from var to C / Q (int), 
+-- there are two types, C type or Q (int) types,
+
 interpret :: Expr -> QSym ()
 interpret expr =
   case expr of
@@ -32,23 +36,33 @@ interpret expr =
 
     RZ q p0 -> do
       p <- at (posiVar p0)
-      update p0 =<< (timesRotate p (posiInt p) q)
+      update (posiVar p0) =<< (timesRotate p (posiInt p) q)
 
     RRZ q p0 -> do
       p <- at (posiVar p0)
       update (posiVar p) =<< (timesRotateR p (posiInt p) q)
 
     SR n x -> do
-      -- p <- atPosi st x
-      update x =<< (srRotate x n)
-
-    -- SRR n x -> srrRotate st x n
-    -- Lshift x -> update st x (lshift (atPosi st x) x)
-    -- Rshift x -> update st x (rshift (atPosi st x) x)
-    -- Rev x -> update st x (reverse (atPosi st x) x)
-    -- QFT x b -> let n = atVar env x in update st x (turnQFT (atPosi st x) (n-b))
-    -- RQFT x b -> let n = atVar env x in update st x (turnRQFT (atPosi st x) (n-b))
-    -- Seq e1 e2 -> interpret env e2 (interpret env e1 st)
+      size <- atVar x
+      v <- at x
+      update x =<< (srRotate v n size)
+      
+    SRR n x -> do
+      size <- atVar x
+      v <- at x
+      update x =<< (srrRotate v n size)
+      
+    QFT x b -> do
+      size <- atVar x
+      v <- at x
+      update x =<< (turnQFT v (size - b)) 
+    
+    RQFT x b -> do
+      size <- atVar x
+      v <- at x
+      update x =<< (turnQFT v (size - b)) 
+    
+    Seq e1 e2 -> interpret env e2 (interpret env e1 st)
 
 invExpr :: Expr -> Expr
 invExpr p =
@@ -74,11 +88,11 @@ exchange :: Value -> Int -> Value
 exchange (NVal b r) p = NVal (complementBit b p) r
 exchange v _ = v
 
-srRotate :: Value -> Posi -> Int -> Value
+srRotate :: Value -> Int -> Int -> Value
 srRotate (NVal b r) q _ = (NVal b r)
 srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 
-srrRotate :: Value -> Posi -> Int -> Value
+srrRotate :: Value -> Int -> Int -> Value
 srrRotate (NVal b r) q _ = (NVal b r)
 srrRotate (QVal rc r) q n = QVal rc (r-(2^(n-1-q)))
 
@@ -255,4 +269,54 @@ fbPush b v = rzSetBit (v `shiftL` 1) 0 b
 -- RzValue $ \case
 --   0 -> b
 --   n -> f ! (n - 1)
+
+cnot :: Posi -> Posi -> Expr
+cnot p1 p2 = CU p1 (X p2)
+
+ccx :: Posi -> Posi -> Posi -> Expr
+ccx p1 p2 p3 = CU p1 (cnot p2 p3)
+
+maj a b c = Seq (cnot c b) (Seq (cnot c a) (ccx a b c))
+
+uma a b c = Seq (ccx a b c) (Seq (cnot c a) (cnot a b))
+
+
+--Fixpoint MAJseq' n x y c : exp :=
+--  match n with
+--  | 0 => MAJ c (y,0) (x,0)
+--  | S m => MAJseq' m x y c; MAJ (x, m) (y, n) (x, n)
+--  end.
+--Definition MAJseq n x y c := MAJseq' (n - 1) x y c.
+
+--Fixpoint UMAseq' n x y c : exp :=
+--  match n with
+--  | 0 => UMA c (y,0) (x,0)
+--  | S m => UMA (x, m) (y,n) (x, n); UMAseq' m x y c
+--  end.
+--Definition UMAseq n x y c := UMAseq' (n - 1) x y c.
+
+--Definition adder01 n x y c: exp := MAJseq n x y c; UMAseq n x y c.
+
+--rzadder :: Var -> Int -> Int -> [Bool] -> 
+
+--Fixpoint rz_adder' (x:var) (n:nat) (size:nat) (M: nat -> bool) :=
+--  match n with 
+--  | 0 => SKIP (x,0)
+--  | S m => rz_adder' x m size M ; if M m then SR (size - n) x else SKIP (x,m)
+--  end.
+
+--Definition rz_adder (x:var) (n:nat) (M:nat -> bool) := rz_adder' x n n M.
+
+
+
+
+
+
+
+
+
+
+
+
+
 

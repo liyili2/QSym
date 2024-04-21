@@ -106,6 +106,7 @@ bool2RzValue True = rzValue 1
 data Value
   = NVal RzValue RzValue
   | QVal RzValue RzValue
+  
 
 allFalse :: MonadReader (QEnv a) m => m RzValue
 allFalse = rzValue 0
