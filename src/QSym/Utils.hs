@@ -49,19 +49,6 @@ xVar = Var 0
 yVar = Var 1
 zVar = Var 2
 
-data Posi =
-  Posi
-    { posiVar :: Var
-    , posiInt :: Int
-    }
-  deriving (Show, Eq)
-
-getPosiVar :: Posi -> Var
-getPosiVar (Posi x _) = x
-
-nextPos :: Posi -> Posi
-nextPos (Posi x i) = Posi x (i + 1)
-
 -- data Bvector = Bvector Int -- Bit length
 --                        Word64 -- Actual bits
 --   deriving (Show, Eq, Ord)

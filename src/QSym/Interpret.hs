@@ -34,35 +34,42 @@ interpret expr =
       then interpret e'
       else pure ()
 
-    RZ q p0 -> do
+    RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
       p <- at (posiVar p0)
       update (posiVar p0) =<< (timesRotate p (posiInt p) q)
 
-    RRZ q p0 -> do
+    RRZ (ANum q) p0 -> do
       p <- at (posiVar p0)
       update (posiVar p) =<< (timesRotateR p (posiInt p) q)
 
-    SR n x -> do
+    SR (ANum n) x -> do
       size <- atVar x
       v <- at x
       update x =<< (srRotate v n size)
       
-    SRR n x -> do
+    SRR (ANum n) x -> do
       size <- atVar x
       v <- at x
       update x =<< (srrRotate v n size)
       
-    QFT x b -> do
+    QFT x (ANum b) -> do
       size <- atVar x
       v <- at x
       update x =<< (turnQFT v (size - b)) 
     
-    RQFT x b -> do
+    RQFT x (ANum b) -> do
       size <- atVar x
       v <- at x
       update x =<< (turnQFT v (size - b)) 
     
     Seq e1 e2 -> interpret env e2 (interpret env e1 st)
+    
+    IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
+    
+    App x el -> let vl = map (\ a -> simpAExp a) e1 in -- the el must contain at least one value
+                   do
+                   Closure (x, yl, e) <- findFEnv x
+                   interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
 
 invExpr :: Expr -> Expr
 invExpr p =
@@ -270,6 +277,9 @@ fbPush b v = rzSetBit (v `shiftL` 1) 0 b
 --   0 -> b
 --   n -> f ! (n - 1)
 
+
+
+-- move the following to test, they are test cases
 cnot :: Posi -> Posi -> Expr
 cnot p1 p2 = CU p1 (X p2)
 
