@@ -68,9 +68,9 @@ interpret expr =
     
     App x el -> let vl = map (\ a -> simpAExp a) e1 in -- the el must contain at least one value
                    do
-                   Closure (x, yl, e) <- findFEnv x
+                   Closure x yl e <- findFEnv x
                    interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
-    Fix x y z e -> updateFEnv x =<< Closure (y,z,e)
+    Fix x y z e -> updateFEnv x =<< Closure y z e
 
 invExpr :: Expr -> Expr
 invExpr p =
