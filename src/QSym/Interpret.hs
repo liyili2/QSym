@@ -70,6 +70,7 @@ interpret expr =
                    do
                    Closure (x, yl, e) <- findFEnv x
                    interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
+    Fix x y z e -> updateFEnv x =<< Closure (y,z,e)
 
 invExpr :: Expr -> Expr
 invExpr p =
