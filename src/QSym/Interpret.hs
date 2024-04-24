@@ -291,32 +291,27 @@ maj a b c = Seq (cnot c b) (Seq (cnot c a) (ccx a b c))
 
 uma a b c = Seq (ccx a b c) (Seq (cnot c a) (cnot a b))
 
+majseq' = Fix (Var 0) (Var 1) [(Var 2), (Var 3), (Var 4)] (IFExp (BEq (AVar (Var 1)) (ANum 0))
+    (maj (Var 4) (Posi {posiVar:: (Var 2), posiInt:: (ANum 0)}) (Posi {posiVar:: (Var 3), posiInt:: (ANum 0)}))
+     (Seq (App (Var 0) [Minus (AVar (Var 1)) (ANum 1),(AVar (Var 2)),(AVar (Var 3)), (AVar (Var 4))])
+       (maj (Posi {posiVar:: (Var 2), posiInt:: (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar:: (Var 3), posiInt:: (AVar (Var 1))})
+          (Posi {posiVar:: (Var 2), posiInt:: (AVar (Var 1))}))))
 
---Fixpoint MAJseq' n x y c : exp :=
---  match n with
---  | 0 => MAJ c (y,0) (x,0)
---  | S m => MAJseq' m x y c; MAJ (x, m) (y, n) (x, n)
---  end.
---Definition MAJseq n x y c := MAJseq' (n - 1) x y c.
+umaseq' = Fix (Var 5) (Var 1) [(Var 2), (Var 3), (Var 4)] (IFExp (BEq (AVar (Var 1)) (ANum 0))
+    (uma (Var 4) (Posi {posiVar:: (Var 3), posiInt:: (ANum 0)}) (Posi {posiVar:: (Var 2), posiInt:: (ANum 0)}))
+     (Seq (uma (Posi {posiVar:: (Var 2), posiInt:: (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar:: (Var 3), posiInt:: (AVar (Var 1))})
+          (Posi {posiVar:: (Var 2), posiInt:: (AVar (Var 1))}))
+          (App (Var 5) [Minus (AVar (Var 1)) (ANum 1),(AVar (Var 2)),(AVar (Var 3)), (AVar (Var 4))])))
+          
+adder n x y c = Seq (App (Var 0) [Minus (AVar x) (ANum 1), (AVar y), AVar c]) (App (Var 5) [Minus (AVar x) (ANum 1), (AVar y), AVar c])
 
---Fixpoint UMAseq' n x y c : exp :=
---  match n with
---  | 0 => UMA c (y,0) (x,0)
---  | S m => UMA (x, m) (y,n) (x, n); UMAseq' m x y c
---  end.
---Definition UMAseq n x y c := UMAseq' (n - 1) x y c.
+rz_adder' x n size m = Fix (Var 6) (AVar n) [AVar x, AVar size, AVar m] 
+   (IFExp (BEq (AVar (Var 1)) (ANum 0)) 
+      (SKIP (Posi {posiVar:: x, posiInt:: (ANum 0)}))
+          (Seq (App (Var 6) [Minus (AVar n) (ANum 1),(AVar x),(AVar size), (AVar m)])
+            (IFExp (GBit (AVar m) (Minus (AVar n) (ANum 1))) (SR (Minus (AVar size) (AVar n)) x) (SKIP (Posi {posiVar:: x, posiInt:: (Avar Minus (AVar n) (ANum 1))})))))
 
---Definition adder01 n x y c: exp := MAJseq n x y c; UMAseq n x y c.
-
---rzadder :: Var -> Int -> Int -> [Bool] -> 
-
---Fixpoint rz_adder' (x:var) (n:nat) (size:nat) (M: nat -> bool) :=
---  match n with 
---  | 0 => SKIP (x,0)
---  | S m => rz_adder' x m size M ; if M m then SR (size - n) x else SKIP (x,m)
---  end.
-
---Definition rz_adder (x:var) (n:nat) (M:nat -> bool) := rz_adder' x n n M.
+rz_adder x n m = adder n x n n m
 
 
 
