@@ -15,6 +15,7 @@ import qualified QSym.QState as QS
 -- import QSym.QState (QEnv, mkEnv)
 
 import QSym.Utils
+import QSym.Syntax
 
 import Control.Monad.Reader
 import Control.Monad.State
@@ -107,7 +108,7 @@ data Value
   = NVal RzValue RzValue
   | QVal RzValue RzValue
   
-data Clou = Closure Var [Var] Expr
+data Clou = Closure Var [Var] AExp
   
 
 allFalse :: MonadReader (QEnv a) m => m RzValue

@@ -1,9 +1,9 @@
 module QSym.Utils
   (Var (..)
   ,xVar, yVar, zVar
-  ,Posi (..)
-  ,getPosiVar
-  ,nextPos
+  -- ,Posi (..)
+  -- ,getPosiVar
+  -- ,nextPos
   -- ,RzValue
   -- ,(!)
   -- ,rzSetBit

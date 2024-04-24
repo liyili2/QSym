@@ -7,6 +7,7 @@ import qualified Data.Bits as Bits
 
 data AExp
   = ANum Int | AVar Var | Minus AExp AExp | Plus AExp AExp | Mult AExp AExp
+  deriving (Show, Eq)
 
 data Posi = -- posi is x[v] where x is a quantum variable and v is an aexp
   Posi
@@ -19,34 +20,31 @@ getPosiVar :: Posi -> Var
 getPosiVar (Posi x _) = x
 
 nextPos :: Posi -> Posi
-nextPos (Posi x i) = Posi x (i + 1)
+nextPos (Posi x i) = Posi x (Plus i (ANum 1))
 
 
 substAExp :: AExp -> Var -> Int -> AExp
 substAExp (ANum n) x v = (ANum n)
-substAExp (AVar x) y v = if x == y then v else (AVar x)
+substAExp (AVar x) y v = if x == y then ANum v else (AVar x)
 substAExp (Minus e1 e2) x v = Minus (substAExp e1 x v) (substAExp e2 x v)
 substAExp (Plus e1 e2) x v = Plus (substAExp e1 x v) (substAExp e2 x v)
 substAExp (Mult e1 e2) x v = Mult (substAExp e1 x v) (substAExp e2 x v)
 
-simpAExp :: AExp -> AExp
-simpAExp (ANum v) = ANum v
-simpAExp (AVar x) = AVar x
-simpAExp (Minus e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleAExp :: AExp -> AExp
+simpleAExp (ANum v) = ANum v
+simpleAExp (AVar x) = AVar x
+simpleAExp (Minus e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> ANum (v1 - v2)
                                           _ -> Minus (ANum v1) e2
                                      _ -> Minus e1 e2
-simpAExp (Plus e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleAExp (Plus e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> ANum (v1 + v2)
                                           _ -> Plus (ANum v1) e2
                                      _ -> Plus e1 e2                                 
-simpAExp (Mult e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleAExp (Mult e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> ANum (v1 * v2)
                                           _ -> Mult (ANum v1) e2
                                      _ -> Mult e1 e2       
@@ -59,33 +57,30 @@ data BExp
   | BNot BExp
   
 substBExp :: BExp -> Var -> Int -> BExp
-substBExp (GBit e1 e2) x v = GBit (substBExp e1 x v) (substBExp e2 x v)
-substBExp (BLt e1 e2) x v = BLt (substBExp e1 x v) (substBExp e2 x v)
-substBExp (BEq e1 e2) x v = BEq (substBExp e1 x v) (substBExp e2 x v)
+substBExp (GBit e1 e2) x v = GBit (substAExp e1 x v) (substAExp e2 x v)
+substBExp (BLt e1 e2) x v = BLt (substAExp e1 x v) (substAExp e2 x v)
+substBExp (BEq e1 e2) x v = BEq (substAExp e1 x v) (substAExp e2 x v)
 substBExp (BNot e1) x v = BNot (substBExp e1 x v)
 
 
-simpBExp :: BExp -> BExp
+simpleBExp :: BExp -> BExp
 simpleBExp (BValue v) = BValue v
-simpBExp (GBit e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleBExp (GBit e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> BValue (testBit v1 v2)
                                           _ -> GBit (ANum v1) e2
                                      _ -> GBit e1 e2    
-simpBExp (BLt e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleBExp (BLt e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> BValue (v1 < v2)
                                           _ -> BLt (ANum v1) e2
                                      _ -> BLt e1 e2    
-simpBExp (BEq e1 e2) = case simpAExp e1 of
-                                     ANum v1 ->
-                              case simpleAExp e2 of
+simpleBExp (BEq e1 e2) = case simpleAExp e1 of
+                                     ANum v1 -> case simpleAExp e2 of
                                           ANum v2 -> BValue (v1 == v2)
                                           _ -> BEq (ANum v1) e2
                                      _ -> BEq e1 e2    
-simpBExp (BNot e1) = case simpBExp e1 of
+simpleBExp (BNot e1) = case simpleBExp e1 of
                                      BValue v1 -> BValue (not v1)
                                      _ -> BNot e1
                                      
@@ -126,22 +121,22 @@ substExpr (App y el) x v = App y (map (\ a ->  substAExp a x v) el)
 substExpr (Fix a b c e) x v = Fix a b c e
 substExpr (IFExp b e1 e2) x v = IFExp (substBExp b x v) (substExpr e1 x v) (substExpr e2 x v)
 
-simpExpr (SKIP p) = SKIP (p {posiInt = (simpAExp (posiInt p))})
-simpExpr (X p) = X (p {posiInt = (simpAExp (posiInt p))})
-simpExpr (CU p e) = CU (p {posiInt = (simpAExp (posiInt p))}) (simpExpr e)
-simpExpr (RZ q p) = RZ (simpAExp q) (p {posiInt = (simpAExp (posiInt p))})
-simpExpr (RRZ q p) = RRZ (simpAExp q) (p {posiInt = (simpAExp (posiInt p))})
-simpExpr (SR q y) = SR (simpAExp q) y
-simpExpr (SRR q y) = SRR (simpAExp q) y
-simpExpr (Lshift y) = Lshift y
-simpExpr (Rshift y) = Rshift y
-simpExpr (Rev y) = Rev y
-simpExpr (QFT y b) = QFT y (simpAExp b)
-simpExpr (RQFT y b) = RQFT y (simpAExp b)
-simpExpr (Seq e1 e2) = Seq (simpExpr e1) (simpExpr e2)
-simpExpr (App x el) = App x (map (\a -> simpAExp a) el)
-simpExpr (Fix x y z e) = Fix x y z e
-simpExpr IFExp b e1 e2 = IFExp (simpBExp b) (simpExpr e1) (simpExpr e2)
+-- simpExpr (SKIP p) = SKIP (p {posiInt = (simpleAExp (posiInt p))})
+-- simpExpr (X p) = X (p {posiInt = (simpleAExp (posiInt p))})
+-- simpExpr (CU p e) = CU (p {posiInt = (simpleAExp (posiInt p))}) (simpExpr e)
+-- simpExpr (RZ q p) = RZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
+-- simpExpr (RRZ q p) = RRZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
+-- simpExpr (SR q y) = SR (simpleAExp q) y
+-- simpExpr (SRR q y) = SRR (simpleAExp q) y
+-- simpExpr (Lshift y) = Lshift y
+-- simpExpr (Rshift y) = Rshift y
+-- simpExpr (Rev y) = Rev y
+-- simpExpr (QFT y b) = QFT y (simpleAExp b)
+-- simpExpr (RQFT y b) = RQFT y (simpleAExp b)
+-- simpExpr (Seq e1 e2) = Seq (simpExpr e1) (simpExpr e2)
+-- simpExpr (App x el) = App x (map (\a -> simpleAExp a) el)
+-- simpExpr (Fix x y z e) = Fix x y z e
+-- simpExpr IFExp b e1 e2 = IFExp (simpBExp b) (simpExpr e1) (simpExpr e2)
 
 
 pprExpr :: Expr -> String
