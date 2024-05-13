@@ -50,3 +50,26 @@ data Value
   | NVal RzValue RzValue
 ```
 
+# Example usage
+
+In a branch of the `interpret` function for handling the `SR` "expression":
+
+```haskell
+interpret expr =
+  case expr of
+    ...
+
+    SR n x -> do
+      size <- atVar x
+      v <- at x
+      update x (srRotate v n size)
+```
+
+The above branch uses the following function:
+
+```haskell
+srRotate :: Value -> Int -> Int -> Value
+srRotate (NVal b r) q _ = NVal b r
+srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
+```
+

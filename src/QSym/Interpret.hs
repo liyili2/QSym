@@ -24,23 +24,23 @@ interpret expr =
   case expr of
     SKIP _ -> pure ()
 
-    X p -> do
-      v <- at (posiVar p)
-      update (posiVar p) (exchange v (posiInt p))
-
-    CU p e' -> do
-      v <- at (posiVar p)
-      if getCUA v (posiInt p)
-      then interpret e'
-      else pure ()
-
-    RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
-      p <- at (posiVar p0)
-      update (posiVar p0) =<< (timesRotate p (posiInt p) q)
-
-    RRZ (ANum q) p0 -> do
-      p <- at (posiVar p0)
-      update (posiVar p) =<< (timesRotateR p (posiInt p) q)
+    -- X p -> do
+    --   v <- at (posiVar p)
+    --   update (posiVar p) (exchange v (posiInt p))
+    --
+    -- CU p e' -> do
+    --   v <- at (posiVar p)
+    --   if getCUA v (posiInt p)
+    --   then interpret e'
+    --   else pure ()
+    --
+    -- RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
+    --   p <- at (posiVar p0)
+    --   update (posiVar p0) =<< (timesRotate p (posiInt p) q)
+    --
+    -- RRZ (ANum q) p0 -> do
+    --   p <- at (posiVar p0)
+    --   update (posiVar p) =<< (timesRotateR p (posiInt p) q)
 
     SR (ANum n) x -> do
       size <- atVar x
