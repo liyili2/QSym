@@ -55,6 +55,7 @@ data Value
 In a branch of the `interpret` function for handling the `SR` "expression":
 
 ```haskell
+interpret :: Expr -> QSym ()
 interpret expr =
   case expr of
     ...
