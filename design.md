@@ -69,7 +69,7 @@ The above branch uses the following function:
 
 ```haskell
 srRotate :: Value -> RzValue -> RzValue -> Value
-srRotate (NVal b r) q _ = (NVal b r)
+srRotate (NVal b  r) q _ = NVal b r
 srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 ```
 
