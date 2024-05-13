@@ -45,32 +45,39 @@ interpret expr =
     SR (ANum n) x -> do
       size <- atVar x
       v <- at x
-      update x =<< (srRotate v n size)
+      update x (srRotate v n size)
       
     SRR (ANum n) x -> do
       size <- atVar x
       v <- at x
-      update x =<< (srrRotate v n size)
+      update x (srrRotate v n size)
       
     QFT x (ANum b) -> do
       size <- atVar x
       v <- at x
-      update x =<< (turnQFT v (size - b)) 
+      update x (turnQFT v (size - b)) 
     
     RQFT x (ANum b) -> do
       size <- atVar x
       v <- at x
-      update x =<< (turnQFT v (size - b)) 
+      update x (turnQFT v (size - b)) 
     
-    Seq e1 e2 -> interpret env e2 (interpret env e1 st)
+    Seq e1 e2 -> do
+      interpret e1
+      interpret e2
     
     IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
     
-    App x el -> let vl = map (\ a -> simpAExp a) e1 in -- the el must contain at least one value
+    App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain at least one value
                    do
-                   Closure x yl e <- findFEnv x
+                   -- Closure x yl e <- findFEnv x
+                   x <- undefined
+                   e <- undefined
+                   yl <- undefined
                    interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
-    Fix x y z e -> updateFEnv x =<< Closure y z e
+    Fix x y z e -> updateFEnv x $ Closure y z e
+
+updateFEnv = undefined
 
 invExpr :: Expr -> Expr
 invExpr p =
@@ -89,8 +96,8 @@ invExpr p =
     RQFT x b -> QFT x b
     Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
 
-cnot :: Posi -> Posi -> Expr
-cnot x y = CU x (X y)
+-- cnot :: Posi -> Posi -> Expr
+-- cnot x y = CU x (X y)
 
 exchange :: Value -> Int -> Value
 exchange (NVal b r) p = NVal (complementBit b p) r
@@ -120,9 +127,9 @@ timesRotate (QVal rc r) n q= do
   -- n <- atVar (posiVar p)
   pure $ QVal rc (r+(2^(n-1-q)))
 
-timesRotateR :: Value -> Int -> Value
-timesRotateR (NVal b r) n p q = if testBit b p then NVal b (r-(2^(n-1-q))) else NVal b q
-timesRotateR (QVal rc r) n p q = QVal rc (r-(2^(n-1-q)))
+timesRotateR :: Value -> Int -> QSym Value
+timesRotateR (NVal b r) n = pure $ if testBit b undefined then NVal b (r-(2^(n-1-undefined))) else NVal b undefined
+timesRotateR (QVal rc r) n = pure $ QVal rc (r-(2^(n-1-undefined)))
 
 
 -- cutN :: RzValue -> Int -> RzValue
@@ -292,24 +299,24 @@ maj a b c = Seq (cnot c b) (Seq (cnot c a) (ccx a b c))
 uma a b c = Seq (ccx a b c) (Seq (cnot c a) (cnot a b))
 
 majseq' = Fix (Var 0) (Var 1) [(Var 2), (Var 3), (Var 4)] (IFExp (BEq (AVar (Var 1)) (ANum 0))
-    (maj (Var 4) (Posi {posiVar:: (Var 2), posiInt:: (ANum 0)}) (Posi {posiVar:: (Var 3), posiInt:: (ANum 0)}))
+    (maj (Var 4) (Posi {posiVar = (Var 2), posiInt = (ANum 0)}) (Posi {posiVar = (Var 3), posiInt = (ANum 0)}))
      (Seq (App (Var 0) [Minus (AVar (Var 1)) (ANum 1),(AVar (Var 2)),(AVar (Var 3)), (AVar (Var 4))])
-       (maj (Posi {posiVar:: (Var 2), posiInt:: (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar:: (Var 3), posiInt:: (AVar (Var 1))})
-          (Posi {posiVar:: (Var 2), posiInt:: (AVar (Var 1))}))))
+       (maj (Posi {posiVar = (Var 2), posiInt = (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar = (Var 3), posiInt = (AVar (Var 1))})
+          (Posi {posiVar = (Var 2), posiInt = (AVar (Var 1))}))))
 
 umaseq' = Fix (Var 5) (Var 1) [(Var 2), (Var 3), (Var 4)] (IFExp (BEq (AVar (Var 1)) (ANum 0))
-    (uma (Var 4) (Posi {posiVar:: (Var 3), posiInt:: (ANum 0)}) (Posi {posiVar:: (Var 2), posiInt:: (ANum 0)}))
-     (Seq (uma (Posi {posiVar:: (Var 2), posiInt:: (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar:: (Var 3), posiInt:: (AVar (Var 1))})
-          (Posi {posiVar:: (Var 2), posiInt:: (AVar (Var 1))}))
+    (uma (Var 4) (Posi {posiVar = (Var 3), posiInt = (ANum 0)}) (Posi {posiVar = (Var 2), posiInt = (ANum 0)}))
+     (Seq (uma (Posi {posiVar = (Var 2), posiInt = (Minus (AVar (Var 1)) (ANum 1))}) (Posi {posiVar = (Var 3), posiInt = (AVar (Var 1))})
+          (Posi {posiVar = (Var 2), posiInt = (AVar (Var 1))}))
           (App (Var 5) [Minus (AVar (Var 1)) (ANum 1),(AVar (Var 2)),(AVar (Var 3)), (AVar (Var 4))])))
           
 adder n x y c = Seq (App (Var 0) [Minus (AVar x) (ANum 1), (AVar y), AVar c]) (App (Var 5) [Minus (AVar x) (ANum 1), (AVar y), AVar c])
 
 rz_adder' x n size m = Fix (Var 6) (AVar n) [AVar x, AVar size, AVar m] 
    (IFExp (BEq (AVar (Var 1)) (ANum 0)) 
-      (SKIP (Posi {posiVar:: x, posiInt:: (ANum 0)}))
+      (SKIP (Posi {posiVar = x, posiInt = (ANum 0)}))
           (Seq (App (Var 6) [Minus (AVar n) (ANum 1),(AVar x),(AVar size), (AVar m)])
-            (IFExp (GBit (AVar m) (Minus (AVar n) (ANum 1))) (SR (Minus (AVar size) (AVar n)) x) (SKIP (Posi {posiVar:: x, posiInt:: (Avar Minus (AVar n) (ANum 1))})))))
+            (IFExp (GBit (AVar m) (Minus (AVar n) (ANum 1))) (SR (Minus (AVar size) (AVar n)) x) (SKIP (Posi {posiVar = x, posiInt = (AVar Minus (AVar n) (ANum 1))})))))
 
 rz_adder x n m = adder n x n n m
 

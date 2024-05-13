@@ -121,22 +121,22 @@ substExpr (App y el) x v = App y (map (\ a ->  substAExp a x v) el)
 substExpr (Fix a b c e) x v = Fix a b c e
 substExpr (IFExp b e1 e2) x v = IFExp (substBExp b x v) (substExpr e1 x v) (substExpr e2 x v)
 
--- simpExpr (SKIP p) = SKIP (p {posiInt = (simpleAExp (posiInt p))})
--- simpExpr (X p) = X (p {posiInt = (simpleAExp (posiInt p))})
--- simpExpr (CU p e) = CU (p {posiInt = (simpleAExp (posiInt p))}) (simpExpr e)
--- simpExpr (RZ q p) = RZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
--- simpExpr (RRZ q p) = RRZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
--- simpExpr (SR q y) = SR (simpleAExp q) y
--- simpExpr (SRR q y) = SRR (simpleAExp q) y
--- simpExpr (Lshift y) = Lshift y
--- simpExpr (Rshift y) = Rshift y
--- simpExpr (Rev y) = Rev y
--- simpExpr (QFT y b) = QFT y (simpleAExp b)
--- simpExpr (RQFT y b) = RQFT y (simpleAExp b)
--- simpExpr (Seq e1 e2) = Seq (simpExpr e1) (simpExpr e2)
--- simpExpr (App x el) = App x (map (\a -> simpleAExp a) el)
--- simpExpr (Fix x y z e) = Fix x y z e
--- simpExpr IFExp b e1 e2 = IFExp (simpBExp b) (simpExpr e1) (simpExpr e2)
+simpExpr (SKIP p) = SKIP (p {posiInt = (simpleAExp (posiInt p))})
+simpExpr (X p) = X (p {posiInt = (simpleAExp (posiInt p))})
+simpExpr (CU p e) = CU (p {posiInt = (simpleAExp (posiInt p))}) (simpExpr e)
+simpExpr (RZ q p) = RZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
+simpExpr (RRZ q p) = RRZ (simpleAExp q) (p {posiInt = (simpleAExp (posiInt p))})
+simpExpr (SR q y) = SR (simpleAExp q) y
+simpExpr (SRR q y) = SRR (simpleAExp q) y
+simpExpr (Lshift y) = Lshift y
+simpExpr (Rshift y) = Rshift y
+simpExpr (Rev y) = Rev y
+simpExpr (QFT y b) = QFT y (simpleAExp b)
+simpExpr (RQFT y b) = RQFT y (simpleAExp b)
+simpExpr (Seq e1 e2) = Seq (simpExpr e1) (simpExpr e2)
+simpExpr (App x el) = App x (map (\a -> simpleAExp a) el)
+simpExpr (Fix x y z e) = Fix x y z e
+simpExpr (IFExp b e1 e2) = IFExp (simpleBExp b) (simpExpr e1) (simpExpr e2)
 
 
 pprExpr :: Expr -> String
