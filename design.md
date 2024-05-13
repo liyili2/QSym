@@ -34,8 +34,8 @@ also has access to a read-only `QEnv` which it can use to do this.
 ### Monadic `QSym` actions
 
 - `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym`
-- `getState :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`)
-- `getEnv :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QEnv`)
+- `stateGet :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`) (TODO: Update name in code to reflect this)
+- `envGet :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QEnv`) (TODO: Update name in code to reflect this)
 
 ### Building `QEnv`s and `QState`s
 
@@ -60,8 +60,8 @@ interpret expr =
     ...
 
     SR n x -> do
-      size <- atVar x
-      v <- at x
+      size <- envGet x
+      v <- stateGet x
       update x (srRotate v n size)
 ```
 
