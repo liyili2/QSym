@@ -29,12 +29,14 @@ also has access to a read-only `QEnv` which it can use to do this.
 - `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym`
 - `getState :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`)
 - `getEnv :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QEnv`)
+- `emptyEnv :: QEnv`
+- `mkState :: QEnv -> [(Var, Value)] -> QState`: Makes a `QState` from the list of pairs (values assigned to variables) and a given `QEnv`
 
 # Selected details
 
 ```haskell
-
-
-
+data Value
+  = QVal RzValue RzValue
+  | NVal RzValue RzValue
 ```
 
