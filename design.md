@@ -31,9 +31,14 @@ also has access to a read-only `QEnv` which it can use to do this.
 
 ## Operations related to `QEnv` and `QState`
 
+### Monadic `QSym` actions
+
 - `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym`
 - `getState :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`)
 - `getEnv :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QEnv`)
+
+### Building `QEnv`s and `QState`s
+
 - `emptyEnv :: QEnv`
 - `mkState :: QEnv -> [(Var, Value)] -> QState`: Makes a `QState` from the list of pairs (values assigned to variables) and a given `QEnv`
 
