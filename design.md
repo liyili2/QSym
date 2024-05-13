@@ -26,7 +26,7 @@ also has access to a read-only `QEnv` which it can use to do this.
 - `rotate :: Int -> RzValue -> RzValue`: We rotate `v` by `n` bits when we have `rotate n v`. If `n` is greater than the bit length of the vector, the rotation wraps around. **Key point**: This is why it's important to keep track of the bit length.
 - `v ! i` gets the `i`th bit of the `RzValue` called `v`
 - `rzSetBit :: RzValue -> Int -> Bool -> RzValue`
-- `nOnes :: Int -> QSym RzValue`. This produces an `RzValue` consisting of `n` ones: `nOnes n`
+- `nOnes :: Int -> QSym RzValue`. This produces an `RzValue` consisting of `n` ones: `nOnes n`. We are in the `QSym` monad for this because we need to use the `QEnv` to get the bit length for the resulting `RzValue`
 - `rzNatural :: RzValue -> Natural`
 
 ## Operations related to `QEnv` and `QState`
