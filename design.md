@@ -33,7 +33,7 @@ also has access to a read-only `QEnv` which it can use to do this.
 
 ### Monadic `QSym` actions
 
-- `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym`
+- `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym` by change the value associated with a particular variable
 - `stateGet :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`) (TODO: Update name in code to reflect this)
 - `envGet :: Var -> QSym Int`: gets the `Int` associated to the given `Var` (from the `QEnv`) (TODO: Update name in code to reflect this)
 
