@@ -52,6 +52,13 @@ data RzValue = RzValue
   }
   deriving (Show) --(Eq, Ord, Num, Bits, Show)
 
+instance Eq RzValue -- TODO: Implement
+instance Ord RzValue -- TODO: Implement
+instance Enum RzValue -- TODO: Implement
+instance Num RzValue -- TODO: Implement
+instance Real RzValue -- TODO: Implement
+instance Integral RzValue -- TODO: Implement
+
 rzValueToBools :: RzValue -> [Bool]
 rzValueToBools val@(RzValue count _) =
   map (\i -> val ! i) [0..count-1]
