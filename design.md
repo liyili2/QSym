@@ -64,6 +64,8 @@ interpret expr =
       size <- envGet x
       v <- stateGet x
       update x (srRotate v n size)
+
+    ...
 ```
 
 The above branch uses the following function:
