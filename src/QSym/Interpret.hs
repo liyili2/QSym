@@ -22,89 +22,89 @@ import qualified Data.Bits as Bits
 interpret :: Expr -> QSym ()
 interpret expr =
   case expr of
-    SKIP _ -> pure ()
-
-    -- X p -> do
-    --   v <- at (posiVar p)
-    --   update (posiVar p) (exchange v (posiInt p))
-    --
-    -- CU p e' -> do
-    --   v <- at (posiVar p)
-    --   if getCUA v (posiInt p)
-    --   then interpret e'
-    --   else pure ()
-    --
-    -- RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
-    --   p <- at (posiVar p0)
-    --   update (posiVar p0) =<< (timesRotate p (posiInt p) q)
-    --
-    -- RRZ (ANum q) p0 -> do
-    --   p <- at (posiVar p0)
-    --   update (posiVar p) =<< (timesRotateR p (posiInt p) q)
-
-    SR (ANum n) x -> do
+--     SKIP _ -> pure ()
+--
+--     -- X p -> do
+--     --   v <- at (posiVar p)
+--     --   update (posiVar p) (exchange v (posiInt p))
+--     --
+--     -- CU p e' -> do
+--     --   v <- at (posiVar p)
+--     --   if getCUA v (posiInt p)
+--     --   then interpret e'
+--     --   else pure ()
+--     --
+--     -- RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
+--     --   p <- at (posiVar p0)
+--     --   update (posiVar p0) =<< (timesRotate p (posiInt p) q)
+--     --
+--     -- RRZ (ANum q) p0 -> do
+--     --   p <- at (posiVar p0)
+--     --   update (posiVar p) =<< (timesRotateR p (posiInt p) q)
+--
+    SR n x -> do
       size <- atVar x
       v <- at x
       update x (srRotate v n size)
+--       
+--     SRR (ANum n) x -> do
+--       size <- atVar x
+--       v <- at x
+--       update x (srrRotate v n size)
+--       
+--     QFT x (ANum b) -> do
+--       size <- atVar x
+--       v <- at x
+--       update x (turnQFT v (size - b)) 
+--     
+--     RQFT x (ANum b) -> do
+--       size <- atVar x
+--       v <- at x
+--       update x (turnQFT v (size - b)) 
+--     
+--     Seq e1 e2 -> do
+--       interpret e1
+--       interpret e2
+--     
+--     IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
+--     
+--     App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain at least one value
+--                    do
+--                    -- Closure x yl e <- findFEnv x
+--                    x <- undefined
+--                    e <- undefined
+--                    yl <- undefined
+--                    interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
+--     Fix x y z e -> updateFEnv x $ Closure y z e
+--
+-- updateFEnv = undefined
+--
+-- invExpr :: Expr -> Expr
+-- invExpr p =
+--   case p of
+--     SKIP a -> SKIP a
+--     X n -> X n
+--     CU n p -> CU n (invExpr p)
+--     SR n x -> SRR n x
+--     SRR n x -> SR n x
+--     Lshift x -> Rshift x
+--     Rshift x -> Lshift x
+--     Rev x -> Rev x
+--     RZ q p -> RRZ q p
+--     RRZ q p -> RZ q p
+--     QFT x b -> RQFT x b
+--     RQFT x b -> QFT x b
+--     Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
+--
+-- -- cnot :: Posi -> Posi -> Expr
+-- -- cnot x y = CU x (X y)
+--
+-- exchange :: Value -> Int -> Value
+-- exchange (NVal b r) p = NVal (complementBit b p) r
+-- exchange v _ = v
 
-    SRR (ANum n) x -> do
-      size <- atVar x
-      v <- at x
-      update x (srrRotate v n size)
-
-    QFT x (ANum b) -> do
-      size <- atVar x
-      v <- at x
-      update x (turnQFT v (size - b)) 
-
-    RQFT x (ANum b) -> do
-      size <- atVar x
-      v <- at x
-      update x (turnQFT v (size - b)) 
-
-    Seq e1 e2 -> do
-      interpret e1
-      interpret e2
-
-    IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
-
-    App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain at least one value
-                   do
-                   -- Closure x yl e <- findFEnv x
-                   x <- undefined
-                   e <- undefined
-                   yl <- undefined
-                   interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
-    Fix x y z e -> updateFEnv x $ Closure y z e
-
-updateFEnv = undefined
-
-invExpr :: Expr -> Expr
-invExpr p =
-  case p of
-    SKIP a -> SKIP a
-    X n -> X n
-    CU n p -> CU n (invExpr p)
-    SR n x -> SRR n x
-    SRR n x -> SR n x
-    Lshift x -> Rshift x
-    Rshift x -> Lshift x
-    Rev x -> Rev x
-    RZ q p -> RRZ q p
-    RRZ q p -> RZ q p
-    QFT x b -> RQFT x b
-    RQFT x b -> QFT x b
-    Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
-
--- cnot :: Posi -> Posi -> Expr
--- cnot x y = CU x (X y)
-
-exchange :: Value -> Int -> Value
-exchange (NVal b r) p = NVal (complementBit b p) r
-exchange v _ = v
-
-srRotate :: Value -> RzValue -> RzValue -> Value
-srRotate (NVal b r) q _ = (NVal b r)
+srRotate :: Value -> Int -> Int -> Value
+srRotate (NVal b  r) _ _ = (NVal b r)
 srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 
 -- srrRotate :: Value -> Int -> Int -> Value

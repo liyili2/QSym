@@ -23,7 +23,7 @@ also has access to a read-only `QEnv` which it can use to do this.
 
 - Standard numeric functions such as `+` work on `RzValue`s
 - `rzValue :: Natural -> QSym RzValue`: Converts a `Natural` to an `RzValue`. Note that this is in the `QSym` monad: we need access to the `QEnv` to know how long the bit vector should be (including trailing zeroes)
-- `rotate :: Int -> RzValue -> RzValue`: We rotate `v` by `n` bits when we have `rotate n v`
+- `rotate :: Int -> RzValue -> RzValue`: We rotate `v` by `n` bits when we have `rotate n v`. If `n` is greater than the bit length of the vector, the rotation wraps around. **Key point**: This is why it's important to keep track of the bit length.
 - `v ! i` gets the `i`th bit of the `RzValue` called `v`
 - `rzSetBit :: RzValue -> Int -> Bool -> RzValue`
 - `nOnes :: Int -> QSym RzValue`. This produces an `RzValue` consisting of `n` ones: `nOnes n`
