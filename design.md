@@ -10,7 +10,7 @@
 - `RzValue`: This is a bit-vector of arbitrary length
 - `QSym`: Reader + state monad. This has a read-only `QEnv` and a read-write `QState`
 - `QState`: This maps `Var`s to `Value`s
-- `QEnv`: This maps `Var`s to `Int`s. These `Int`s are the bit-length of the corresponding bit vector (?)
+- `QEnv`: This maps `Var`s to `Int`s. These `Int`s are the bit-length of the corresponding bit vectors (?)
 
 # General description
 
