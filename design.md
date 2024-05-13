@@ -19,6 +19,8 @@ also has access to a read-only `QEnv` which it can use to do this.
 
 # Utility functions
 
+## Operations on `RzValue`s
+
 - Standard numeric functions such as `+` work on `RzValue`s
 - `rzValue :: Natural -> QSym RzValue`: Converts a `Natural` to an `RzValue`. Note that this is in the `QSym` monad: we need access to the `QEnv` to know how long the bit vector should be (including trailing zeroes)
 - `rotate :: Int -> RzValue -> RzValue`: We rotate `v` by `n` bits when we have `rotate n v`
@@ -26,6 +28,9 @@ also has access to a read-only `QEnv` which it can use to do this.
 - `rzSetBit :: RzValue -> Int -> Bool -> RzValue`
 - `nOnes :: Int -> QSym RzValue`. This produces an `RzValue` consisting of `n` ones: `nOnes n`
 - `rzNatural :: RzValue -> Natural`
+
+## Operations related to `QEnv` and `QState`
+
 - `update :: Var -> Value -> QSym ()`: updates the `QState` that is "tracked" by `QSym`
 - `getState :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QState`)
 - `getEnv :: Var -> QSym Value`: gets the `Value` associated to the given `Var` (from the `QEnv`)
