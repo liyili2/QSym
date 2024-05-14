@@ -22,7 +22,7 @@ import Control.Monad.State
 
 import Numeric.Natural
 import Test.QuickCheck
-import Data.Bits
+import Data.Bits as Bits
 
 newtype QSym a = QSym (ReaderT QEnv' (State QState') a)
   deriving (Functor, Applicative, Monad, MonadReader QEnv')
@@ -52,12 +52,49 @@ data RzValue = RzValue
   }
   deriving (Show) --(Eq, Ord, Num, Bits, Show)
 
-instance Eq RzValue -- TODO: Implement
-instance Ord RzValue -- TODO: Implement
-instance Enum RzValue -- TODO: Implement
-instance Num RzValue -- TODO: Implement
-instance Real RzValue -- TODO: Implement
-instance Integral RzValue -- TODO: Implement
+instance Eq RzValue where
+  RzValue sz1 f == RzValue sz2 g =
+    sz1 == sz2 && f == g
+
+instance Ord RzValue where
+  compare (RzValue _ f) (RzValue _ g) = compare f g
+
+instance Enum RzValue where
+  toEnum i = error "RzValue: toEnum" -- NOTE: We don't know the size here
+  fromEnum (RzValue _ f) = fromEnum f
+
+
+instance Num RzValue where
+  (+) = liftNaturalBinOp (+)
+  (-) = liftNaturalBinOp (-)
+  (*) = liftNaturalBinOp (*)
+  negate = liftNaturalUnaryOp negate
+  signum = error "RzValue: signum"
+  fromInteger = error "RzValue: fromInteger" -- NOTE: We don't know the size here
+
+instance Real RzValue where
+  toRational (RzValue _ f) = toRational f
+
+instance Integral RzValue where
+-- TODO: Is this right?
+  quotRem x y = (quot x y, rem x y)
+  quot = liftNaturalBinOp quot
+  rem = liftNaturalBinOp rem
+  toInteger (RzValue _ f) = toInteger f
+    
+
+-- TODO: Is this right?
+-- TODO: Don't export this
+liftNaturalBinOp :: (Natural -> Natural -> Natural) -> RzValue -> RzValue -> RzValue
+liftNaturalBinOp op (RzValue sz1 f) (RzValue sz2 g) =
+  let newSz = max sz1 sz2
+  in
+  RzValue newSz (op f g `mod` fromIntegral newSz)
+
+-- TODO: Don't export this
+liftNaturalUnaryOp :: (Natural -> Natural) -> RzValue -> RzValue
+liftNaturalUnaryOp op (RzValue sz f) =
+  RzValue sz (op f `mod` fromIntegral sz)
 
 rzValueToBools :: RzValue -> [Bool]
 rzValueToBools val@(RzValue count _) =
@@ -98,6 +135,16 @@ rzSetBit (RzValue sz f) i b = RzValue sz $
 
 nOnes :: Int -> QSym RzValue
 nOnes n = rzValue ((1 `shiftL` n) - 1)
+
+-- Left shift
+-- TODO: Should we update the bit size?
+shiftLeft :: RzValue -> Int -> RzValue
+shiftLeft (RzValue sz f) n =
+  RzValue sz (f `shiftL` n)
+
+complementBit :: RzValue -> Int -> RzValue
+complementBit (RzValue sz f) i =
+  RzValue sz (f `Bits.complementBit` i)
 
 -- Apply the function to bits below the given index
 mapBitsBelow :: Int -> RzValue -> (Int -> Bool) -> RzValue

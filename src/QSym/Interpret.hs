@@ -12,7 +12,6 @@ import QSym.Syntax
 import QSym.Utils
 import QSym.Monad
 
-import Data.Bits hiding (xor, rotate, rotateR)
 import qualified Data.Bits as Bits
 
 -- need to add an other map, one is a function map, mapping from fvar to closure
@@ -22,63 +21,52 @@ import qualified Data.Bits as Bits
 interpret :: Expr -> QSym ()
 interpret expr =
   case expr of
---     SKIP _ -> pure ()
---
---     -- X p -> do
---     --   v <- stateGet (posiVar p)
---     --   update (posiVar p) (exchange v (posiInt p))
---     --
---     -- CU p e' -> do
---     --   v <- stateGet (posiVar p)
---     --   if getCUA v (posiInt p)
---     --   then interpret e'
---     --   else pure ()
---     --
---     -- RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
---     --   p <- stateGet (posiVar p0)
---     --   update (posiVar p0) =<< (timesRotate p (posiInt p) q)
---     --
---     -- RRZ (ANum q) p0 -> do
---     --   p <- stateGet (posiVar p0)
---     --   update (posiVar p) =<< (timesRotateR p (posiInt p) q)
---
+    SKIP _ -> pure ()
+
+    X p -> do
+      v <- stateGet (posiVar p)
+      update (posiVar p) (exchange v (posiInt p))
+
+    CU p e' -> do
+      v <- stateGet (posiVar p)
+      if getCUA v (posiInt p)
+      then interpret e'
+      else pure ()
+
+    RZ q p0 -> do
+      p <- stateGet (posiVar p0)
+      n <- envGet (posiVar p0)
+      update (posiVar p0) =<< timesRotate p n q
+
+    RRZ q p0 -> do
+      p <- stateGet (posiVar p0)
+      n <- envGet (posiVar p0)
+      update (posiVar p0) =<< timesRotateR p n q
+
     SR n x -> do
       size <- envGet x
       v <- stateGet x
       update x (srRotate v n size)
---       
---     SRR (ANum n) x -> do
---       size <- envGet x
---       v <- stateGet x
---       update x (srrRotate v n size)
---       
---     QFT x (ANum b) -> do
---       size <- envGet x
---       v <- stateGet x
---       update x (turnQFT v (size - b)) 
---     
---     RQFT x (ANum b) -> do
---       size <- envGet x
---       v <- stateGet x
---       update x (turnQFT v (size - b)) 
---     
---     Seq e1 e2 -> do
---       interpret e1
---       interpret e2
---     
---     IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
---     
---     App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain stateGet least one value
---                    do
---                    -- Closure x yl e <- findFEnv x
---                    x <- undefined
---                    e <- undefined
---                    yl <- undefined
---                    interpret (simpExpr (foldl (\ a b -> case b of (bx,bv) -> substAExp a bx bv) e (zip (x:yl) vl)))
---     Fix x y z e -> updateFEnv x $ Closure y z e
---
--- updateFEnv = undefined
---
+
+    SRR n x -> do
+      size <- envGet x
+      v <- stateGet x
+      update x (srrRotate v n size)
+
+    QFT x b -> do
+      size <- envGet x
+      v <- stateGet x
+      update x (turnQFT v (size - b)) 
+
+    RQFT x b -> do
+      size <- envGet x
+      v <- stateGet x
+      update x (turnRQFT v (size - b)) 
+
+    Seq e1 e2 -> do
+      interpret e1
+      interpret e2
+
 -- invExpr :: Expr -> Expr
 -- invExpr p =
 --   case p of
@@ -98,39 +86,36 @@ interpret expr =
 --
 -- -- cnot :: Posi -> Posi -> Expr
 -- -- cnot x y = CU x (X y)
---
--- exchange :: Value -> Int -> Value
--- exchange (NVal b r) p = NVal (complementBit b p) r
--- exchange v _ = v
+
+exchange :: Value -> Int -> Value
+exchange (NVal b r) p = NVal (complementBit b p) r
+exchange v _ = v
 
 srRotate :: Value -> Int -> Int -> Value
 srRotate (NVal b  r) _ _ = (NVal b r)
 srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 
--- srrRotate :: Value -> Int -> Int -> Value
--- srrRotate (NVal b r) q _ = (NVal b r)
--- srrRotate (QVal rc r) q n = QVal rc (r-(2^(n-1-q)))
---
--- getCUA :: Value -> Int -> Bool
--- getCUA (NVal b _) p = testBit b p
--- getCUA (QVal {}) p = False
---
--- -- timesRotate :: Value -> Int -> Value
--- timesRotate :: Value -> Int -> Int -> QSym Value
--- timesRotate (NVal b r) n q = do
---   -- n <- envGet (posiVar p)
---   if testBit b n
---     then pure $ NVal b (r+(2^(n-1-q)))
---     else pure $ NVal b q
---
--- timesRotate (QVal rc r) n q= do
---   -- n <- envGet (posiVar p)
---   pure $ QVal rc (r+(2^(n-1-q)))
---
--- timesRotateR :: Value -> Int -> QSym Value
--- timesRotateR (NVal b r) n = pure $ if testBit b undefined then NVal b (r-(2^(n-1-undefined))) else NVal b undefined
--- timesRotateR (QVal rc r) n = pure $ QVal rc (r-(2^(n-1-undefined)))
---
+srrRotate :: Value -> Int -> Int -> Value
+srrRotate (NVal b r) q _ = (NVal b r)
+srrRotate (QVal rc r) q n = QVal rc (r-(2^(n-1-q)))
+
+getCUA :: Value -> Int -> Bool
+getCUA (NVal b _) p = b ! p
+getCUA (QVal {}) p = False
+
+timesRotate :: Value -> Int -> Int -> QSym Value
+timesRotate (NVal b r) n q = do
+  if b ! n
+    then pure $ NVal b (rotate q r) --(r+(2^(n-1-q)))
+    else pure $ NVal b r
+
+timesRotate (QVal rc r) n q = do
+  pure $ QVal rc (r+(2^(n-1-q)))
+
+timesRotateR :: Value -> Int -> Int -> QSym Value
+timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r-(2^(n-1-q))) else NVal b r
+timesRotateR (QVal rc r) n q = pure $ QVal rc (r-(2^(n-1-q)))
+
 --
 -- -- cutN :: RzValue -> Int -> RzValue
 -- -- cutN r n = r .&. nOnes n
@@ -188,14 +173,14 @@ srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 --   n <- envGet x
 --   pure $ NVal (complementBit v n) r
 -- reverse (QVal v r) x = pure (QVal v r)
---
--- turnQFT :: Value -> Int -> Value
--- turnQFT (NVal v r) n = (QVal r (rotate v n))
--- turnQFT (QVal v r) n = (QVal v r)
---
--- turnRQFT :: Value -> Value
--- turnRQFT (NVal v r) n = (NVal v r)
--- turnRQFT (QVal rc r) n = (NVal (shift r n) rc)
+
+turnQFT :: Value -> Int -> Value
+turnQFT (NVal v r) n = (QVal r (rotate n v))
+turnQFT (QVal v r) n = (QVal v r)
+
+turnRQFT :: Value -> Int -> Value
+turnRQFT (NVal v r) n = (NVal v r)
+turnRQFT (QVal rc r) n = (NVal (shiftLeft r n) rc)
 --
 -- assignSeq :: Var -> RzValue -> Int -> QSym ()
 -- assignSeq x vals 0 = pure ()
