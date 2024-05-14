@@ -25,41 +25,41 @@ interpret expr =
 --     SKIP _ -> pure ()
 --
 --     -- X p -> do
---     --   v <- at (posiVar p)
+--     --   v <- stateGet (posiVar p)
 --     --   update (posiVar p) (exchange v (posiInt p))
 --     --
 --     -- CU p e' -> do
---     --   v <- at (posiVar p)
+--     --   v <- stateGet (posiVar p)
 --     --   if getCUA v (posiInt p)
 --     --   then interpret e'
 --     --   else pure ()
 --     --
 --     -- RZ (ANum q) p0 -> do -- the q term must be evaluated to ANum q in order to make sense
---     --   p <- at (posiVar p0)
+--     --   p <- stateGet (posiVar p0)
 --     --   update (posiVar p0) =<< (timesRotate p (posiInt p) q)
 --     --
 --     -- RRZ (ANum q) p0 -> do
---     --   p <- at (posiVar p0)
+--     --   p <- stateGet (posiVar p0)
 --     --   update (posiVar p) =<< (timesRotateR p (posiInt p) q)
 --
     SR n x -> do
-      size <- atVar x
-      v <- at x
+      size <- envGet x
+      v <- stateGet x
       update x (srRotate v n size)
 --       
 --     SRR (ANum n) x -> do
---       size <- atVar x
---       v <- at x
+--       size <- envGet x
+--       v <- stateGet x
 --       update x (srrRotate v n size)
 --       
 --     QFT x (ANum b) -> do
---       size <- atVar x
---       v <- at x
+--       size <- envGet x
+--       v <- stateGet x
 --       update x (turnQFT v (size - b)) 
 --     
 --     RQFT x (ANum b) -> do
---       size <- atVar x
---       v <- at x
+--       size <- envGet x
+--       v <- stateGet x
 --       update x (turnQFT v (size - b)) 
 --     
 --     Seq e1 e2 -> do
@@ -68,7 +68,7 @@ interpret expr =
 --     
 --     IFExp (BValue b) e1 e2 -> if b then interpret e1 else interpret e2
 --     
---     App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain at least one value
+--     App x e1 -> let vl = map (\ a -> simpleAExp a) e1 in -- the el must contain stateGet least one value
 --                    do
 --                    -- Closure x yl e <- findFEnv x
 --                    x <- undefined
@@ -118,13 +118,13 @@ srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 -- -- timesRotate :: Value -> Int -> Value
 -- timesRotate :: Value -> Int -> Int -> QSym Value
 -- timesRotate (NVal b r) n q = do
---   -- n <- atVar (posiVar p)
+--   -- n <- envGet (posiVar p)
 --   if testBit b n
 --     then pure $ NVal b (r+(2^(n-1-q)))
 --     else pure $ NVal b q
 --
 -- timesRotate (QVal rc r) n q= do
---   -- n <- atVar (posiVar p)
+--   -- n <- envGet (posiVar p)
 --   pure $ QVal rc (r+(2^(n-1-q)))
 --
 -- timesRotateR :: Value -> Int -> QSym Value
@@ -170,7 +170,7 @@ srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 --
 -- lshift :: Value -> Var -> QSym Value
 -- lshift (NVal v r) x = do
---   n <- atVar x
+--   n <- envGet x
 --   pure $ NVal (shift v n) r
 --
 -- lshift (QVal v r) x = do
@@ -178,14 +178,14 @@ srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 --
 -- rshift :: Value -> Var -> QSym Value
 -- rshift (NVal v r) x = do
---   n <- atVar x
+--   n <- envGet x
 --   pure $ NVal (rotate v n) r
 --
 -- rshift (QVal v r) x = QVal v r
 --
 -- reverse :: Value -> Var -> QSym Value
 -- reverse (NVal v r) x = do
---   n <- atVar x
+--   n <- envGet x
 --   pure $ NVal (complementBit v n) r
 -- reverse (QVal v r) x = pure (QVal v r)
 --

@@ -32,16 +32,16 @@ execQSym :: QSym () -> QEnv' -> QState' -> QState'
 execQSym (QSym m) env st =
   execState (runReaderT m env) st
 
-at :: Var -> QSym Value
-at x =
-  at_ <$> QSym get <*> pure x
+stateGet :: Var -> QSym Value
+stateGet x =
+  stateGet' <$> QSym get <*> pure x
 
 update :: Var -> Value -> QSym ()
 update i new =
-  QSym $ modify $ \st -> update_ st i new
+  QSym $ modify $ \st -> update' st i new
 
-atVar :: Var -> QSym Int
-atVar x = atVar_ <$> QSym ask <*> pure x
+envGet :: Var -> QSym Int
+envGet x = envGet' <$> QSym ask <*> pure x
 
 -- Bit count usually won't change, except Nor -> Phi
 -- (Starts at Nor type)
@@ -125,8 +125,8 @@ newtype QEnv a = QEnv [(Var, a)] --(Var -> a)
 
 type QEnv' = QEnv Int
 
-atVar_ :: QEnv a -> Var -> a
-atVar_ (QEnv xs) v =
+envGet' :: QEnv a -> Var -> a
+envGet' (QEnv xs) v =
   let Just r = lookup v xs
   in
   r
@@ -138,15 +138,15 @@ newtype QState a = QState (Var -> a)
 
 type QState' = QState Value
 
-at_ :: QState a -> Var -> a
-at_ (QState f) = f
+stateGet' :: QState a -> Var -> a
+stateGet' (QState f) = f
 
-update_ :: QState a -> Var -> a -> QState a
-update_ st i new = QState $
+update' :: QState a -> Var -> a -> QState a
+update' st i new = QState $
   \j ->
     if j == i
     then new
-    else at_ st j
+    else stateGet' st j
 
 -- updateVar' :: QState Value -> Posi -> Bvector -> QState Value
 -- updateVar' st x vec =
@@ -163,7 +163,7 @@ emptyState env = QState $ \_ -> liftA2 NVal allFalse allFalse env
 
 mkState :: QEnv a -> [(Var, Value)] -> QState Value
 mkState env [] = emptyState env
-mkState env ((p, v):rest) = update_ (mkState env rest) p v
+mkState env ((p, v):rest) = update' (mkState env rest) p v
 
 -- stateFromVars :: [(Var, Bvector)] -> QState Value
 -- stateFromVars [] = emptyState
