@@ -67,25 +67,25 @@ interpret expr =
       interpret e1
       interpret e2
 
--- invExpr :: Expr -> Expr
--- invExpr p =
---   case p of
---     SKIP a -> SKIP a
---     X n -> X n
---     CU n p -> CU n (invExpr p)
---     SR n x -> SRR n x
---     SRR n x -> SR n x
---     Lshift x -> Rshift x
---     Rshift x -> Lshift x
---     Rev x -> Rev x
---     RZ q p -> RRZ q p
---     RRZ q p -> RZ q p
---     QFT x b -> RQFT x b
---     RQFT x b -> QFT x b
---     Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
---
--- -- cnot :: Posi -> Posi -> Expr
--- -- cnot x y = CU x (X y)
+invExpr :: Expr -> Expr
+invExpr p =
+  case p of
+    SKIP a -> SKIP a
+    X n -> X n
+    CU n p -> CU n (invExpr p)
+    SR n x -> SRR n x
+    SRR n x -> SR n x
+    Lshift x -> Rshift x
+    Rshift x -> Lshift x
+    Rev x -> Rev x
+    RZ q p -> RRZ q p
+    RRZ q p -> RZ q p
+    QFT x b -> RQFT x b
+    RQFT x b -> QFT x b
+    Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
+
+cnot :: Posi -> Posi -> Expr
+cnot x y = CU x (X y)
 
 exchange :: Value -> Int -> Value
 exchange (NVal b r) p = NVal (complementBit b p) r
@@ -175,12 +175,12 @@ timesRotateR (QVal rc r) n q = pure $ QVal rc (r-(2^(n-1-q)))
 -- reverse (QVal v r) x = pure (QVal v r)
 
 turnQFT :: Value -> Int -> Value
-turnQFT (NVal v r) n = (QVal r (rotate n v))
-turnQFT (QVal v r) n = (QVal v r)
+turnQFT (NVal v r) n = QVal r (rotate n v)
+turnQFT (QVal v r) n = QVal v r
 
 turnRQFT :: Value -> Int -> Value
-turnRQFT (NVal v r) n = (NVal v r)
-turnRQFT (QVal rc r) n = (NVal (shiftLeft r n) rc)
+turnRQFT (NVal v r) n = NVal v r
+turnRQFT (QVal rc r) n = NVal (shiftLeft r n) rc
 --
 -- assignSeq :: Var -> RzValue -> Int -> QSym ()
 -- assignSeq x vals 0 = pure ()
@@ -250,12 +250,12 @@ turnRQFT (QVal rc r) n = (NVal (shiftLeft r n) rc)
 -- --   if x < i
 -- --   then not (f ! x)
 -- --   else f ! x
---
+
 -- nat2fb :: Int -> RzValue
 -- nat2fb 0 = allFalse
 -- nat2fb p | p > 0 = pos2fb p
 -- nat2fb p = error $ "nat2fb: got negative argument: " ++ show p
---
+
 -- -- | Precondition: Argument must be positive
 -- pos2fb :: Int -> RzValue
 -- pos2fb 1 = fbPush True allFalse

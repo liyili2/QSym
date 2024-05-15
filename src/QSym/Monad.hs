@@ -28,8 +28,8 @@ newtype QSym a = QSym (ReaderT QEnv' (State QState') a)
   deriving (Functor, Applicative, Monad, MonadReader QEnv')
 
 -- Specialized to () so that we know we're forgetting the "result"
-execQSym :: QSym () -> QEnv' -> QState' -> QState'
-execQSym (QSym m) env st =
+execQSym :: QEnv' -> QState' -> QSym () -> QState'
+execQSym env st (QSym m) =
   execState (runReaderT m env) st
 
 stateGet :: Var -> QSym Value
@@ -204,6 +204,9 @@ update' st i new = QState $
 
 -- updateVar :: QState Value -> Var -> Bvector -> QState Value
 -- updateVar st x = updateVar' st (Posi x 0)
+
+mkQEnv :: [(Var, a)] -> QEnv a
+mkQEnv = QEnv
 
 emptyState :: QEnv a -> QState Value
 emptyState env = QState $ \_ -> liftA2 NVal allFalse allFalse env
