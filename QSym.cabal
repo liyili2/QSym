@@ -54,20 +54,20 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall -O2
 
-executable QSym
+library
     -- Import common warning flags.
     import:           warnings
 
-    -- .hs or .lhs file containing the Main module.
-    main-is:          Main.hs
+    -- -- .hs or .lhs file containing the Main module.
+    -- main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: QSym.QState
-                   QSym.Syntax
-                   QSym.Interpret
-                   QSym.Monad
-                   QSym.Utils
-                   QSym.Tests.Arithmetic
+    exposed-modules: QSym.QState
+                     QSym.Syntax
+                     QSym.Interpret
+                     QSym.Monad
+                     QSym.Utils
+                     QSym.Tests.Arithmetic
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -76,10 +76,26 @@ executable QSym
     build-depends:    base,
                       containers,
                       QuickCheck,
+                      integer-logarithms,
                       mtl
 
     -- Directories containing source files.
-    hs-source-dirs:   app, src
+    hs-source-dirs:   src
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
+test-suite QSym-tests
+    type:                exitcode-stdio-1.0
+    hs-source-dirs:      src/test
+    main-is:             Test.hs
+
+    build-depends:       base,
+                         tasty,
+                         tasty-golden,
+                         QuickCheck,
+                         QSym
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+

@@ -14,11 +14,15 @@ module QSym.Monad
 import qualified QSym.QState as QS
 -- import QSym.QState (QEnv, mkEnv)
 
+import GHC.Stack
+
 import QSym.Utils
 import QSym.Syntax
 
 import Control.Monad.Reader
 import Control.Monad.State
+
+import Math.NumberTheory.Logarithms
 
 import Numeric.Natural
 import Test.QuickCheck
@@ -69,8 +73,17 @@ instance Num RzValue where
   (-) = liftNaturalBinOp (-)
   (*) = liftNaturalBinOp (*)
   negate = liftNaturalUnaryOp negate
-  signum = error "RzValue: signum"
-  fromInteger = error "RzValue: fromInteger" -- NOTE: We don't know the size here
+
+  -- TODO: Is this okay?
+  signum :: RzValue -> RzValue
+  signum = liftNaturalUnaryOp signum
+
+  -- TODO: Is this okay?
+  abs :: RzValue -> RzValue
+  abs = liftNaturalUnaryOp abs
+
+  -- TODO: Is this okay?
+  fromInteger = mkRzValue'
 
 instance Real RzValue where
   toRational (RzValue _ f) = toRational f
@@ -227,6 +240,13 @@ stEquiv vars env st1 st2 =
       lookup v st1 === lookup v st2
 
     lookup v (QState s) = s v
+
+-- TODO: Is this reasonable?
+mkRzValue' :: Integral a => a -> RzValue
+mkRzValue' i =
+  let sz = integerLog2 (fromIntegral i) + 1
+  in
+  RzValue sz (fromIntegral i)
 
 
 -- stateFromVars :: [(Var, Bvector)] -> QState Value

@@ -19,6 +19,7 @@ import qualified Data.Bits as Bits
 -- need to add an other map, one is a function map, mapping from fvar to closure
 -- modify env from var to C / Q (int), 
 -- there are two types, C type or Q (int) types,
+--
 
 interpret :: Expr -> QSym ()
 interpret expr =
@@ -64,6 +65,18 @@ interpret expr =
       size <- envGet x
       v <- stateGet x
       update x (turnRQFT v (size - b)) 
+
+    Rev x -> do
+      v <- stateGet x
+      update x =<< rshift v x
+
+    Lshift x -> do
+      v <- stateGet x
+      update x =<< lshift v x
+
+    Rshift x -> do
+      v <- stateGet x
+      update x =<< rshift v x
 
     Seq e1 e2 -> do
       interpret e1
@@ -154,27 +167,27 @@ cutN (RzValue _sz f) newSz = RzValue newSz f
 --
 -- --xor :: Bool -> Bool -> Bool
 -- --xor = (/=)
---
--- lshift :: Value -> Var -> QSym Value
--- lshift (NVal v r) x = do
---   n <- envGet x
---   pure $ NVal (shift v n) r
---
--- lshift (QVal v r) x = do
---   pure $ QVal v r
---
--- rshift :: Value -> Var -> QSym Value
--- rshift (NVal v r) x = do
---   n <- envGet x
---   pure $ NVal (rotate v n) r
---
--- rshift (QVal v r) x = QVal v r
---
--- reverse :: Value -> Var -> QSym Value
--- reverse (NVal v r) x = do
---   n <- envGet x
---   pure $ NVal (complementBit v n) r
--- reverse (QVal v r) x = pure (QVal v r)
+
+lshift :: Value -> Var -> QSym Value
+lshift (NVal v r) x = do
+  n <- envGet x
+  pure $ NVal (shiftLeft v n) r
+
+lshift (QVal v r) x = do
+  pure $ QVal v r
+
+rshift :: Value -> Var -> QSym Value
+rshift (NVal v r) x = do
+  n <- envGet x
+  pure $ NVal (rotate n v) r
+
+rshift (QVal v r) x = pure $ QVal v r
+
+reverse :: Value -> Var -> QSym Value
+reverse (NVal v r) x = do
+  n <- envGet x
+  pure $ NVal (complementBit v n) r
+reverse (QVal v r) x = pure (QVal v r)
 
 turnQFT :: Value -> Int -> Value
 turnQFT (NVal v r) n = QVal r (rotate n v)
@@ -252,14 +265,6 @@ turnRQFT (QVal rc r) n = NVal (shiftLeft r n) rc
 -- --   if x < i
 -- --   then not (f ! x)
 -- --   else f ! x
-
--- TODO: Is this reasonable?
-mkRzValue' :: (Integral a, FiniteBits a) => a -> RzValue
-mkRzValue' i =
-  let Just typeSize = bitSizeMaybe i
-      sz = typeSize - countLeadingZeros i
-  in
-  RzValue sz (fromIntegral i)
 
 -- nat2fb :: Int -> RzValue
 -- nat2fb 0 = allFalse
