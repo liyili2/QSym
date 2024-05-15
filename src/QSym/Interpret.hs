@@ -12,6 +12,8 @@ import QSym.Syntax
 import QSym.Utils
 import QSym.Monad
 
+import Data.Bits (countLeadingZeros, bitSizeMaybe, FiniteBits)
+
 import qualified Data.Bits as Bits
 
 -- need to add an other map, one is a function map, mapping from fvar to closure
@@ -116,14 +118,14 @@ timesRotateR :: Value -> Int -> Int -> QSym Value
 timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r-(2^(n-1-q))) else NVal b r
 timesRotateR (QVal rc r) n q = pure $ QVal rc (r-(2^(n-1-q)))
 
---
--- -- cutN :: RzValue -> Int -> RzValue
--- -- cutN r n = r .&. nOnes n
--- -- RzValue $ \i ->
--- --   if i < n
--- --   then r ! i
--- --   else False
---
+cutN :: RzValue -> Int -> RzValue
+cutN (RzValue _sz f) newSz = RzValue newSz f
+
+-- RzValue $ \i ->
+--   if i < n
+--   then r ! i
+--   else False
+
 -- -- fbrev :: Int -> RzValue -> RzValue
 -- -- fbrev n r =
 -- --  mapBitsBelow n r $ \i ->
@@ -250,6 +252,14 @@ turnRQFT (QVal rc r) n = NVal (shiftLeft r n) rc
 -- --   if x < i
 -- --   then not (f ! x)
 -- --   else f ! x
+
+-- TODO: Is this reasonable?
+mkRzValue' :: (Integral a, FiniteBits a) => a -> RzValue
+mkRzValue' i =
+  let Just typeSize = bitSizeMaybe i
+      sz = typeSize - countLeadingZeros i
+  in
+  RzValue sz (fromIntegral i)
 
 -- nat2fb :: Int -> RzValue
 -- nat2fb 0 = allFalse

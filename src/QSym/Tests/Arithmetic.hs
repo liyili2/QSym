@@ -68,13 +68,14 @@ checkDivMod =
       m = fromIntegral mw
       mkRzValue = toRzValue n
       toValue rz = NVal rz rz -- TODO: Does this make sense?
+      env = divModEnv n
   in
   forAll (pure (mkRzValue (22 :: Word64))) $ \vx ->
-  stEquiv (divModVars n) (divModEnv n)
+  stEquiv (divModVars n) env
     (interpretDivMod n m
-      (mkState undefined [(xVar, toValue vx)]))
+      (mkState env [(xVar, toValue vx)]))
     (mkState
-      undefined
+      env
       [(xVar, toValue (vx `mod` mkRzValue mw))
       ,(yVar, toValue (vx `div` mkRzValue mw))
       ])
@@ -89,7 +90,7 @@ rzDivMod n x ex m =
   in
   Rev x <>
   QFT x n <>
-  -- rzModer' (i + 1) n x ex (nat2fb ((2^i) * m)) <> -- FIXME
+  rzModer' (i + 1) n x ex (mkRzValue' ((2^i) * m)) <>
   invExpr (Rev x <> QFT x n)
 
 rzModer' :: Int -> Int -> Var -> Var -> RzValue -> Expr
@@ -100,8 +101,7 @@ rzModer' i n x ex m =
   rzCompareHalf3 x n (Posi ex j) m <> QFT x n <>
   CU (Posi ex j) (rzAdder x n m) <>
   X (Posi ex j) <>
-  undefined
-  -- rzModer' j n x ex (cutN (divTwoSpec m) n) -- FIXME
+  rzModer' j n x ex (cutN (divTwoSpec m) n)
 
 divTwoSpec :: RzValue -> RzValue
 divTwoSpec v = v `div` 2
