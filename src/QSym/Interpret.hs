@@ -68,7 +68,7 @@ interpret expr =
 
     Rev x -> do
       v <- stateGet x
-      update x =<< rshift v x
+      update x =<< reverse v x
 
     Lshift x -> do
       v <- stateGet x
@@ -83,8 +83,8 @@ interpret expr =
       interpret e2
 
 invExpr :: Expr -> Expr
-invExpr p =
-  case p of
+invExpr e0 =
+  case e0 of
     SKIP a -> SKIP a
     X n -> X n
     CU n p -> CU n (invExpr p)
