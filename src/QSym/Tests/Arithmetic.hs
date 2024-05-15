@@ -89,7 +89,7 @@ rzDivMod n x ex m =
   in
   Rev x <>
   QFT x n <>
-  -- rzModer' (i + 1) n x ex (nat2fb ((2^i) * m)) <> -- TODO: Fix this
+  -- rzModer' (i + 1) n x ex (nat2fb ((2^i) * m)) <> -- FIXME
   invExpr (Rev x <> QFT x n)
 
 rzModer' :: Int -> Int -> Var -> Var -> RzValue -> Expr
@@ -101,7 +101,7 @@ rzModer' i n x ex m =
   CU (Posi ex j) (rzAdder x n m) <>
   X (Posi ex j) <>
   undefined
-  -- rzModer' j n x ex (cutN (divTwoSpec m) n) -- TODO: Fix this
+  -- rzModer' j n x ex (cutN (divTwoSpec m) n) -- FIXME
 
 divTwoSpec :: RzValue -> RzValue
 divTwoSpec v = v `div` 2
