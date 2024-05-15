@@ -146,6 +146,9 @@ complementBit :: RzValue -> Int -> RzValue
 complementBit (RzValue sz f) i =
   RzValue sz (f `Bits.complementBit` i)
 
+toRzValue :: Integral a => Int -> a -> RzValue
+toRzValue size = RzValue size . fromIntegral
+
 -- Apply the function to bits below the given index
 mapBitsBelow :: Int -> RzValue -> (Int -> Bool) -> RzValue
 mapBitsBelow i0 v0 f = go i0 v0
@@ -161,6 +164,7 @@ bool2RzValue True = rzValue 1
 data Value
   = NVal RzValue RzValue
   | QVal RzValue RzValue
+  deriving (Eq, Show)
   
 allFalse :: MonadReader (QEnv a) m => m RzValue
 allFalse = rzValue 0
@@ -214,6 +218,16 @@ emptyState env = QState $ \_ -> liftA2 NVal allFalse allFalse env
 mkState :: QEnv a -> [(Var, Value)] -> QState Value
 mkState env [] = emptyState env
 mkState env ((p, v):rest) = update' (mkState env rest) p v
+
+stEquiv :: [Var] -> QEnv Int -> QState Value -> QState Value -> Property
+stEquiv vars env st1 st2 =
+    conjoin (map go vars)
+  where
+    go v =
+      lookup v st1 === lookup v st2
+
+    lookup v (QState s) = s v
+
 
 -- stateFromVars :: [(Var, Bvector)] -> QState Value
 -- stateFromVars [] = emptyState

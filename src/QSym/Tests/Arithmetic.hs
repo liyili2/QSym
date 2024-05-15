@@ -43,9 +43,7 @@ divModVars n = getVars (rzDivModOut n 1)
 
 divModEnv :: Int -> QEnv Int
 divModEnv n =
-  let bitVectorSize = 8
-  in
-  mkQEnv $ take 3 (zip (map Var [0..]) (repeat bitVectorSize)) -- TODO: Is this okay?
+  mkQEnv $ take 3 (zip (map Var [0..]) (repeat (n + 1))) -- TODO: Is this okay?
 
 interpretDivMod :: Int -> Int -> QState Value -> QState Value
 interpretDivMod n m state =
@@ -56,27 +54,30 @@ interpretDivMod n m state =
     (interpret
       (rzDivModOut n m))
 
--- checkDivMod :: Property
--- checkDivMod =
---   -- forAll (choose (0, 60)) $ \n ->
---   -- forAll (pure 10) $ \n ->
---   -- forAll (pure 60) $ \n ->
---   -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
---   -- forAll (genBvector n) $ \vx ->
---   forAll (pure 5) $ \(nw :: Word64) ->
---   forAll (pure 5) $ \(mw :: Word64) ->
---   forAll (pure (int2Bvector (22 :: Word64))) $ \vx ->
---   let n, m :: Int
---       n = fromIntegral nw
---       m = fromIntegral mw
---   in
---   stEquiv (divModVars n) (divModEnv n)
---     (interpretDivMod n m
---       (stateFromVars [(xVar, vx)]))
---     (stateFromVars
---       [(xVar, vx `modBvector` int2Bvector mw)
---       ,(yVar, vx `divBvector` int2Bvector mw)
---       ])
+checkDivMod :: Property
+checkDivMod =
+  -- forAll (choose (0, 60)) $ \n ->
+  -- forAll (pure 10) $ \n ->
+  -- forAll (pure 60) $ \n ->
+  -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
+  -- forAll (genBvector n) $ \vx ->
+  forAll (pure 5) $ \(nw :: Word64) ->
+  forAll (pure 5) $ \(mw :: Word64) ->
+  let n, m :: Int
+      n = fromIntegral nw
+      m = fromIntegral mw
+      mkRzValue = toRzValue n
+      toValue rz = NVal rz rz -- TODO: Does this make sense?
+  in
+  forAll (pure (mkRzValue (22 :: Word64))) $ \vx ->
+  stEquiv (divModVars n) (divModEnv n)
+    (interpretDivMod n m
+      (mkState undefined [(xVar, toValue vx)]))
+    (mkState
+      undefined
+      [(xVar, toValue (vx `mod` mkRzValue mw))
+      ,(yVar, toValue (vx `div` mkRzValue mw))
+      ])
 
 rzDivModOut :: Int -> Int -> Expr
 rzDivModOut size = rzDivMod (size+1) xVar yVar
