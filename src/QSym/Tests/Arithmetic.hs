@@ -141,7 +141,10 @@ rzAdder' x n size fm =
   rzAdder' x m size fm <> if fm ! m then SR (size - n) x else SKIP (Posi x m)
 
 rzAdder :: Var -> Int -> RzValue -> Expr
-rzAdder x n = Seq (QFT x 0) (Seq (rzAdder' x n n) (RQFT x 0))
+rzAdder x n = rzAdder' x n n
+
+rzAdder_test :: Var -> Int -> RzValue -> Expr
+rzAdder_test x n = Seq (QFT x 0) (Seq (rzAdder' x n n) (RQFT x 0))
 
 findNum :: Int -> Int -> Int
 findNum x n = findNum' n x (2 ^ (n-1)) 0
