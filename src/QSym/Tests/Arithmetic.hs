@@ -64,8 +64,8 @@ checkDivMod =
   forAll (pure 5) $ \(nw :: Word64) ->
   forAll (pure 5) $ \(mw :: Word64) ->
   let n, m :: Int
-      n = fromIntegral nw
-      m = fromIntegral mw
+      n = fromNatural nw
+      m = fromNatural mw
       mkRzValue = toRzValue n
       toValue rz = NVal rz rz -- TODO: Does this make sense? 
       env = divModEnv n
@@ -160,3 +160,7 @@ findNum' size x y i =
   then i
   else findNum' n (2 * x) y (i+1)
 
+fromNatural :: (Integral a, Num b) => a -> Maybe b
+fromNatural x
+  | x >= 0    = Just (fromIntegral x)
+  | otherwise = error "fromIntegral: negative number"
