@@ -67,7 +67,7 @@ checkDivMod =
       n = fromIntegral nw
       m = fromIntegral mw
       mkRzValue = toRzValue n
-      toValue rz = NVal rz rz -- TODO: Does this make sense?
+      toValue rz = NVal rz rz -- TODO: Does this make sense? 
       env = divModEnv n
   in
   forAll (pure (mkRzValue (22 :: Word64))) $ \vx ->
@@ -141,7 +141,7 @@ rzAdder' x n size fm =
   rzAdder' x m size fm <> if fm ! m then SR (size - n) x else SKIP (Posi x m)
 
 rzAdder :: Var -> Int -> RzValue -> Expr
-rzAdder x n = rzAdder' x n n
+rzAdder x n = Seq (QFT x 0) (Seq (rzAdder' x n n) (RQFT x 0))
 
 findNum :: Int -> Int -> Int
 findNum x n = findNum' n x (2 ^ (n-1)) 0
