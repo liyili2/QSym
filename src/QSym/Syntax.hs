@@ -20,7 +20,7 @@ nextPos (Posi x i) = Posi x (i + 1)
 
 
 data Expr
-  = SKIP Posi  -- do nothing
+  = SKIP -- do nothing
   | X Posi  -- x[v] posi qubit |0> -> |1> and |1> -> |0>, x is Nor type
   | CU Posi Expr  -- CU on x[v] posi qubit to control if we apply expr, x is Nor type.
   | RZ Int Posi -- RZ on x[v] posi qubit to rotate Int degree, x is Nor type
@@ -34,9 +34,12 @@ data Expr
   | RQFT Var Int -- RQFT x i means "for array named x, change its type from Phi i to Nor"
   | Seq Expr Expr
   -- deriving (Show)
-  
+
+block :: [Expr] -> Expr  
+block = mconcat
+
 pprExpr :: Expr -> String
-pprExpr (SKIP p) = "SKIP " ++ show p
+pprExpr SKIP = "SKIP"
 pprExpr (X p) = "X " ++ show p
 pprExpr (CU p e) =
   unlines
@@ -64,4 +67,7 @@ getSeqs e = [e]
 
 instance Semigroup Expr where
   (<>) = Seq
+
+instance Monoid Expr where
+  mempty = SKIP
 

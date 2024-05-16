@@ -24,7 +24,7 @@ import qualified Data.Bits as Bits
 interpret :: Expr -> QSym ()
 interpret expr =
   case expr of
-    SKIP _ -> pure ()
+    SKIP -> pure ()
 
     X p -> do
       v <- stateGet (posiVar p)
@@ -85,7 +85,7 @@ interpret expr =
 invExpr :: Expr -> Expr
 invExpr e0 =
   case e0 of
-    SKIP a -> SKIP a
+    SKIP -> SKIP
     X n -> X n
     CU n p -> CU n (invExpr p)
     SR n x -> SRR n x

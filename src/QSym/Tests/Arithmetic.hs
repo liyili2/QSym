@@ -24,7 +24,7 @@ getVars :: Expr -> [Var]
 getVars = Set.toList . go
   where
     go = \case
-      SKIP p -> Set.singleton (getPosiVar p)
+      SKIP -> mempty
       X p -> Set.singleton (getPosiVar p)
       CU p e -> Set.insert (getPosiVar p) (go e)
       RZ _ p -> Set.singleton (getPosiVar p)
@@ -94,7 +94,7 @@ rzDivMod n x ex m =
   invExpr (Rev x <> QFT x n)
 
 rzModer' :: Int -> Int -> Var -> Var -> RzValue -> Expr
-rzModer' 0 _ x _ _ = SKIP (Posi x 0)
+rzModer' 0 _ x _ _ = SKIP
 rzModer' i n x ex m =
   let j = i - 1
   in
@@ -124,27 +124,32 @@ rzCompareHalf3 x n c m =
   -- X p
 
 rzSub' :: Var -> Int -> Int -> RzValue -> Expr
-rzSub' x 0 _size _fm = SKIP (Posi x 0)
+rzSub' x 0 _size _fm = SKIP
 rzSub' x n size fm =
   let m = n - 1
   in
-  rzSub' x m size fm <> if fm ! m then SRR (size - n) x else SKIP (Posi x m)
+  rzSub' x m size fm <> if fm ! m then SRR (size - n) x else SKIP
 
 rzSub :: Var -> Int -> RzValue -> Expr
 rzSub x n = rzSub' x n n
 
 rzAdder' :: Var -> Int -> Int -> RzValue -> Expr
-rzAdder' x 0 _size _fm = SKIP (Posi x 0)
+rzAdder' x 0 _size _fm = SKIP
 rzAdder' x n size fm =
   let m = n - 1
   in
-  rzAdder' x m size fm <> if fm ! m then SR (size - n) x else SKIP (Posi x m)
+  rzAdder' x m size fm <> if fm ! m then SR (size - n) x else SKIP
 
 rzAdder :: Var -> Int -> RzValue -> Expr
 rzAdder x n = rzAdder' x n n
 
 rzAdder_test :: Var -> Int -> RzValue -> Expr
-rzAdder_test x n = Seq (QFT x 0) (Seq (rzAdder' x n n) (RQFT x 0))
+rzAdder_test x n v =
+  block
+    [ QFT x 0
+    , rzAdder' x n n v
+    , RQFT x 0
+    ]
 
 findNum :: Int -> Int -> Int
 findNum x n = findNum' n x (2 ^ (n-1)) 0
