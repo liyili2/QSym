@@ -160,7 +160,7 @@ findNum' size x y i =
   then i
   else findNum' n (2 * x) y (i+1)
 
-fromNatural :: (Integral a, Num b) => a -> Maybe b
+fromNatural :: (Integral a, Num b) => a -> b
 fromNatural x
-  | x >= 0    = Just (fromIntegral x)
+  | x >= 0    = fromIntegral x
   | otherwise = error "fromIntegral: negative number"
