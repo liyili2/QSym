@@ -112,7 +112,7 @@ srRotate (QVal rc r) q n = QVal rc (r+(2^(n-1-q)))
 
 srrRotate :: Value -> Int -> Int -> Value
 srrRotate (NVal b r) q _ = (NVal b r)
-srrRotate (QVal rc r) q n = QVal rc (r-(2^(n-1-q)))
+srrRotate (QVal rc r) q n = QVal rc (r `rzSubtract` (2^(n-1-q)))
 
 getCUA :: Value -> Int -> Bool
 getCUA (NVal b _) p = b ! p
@@ -128,8 +128,8 @@ timesRotate (QVal rc r) n q = do
   pure $ QVal rc (r+(2^(n-1-q)))
 
 timesRotateR :: Value -> Int -> Int -> QSym Value
-timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r-(2^(n-1-q))) else NVal b r
-timesRotateR (QVal rc r) n q = pure $ QVal rc (r-(2^(n-1-q)))
+timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r `rzSubtract` (2^(n-1-q))) else NVal b r
+timesRotateR (QVal rc r) n q = pure $ QVal rc (r `rzSubtract` (2^(n-1-q)))
 
 cutN :: RzValue -> Int -> RzValue
 cutN (RzValue _sz f) newSz = RzValue newSz f

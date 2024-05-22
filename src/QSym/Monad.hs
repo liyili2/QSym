@@ -67,13 +67,25 @@ instance Enum RzValue where
   toEnum i = error "RzValue: toEnum" -- NOTE: We don't know the size here
   fromEnum (RzValue _ f) = fromEnum f
 
+rzSubtract :: HasCallStack => RzValue -> RzValue -> RzValue
+rzSubtract = (-)
+
+-- rzSubtract :: HasCallStack => RzValue -> RzValue -> RzValue
+-- rzSubtract a b
+--   | b > a = error "rzSubtract: b > a"
+--   | otherwise = a - b
 
 instance Num RzValue where
   (+) = liftNaturalBinOp (+)
   -- (-) = liftNaturalBinOp (-)
   (*) = liftNaturalBinOp (*)
-  negate = error "negate called" -- TODO: This is for debugging purposes
-  -- negate = liftNaturalUnaryOp negate
+  -- negate = error "negate called" -- TODO: This is for debugging purposes
+  negate = liftNaturalUnaryOp negate
+
+  RzValue sz1 f - RzValue sz2 g = 
+    if g > f
+    then error "RzValue.-: negative result"
+    else RzValue (max sz1 sz2) (f - g)
 
   -- TODO: Is this okay?
   signum :: RzValue -> RzValue
@@ -84,7 +96,8 @@ instance Num RzValue where
   abs = liftNaturalUnaryOp abs
 
   -- TODO: Is this okay?
-  fromInteger = mkRzValue'
+  fromInteger i | i < 0 = error "RzValue.fromInteger: negative argument"
+  fromInteger i = mkRzValue' i
 
 instance Real RzValue where
   toRational (RzValue _ f) = toRational f
@@ -148,6 +161,7 @@ rzSetBit (RzValue sz f) i b = RzValue sz $
   else clearBit f i
 
 nOnes :: Int -> QSym RzValue
+nOnes n | n < 0 = error "nOnes: negative argument"
 nOnes n = rzValue ((1 `shiftL` n) - 1)
 
 -- Left shift
