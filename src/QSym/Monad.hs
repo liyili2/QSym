@@ -70,9 +70,10 @@ instance Enum RzValue where
 
 instance Num RzValue where
   (+) = liftNaturalBinOp (+)
-  (-) = liftNaturalBinOp (-)
+  -- (-) = liftNaturalBinOp (-)
   (*) = liftNaturalBinOp (*)
-  negate = liftNaturalUnaryOp negate
+  negate = error "negate called" -- TODO: This is for debugging purposes
+  -- negate = liftNaturalUnaryOp negate
 
   -- TODO: Is this okay?
   signum :: RzValue -> RzValue
