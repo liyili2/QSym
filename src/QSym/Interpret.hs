@@ -102,6 +102,9 @@ invExpr e0 =
 cnot :: Posi -> Posi -> Expr
 cnot x y = CU x (X y)
 
+ccx :: Posi -> Posi -> Posi -> Expr
+ccx x y z = CU x (cnot y z)
+
 exchange :: Value -> Int -> Value
 exchange (NVal b r) p = NVal (complementBit b p) r
 exchange v _ = v

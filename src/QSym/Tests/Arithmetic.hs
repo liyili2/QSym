@@ -13,6 +13,8 @@ import Test.QuickCheck
 
 import qualified Data.Set as Set
 
+import Data.Bits
+
 import Debug.Trace
 
 import Data.Word
@@ -169,3 +171,72 @@ fromNatural :: (Integral a, Num b) => a -> b
 fromNatural x
   | x >= 0    = fromIntegral x
   | otherwise = error "fromIntegral: negative number"
+
+
+-- Define MAJ and UMA
+maj :: Posi -> Posi -> Posi -> Expr
+maj a b c = cnot c b <> cnot c a <> ccx a b c
+
+uma :: Posi -> Posi -> Posi -> Expr
+uma a b c = ccx a b c <> cnot c a <> cnot a b
+
+-- Define MAJseq and UMAseq
+majSeq' :: Int -> Var -> Var -> Posi -> Expr
+majSeq' 0 x y c = maj c (Posi y 0) (Posi x 0)
+majSeq' n x y c = majSeq' (n - 1) x y c <> maj (Posi x (n - 1)) (Posi y n) (Posi x n)
+
+majSeq :: Int -> Var -> Var -> Posi -> Expr
+majSeq n x y c = majSeq' (n - 1) x y c
+
+umaSeq' :: Int -> Var -> Var -> Posi -> Expr
+umaSeq' 0 x y c = uma c (Posi y 0) (Posi x 0)
+umaSeq' n x y c = uma (Posi x (n - 1)) (Posi y n) (Posi x n) <> umaSeq' (n - 1) x y c
+
+umaSeq :: Int -> Var -> Var -> Posi -> Expr
+umaSeq n x y c = umaSeq' (n - 1) x y c
+
+
+-- Define adder 
+adder :: Int -> Var -> Var -> Posi -> Expr
+adder n x y c = trace ("Calling fib " ++ show y) $  majSeq n x y c <> umaSeq n x y c
+
+
+
+-- Define the environment for the adder test
+adderEnv :: Int -> QEnv Int
+adderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
+
+-- Test property for the adder function
+checkAdder :: Property
+checkAdder = 
+  forAll (choose (1, 60)) $ \(n :: Int) ->
+  forAll (choose (0, 2^(n - 1))) $ \(vx :: Int) ->
+  forAll (choose (0, 2^(n - 1))) $ \(vy :: Int) ->
+  let 
+      n = n
+      mkRzValue = toRzValue n
+      toValue rz = NVal rz rz
+      env = adderEnv n
+      expectedSum = vx + vy
+      vars = getVars (adder n xVarv yVarv (Posi cVarv 0))
+      initialState = mkState env [(xVarv, toValue (fromIntegral vx)), (yVarv, toValue (fromIntegral vy))]
+      expectedState = mkState env [(xVarv, toValue (fromIntegral expectedSum))]
+  in
+  stEquiv vars env
+    (execQSym env initialState (interpret (adder n xVarv yVarv (Posi cVarv 0))))
+    expectedState
+-- Variables for the adder test
+xVarv :: Var
+xVarv = Var 0
+
+yVarv :: Var
+yVarv = Var 1
+
+cVarv :: Var
+cVarv = Var 2
+
+-- mkState :: QEnv Int -> [(Var, Value)] -> QState Value
+-- mkState env vars = QState { qEnv = env, qVars = M.fromList vars }
+
+-- stEquiv :: [Var] -> QEnv Int -> QState Value -> QState Value -> Bool
+-- stEquiv vars env st1 st2 = all (\v -> stateGet v st1 == stateGet v st2) vars

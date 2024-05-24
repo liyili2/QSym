@@ -241,7 +241,7 @@ mkQEnv :: [(Var, a)] -> QEnv a
 mkQEnv = QEnv
 
 emptyState :: QEnv a -> QState Value
-emptyState env = QState $ \_ -> liftA2 NVal allFalse allFalse env
+emptyState env = QState $ \_ -> liftM2 NVal allFalse allFalse env
 
 mkState :: QEnv a -> [(Var, Value)] -> QState Value
 mkState env [] = emptyState env
