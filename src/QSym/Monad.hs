@@ -19,6 +19,7 @@ import GHC.Stack
 import QSym.Utils
 import QSym.Syntax
 
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
 
