@@ -213,7 +213,6 @@ checkAdder =
   forAll (choose (0, 2^(n - 1))) $ \(vx :: Int) ->
   forAll (choose (0, 2^(n - 1))) $ \(vy :: Int) ->
   let 
-      n = n
       mkRzValue = toRzValue n
       toValue rz = NVal rz rz
       env = adderEnv n
