@@ -258,7 +258,8 @@ stEquiv vars env st1 st2 =
     lookup v (QState s) = s v
 
 -- TODO: Is this reasonable?
-mkRzValue' :: Integral a => a -> RzValue
+mkRzValue' :: (HasCallStack, Show a, Integral a) => a -> RzValue
+mkRzValue' 0 = RzValue 1 0
 mkRzValue' i =
   let sz = integerLog2 (fromIntegral i) + 1
   in
