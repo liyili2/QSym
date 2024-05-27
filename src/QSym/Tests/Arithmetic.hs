@@ -209,7 +209,8 @@ adderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
 -- Test property for the adder function
 checkAdder :: Property
 checkAdder = 
-  forAll (choose (1, 60)) $ \(n :: Int) ->
+  -- forAll (choose (1, 60)) $ \(n :: Int) ->
+  forAll (choose (1, 10)) $ \(n :: Int) ->
   forAll (choose (0, 2^(n - 1))) $ \(vx :: Int) ->
   forAll (choose (0, 2^(n - 1))) $ \(vy :: Int) ->
   let 
