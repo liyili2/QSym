@@ -14,6 +14,7 @@ main :: IO ()
 main =
   mapM_ quickCheck
     [ checkAdder
+    , checkrzAdder
     -- , checkDivMod
     ]
 

@@ -153,6 +153,35 @@ rzAdder_test x n v =
     , RQFT x 0
     ]
 
+rzadderEnv :: Int -> QEnv Int
+rzadderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
+
+checkrzAdder :: Property
+checkrzAdder = 
+  forAll (choose (0,maxBound `div` 2))$ \(x :: Int) ->
+  forAll (choose (0,maxBound `div` 2))$ \(n :: Int) ->
+    let
+      toValue rz = NVal rz rz
+      expectedSum = x + n
+      env = rzadderEnv n
+      vars = getVars(rzAdder (Var x) n (mkRzValue' n))
+      initialState = mkState env [(xVar, toValue (fromIntegral x)), (yVar, toValue (fromIntegral n))]
+      expectedState = mkState env [(xVar, toValue (fromIntegral expectedSum))]
+      expr = rzAdder xVar n (mkRzValue' n)
+    in
+    stEquiv vars env
+      (execQSym env initialState (interpret expr))
+      expectedState
+
+
+
+
+
+
+
+
+
+
 findNum :: Int -> Int -> Int
 findNum x n = findNum' n x (2 ^ (n-1)) 0
 
@@ -202,7 +231,6 @@ adder n x y c = trace (show y) $  majSeq n x y c <> umaSeq n x y c
 
 adderEnv :: Int -> QEnv Int
 adderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
-
 -- Test property for the adder function
 checkAdder :: Property
 checkAdder = 
@@ -220,3 +248,5 @@ checkAdder =
   stEquiv vars env
     (execQSym env initialState (interpret (adder n xVar yVar (Posi zVar 0))))
     expectedState
+
+
