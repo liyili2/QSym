@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall -O2
+    ghc-options: -Wall
 
 library
     -- Import common warning flags.
@@ -85,6 +85,31 @@ library
     -- Base language which the package is written in.
     default-language: GHC2021
 
+executable QSym
+    hs-source-dirs:      src
+
+    main-is:             Main.hs
+
+    other-modules: QSym.QState
+                   QSym.Syntax
+                   QSym.Interpret
+                   QSym.Monad
+                   QSym.Utils
+                   QSym.Tests.Arithmetic
+
+    build-depends:       base,
+                         tasty,
+                         tasty-golden,
+                         QuickCheck,
+                         mtl,
+                         integer-logarithms,
+                         containers,
+                         QSym
+
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+
 test-suite QSym-tests
     type:                exitcode-stdio-1.0
     hs-source-dirs:      src/test
@@ -95,6 +120,7 @@ test-suite QSym-tests
                          tasty-golden,
                          QuickCheck,
                          QSym
+
 
     -- Base language which the package is written in.
     default-language: GHC2021
