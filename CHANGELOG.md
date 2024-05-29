@@ -1,4 +1,4 @@
-# Revision history for QSym
+# Revision history for qsym
 
 ## 0.1.0.0 -- YYYY-mm-dd
 
