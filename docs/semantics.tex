@@ -1,0 +1,63 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage{proof}
+\usepackage{stmaryrd}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{varwidth}
+% \usepackage{simplebnf}
+
+\lstset{basicstyle=\ttfamily, mathescape=true, literate={~} {$\sim$}{1}}
+
+\newcommand {\ra} {\rightarrow}
+\newcommand {\labinfer} [3] [] {\infer[{\textsc{#1}}]{#2}{#3}}
+\newcommand {\Type} {\textsf{Type}}
+\newcommand {\Nat} {\textsf{Nat}}
+\newcommand {\Bool} {\textsf{Bool}}
+\newcommand {\Vect} {\textsf{Vec}}
+\newcommand {\ok} {\text{ type}}
+\newcommand {\Env} {\textsf{Env}}
+\newcommand {\State} {\textsf{State}}
+\newcommand {\Value} {\textsf{Value}}
+\newcommand {\sem} [1] {\llbracket #1 \rrbracket}
+\newcommand {\Esem} [1] {E\sem{#1}}
+\newcommand {\Expr} {\textsf{Expr}}
+\newcommand {\Cmd} {\textsf{Cmd}}
+\newcommand {\Apply} {\textsf{Apply}}
+\newcommand {\fst} {\ensuremath{\textsf{proj}_1}}
+\newcommand {\snd} {\ensuremath{\textsf{proj}_2}}
+
+\begin{document}
+
+\title{Syntax and Semantics}
+\author{}
+\institute{}
+\maketitle
+
+\section{Syntax}
+
+\section{Typing Rules}
+
+\[
+  \begin{array}{c}
+    \fbox{$\Gamma \vdash C : A$}
+  \end{array}
+\]
+
+\section{Denotational semantics}
+
+\[
+  \begin{array}{c}
+    \fbox{\begin{tabular}{c} $\Esem{\cdot} : \Expr \ra \Value* \ra \State$\\ $\sem{\cdot} : \Cmd \ra \State \ra \State$\end{tabular}}\\\\
+      \sem{\Apply\;\ell\;e}\phi = \left((a, b) \mapsto
+             \begin{cases}
+               (a, \Esem{e}(b)) & (a, b) \in \ell\\
+               (a, b) & (a, b) \not\in \ell
+             \end{cases}\right)
+  \end{array}
+\]
+
+\textbf{TODO}: But what about the permutations?
+
+\end{document}

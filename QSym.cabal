@@ -87,6 +87,7 @@ library
 
 executable QSym
     hs-source-dirs:      src
+    ghc-options:         -XStrict
 
     main-is:             Main.hs
 
