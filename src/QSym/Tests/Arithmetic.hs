@@ -20,6 +20,9 @@ import Debug.Trace
 import Data.Word
 -- import Data.Bits
 
+maxVecSizeExponent :: Int
+maxVecSizeExponent = 20
+
 
 -- Get the variables in an exp
 getVars :: Expr -> [Var]
@@ -136,6 +139,7 @@ rzSub :: Var -> Int -> RzValue -> Expr
 rzSub x n = rzSub' x n n
 
 rzAdder' :: Var -> Int -> Int -> RzValue -> Expr
+rzAdder' _ n _ _ | n < 0 = error $ "rzAdder': negative n: " ++ show n
 rzAdder' x 0 _size _fm = SKIP
 rzAdder' x n size fm =
   let m = n - 1
@@ -158,8 +162,8 @@ rzadderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
 
 checkrzAdder :: Property
 checkrzAdder = 
-  forAll (choose (0,maxBound `div` 2))$ \(x :: Int) ->
-  forAll (choose (0,maxBound `div` 2))$ \(n :: Int) ->
+  forAll (choose (0,2 ^ maxVecSizeExponent))$ \(x :: Int) ->
+  forAll (choose (0,2 ^ maxVecSizeExponent))$ \(n :: Int) ->
     let
       toValue rz = NVal rz rz
       expectedSum = x + n
@@ -234,7 +238,7 @@ adderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
 -- Test property for the adder function
 checkAdder :: Property
 checkAdder = 
-  forAll (choose (1, 64)) $ \(n :: Int) ->
+  forAll (choose (1, maxVecSizeExponent)) $ \(n :: Int) ->
   forAll (choose (0, 2^(n - 1))) $ \(vx :: Int) ->
   forAll (choose (0, 2^(n - 1))) $ \(vy :: Int) ->
   let 

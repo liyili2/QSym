@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cabal build
+cabal build --enable-profiling
