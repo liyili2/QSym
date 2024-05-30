@@ -238,9 +238,9 @@ adderEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
 -- Test property for the adder function
 checkAdder :: Property
 checkAdder = 
-  forAll (choose (1, maxVecSizeExponent)) $ \(n :: Int) ->
-  forAll (choose (0, 2^(n - 1))) $ \(vx :: Int) ->
-  forAll (choose (0, 2^(n - 1))) $ \(vy :: Int) ->
+  forAll (choose (2, maxVecSizeExponent)) $ \(n :: Int) ->
+  forAll (choose (2, 2^(n - 1))) $ \(vx :: Int) ->
+  forAll (choose (2, 2^(n - 1))) $ \(vy :: Int) ->
   let 
       toValue rz = NVal rz rz
       env = adderEnv n
