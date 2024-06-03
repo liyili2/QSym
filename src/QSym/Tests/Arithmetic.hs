@@ -94,16 +94,16 @@ rzDivMod n x ex m =
   let i = findNum m (n-1)
   in
   Rev x <>
-  QFT x n <>
+  QFT x 0 <>
   rzModer' (i + 1) n x ex (mkRzValue' ((2^i) * m)) <>
-  invExpr (Rev x <> QFT x n)
+  invExpr (Rev x <> QFT x 0)
 
 rzModer' :: Int -> Int -> Var -> Var -> RzValue -> Expr
 rzModer' 0 _ x _ _ = SKIP
 rzModer' i n x ex m =
   let j = i - 1
   in
-  rzCompareHalf3 x n (Posi ex j) m <> QFT x n <>
+  rzCompareHalf3 x n (Posi ex j) m <> QFT x 0 <>
   CU (Posi ex j) (rzAdder x n m) <>
   X (Posi ex j) <>
   rzModer' j n x ex (cutN (divTwoSpec m) n)
@@ -118,7 +118,7 @@ rzCompareHalf3 x n c m =
   let p = Posi x 0
   in
   rzSub x n m <>
-  RQFT x n <>
+  RQFT x 0 <>
   cnot p c
   -- let p = Posi x 0
   -- in
@@ -252,5 +252,6 @@ checkAdder =
   stEquiv vars env
     (execQSym env initialState (interpret (adder n xVar yVar (Posi zVar 0))))
     expectedState
+
 
 
