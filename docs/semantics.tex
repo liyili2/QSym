@@ -6,6 +6,7 @@
 \usepackage{amssymb}
 \usepackage{listings}
 \usepackage{varwidth}
+% \usepackage{syntax}
 % \usepackage{simplebnf}
 
 \lstset{basicstyle=\ttfamily, mathescape=true, literate={~} {$\sim$}{1}}
@@ -20,13 +21,18 @@
 \newcommand {\Env} {\textsf{Env}}
 \newcommand {\State} {\textsf{State}}
 \newcommand {\Value} {\textsf{Value}}
+\newcommand {\Locus} {\textsf{Locus}}
+\newcommand {\Loc} {\textsf{Location}}
 \newcommand {\sem} [1] {\llbracket #1 \rrbracket}
 \newcommand {\Esem} [1] {E\sem{#1}}
 \newcommand {\Expr} {\textsf{Expr}}
-\newcommand {\Cmd} {\textsf{Cmd}}
+\newcommand {\Cmd} {\textsf{Stmt}}
 \newcommand {\Apply} {\textsf{Apply}}
 \newcommand {\fst} {\ensuremath{\textsf{proj}_1}}
 \newcommand {\snd} {\ensuremath{\textsf{proj}_2}}
+\newcommand {\Var} {\textsf{Var}}
+\newcommand {\Index} {\textsf{Index}}
+\newcommand {\Cast} {\textsf{Cast}}
 
 \begin{document}
 
@@ -37,6 +43,17 @@
 
 \section{Syntax}
 
+  \begin{tabular}{lll}
+    Expressions\; & e & ::= $x$ $\mid$ $x[i,j)$ $\mid$ $e + e$ $\mid$ $e \cdot e$\\
+    Statement\; & s & ::= s ; s $\mid$ $\Apply$ $\ell$ $e$ $\mid$ $\Cast$ $\ell$ $\ell'$
+  \end{tabular}
+
+% \begin{center}
+% \begin{bnf}
+%   s : \Cmd ::= s ; s $\mid$ \Apply\;\ell\;e;;
+% \end{bnf}
+% \end{center}
+
 \section{Typing Rules}
 
 \[
@@ -46,15 +63,27 @@
 \]
 
 \section{Denotational semantics}
+    \fbox{
+      \begin{minipage}{\textwidth}
+      \[
+      \begin{array}{ll}
+                \Esem{\cdot} &{}: \Expr \ra ((\Value \times \Locus) \ra \State)\\
+                \sem{\cdot} &{}: \Cmd \ra (\State \ra \State)\\
+                \State &{}= \Loc \ra \Value\\
+                \Loc &{}= \Var \times \Index
+          \end{array}
+        \]
+      \end{minipage}
+}
+
+\subsection{Semantics of expressions}
+
+\subsection{Semantics of statements}
 
 \[
   \begin{array}{c}
-    \fbox{\begin{tabular}{c} $\Esem{\cdot} : \Expr \ra \Value* \ra \State$\\ $\sem{\cdot} : \Cmd \ra \State \ra \State$\end{tabular}}\\\\
-      \sem{\Apply\;\ell\;e}\phi = \left((a, b) \mapsto
-             \begin{cases}
-               (a, \Esem{e}(b)) & (a, b) \in \ell\\
-               (a, b) & (a, b) \not\in \ell
-             \end{cases}\right)
+      \sem{\Apply\;\ell\;e}\phi = (a, b) \mapsto
+               (a, \Esem{e}(b, \ell))
   \end{array}
 \]
 
