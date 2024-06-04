@@ -44,8 +44,9 @@
 \section{Syntax}
 
   \begin{tabular}{lll}
-    Expressions\; & e & ::= $x$ $\mid$ $x[i,j)$ $\mid$ $e + e$ $\mid$ $e \cdot e$\\
-    Statement\; & s & ::= s ; s $\mid$ $\Apply$ $\ell$ $e$ $\mid$ $\Cast$ $\ell$ $\ell'$
+    Locus\; & $\ell$ & ::= $x[i, j)$ $\mid$ $x[i, j) \uplus \ell$\\
+    Expression\; & e & ::= $x$ $\mid$ $x[i,j)$ $\mid$ $e + e$ $\mid$ $e \cdot e$\\
+    Statement\; & s & ::= s ; s $\mid$ $\Apply$ $\ell$ $e$ $\mid$ $\Cast$ $\ell$ $\ell$
   \end{tabular}
 
 % \begin{center}
@@ -82,8 +83,8 @@
 
 \[
   \begin{array}{c}
-      \sem{\Apply\;\ell\;e}\phi = (a, b) \mapsto
-               (a, \Esem{e}(b, \ell))
+      \sem{\Apply\;\ell\;e}\phi = a \mapsto
+               \Esem{e}(a, \ell)
   \end{array}
 \]
 
