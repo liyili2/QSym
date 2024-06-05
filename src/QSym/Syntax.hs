@@ -5,10 +5,13 @@ import QSym.Utils
 import Data.Bits hiding (xor, rotate, rotateR)
 import qualified Data.Bits as Bits
 
+import Numeric.Natural
+
+
 data Posi = -- posi is x[v] where x is a quantum variable and v is an aexp
   Posi
     { posiVar :: Var
-    , posiInt :: Int
+    , posiInt :: Natural
     }
   deriving (Show, Eq)
 
@@ -23,15 +26,15 @@ data Expr
   = SKIP -- do nothing
   | X Posi  -- x[v] posi qubit |0> -> |1> and |1> -> |0>, x is Nor type
   | CU Posi Expr  -- CU on x[v] posi qubit to control if we apply expr, x is Nor type.
-  | RZ Int Posi -- RZ on x[v] posi qubit to rotate Int degree, x is Nor type
-  | RRZ Int Posi -- RRZ on x[v] posi qubit to rotate -Int degree, x is Nor type
-  | SR Int Var -- SR on x array qubit to rotate a series of Int degree, x is Phi type
-  | SRR Int Var -- SRR on x array qubit to rotate a series of -Int degree, x is Phi type
+  | RZ Natural Posi -- RZ on x[v] posi qubit to rotate Natural degree, x is Nor type
+  | RRZ Natural Posi -- RRZ on x[v] posi qubit to rotate -Natural degree, x is Nor type
+  | SR Natural Var -- SR on x array qubit to rotate a series of Natural degree, x is Phi type
+  | SRR Natural Var -- SRR on x array qubit to rotate a series of -Natural degree, x is Phi type
   | Lshift Var  -- left-shift on x array, x is Nor type
   | Rshift Var  -- right shift-on x array, x is Nor type
   | Rev Var     -- rev on x array, x is nor type
-  | QFT Var Int -- QFT x i means "for array named x, change its type from Nor to Phi i"
-  | RQFT Var Int -- RQFT x i means "for array named x, change its type from Phi i to Nor"
+  | QFT Var Natural -- QFT x i means "for array named x, change its type from Nor to Phi i"
+  | RQFT Var Natural -- RQFT x i means "for array named x, change its type from Phi i to Nor"
   | Seq Expr Expr
   -- deriving (Show)
 

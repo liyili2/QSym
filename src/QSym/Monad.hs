@@ -45,14 +45,14 @@ update :: Var -> Value -> QSym ()
 update i new =
   QSym $ modify $ \st -> update' st i new
 
-envGet :: Var -> QSym Int
+envGet :: Var -> QSym Natural
 envGet x = envGet' <$> QSym ask <*> pure x
 
 -- Bit count usually won't change, except Nor -> Phi
 -- (Starts at Nor type)
 -- Initial bit count is determined by the environment size
 data RzValue = RzValue
-  { rzBitCount :: Int
+  { rzBitCount :: Natural
   , rzNatural :: Natural
   }
   deriving (Show) --(Eq, Ord, Num, Bits, Show)
@@ -133,7 +133,7 @@ boolsToRzValue xs0 = go 0 xs0
   where
     len = length xs0
 
-    go i [] = RzValue len 0
+    go i [] = RzValue (intToNatural len) 0
     go i (True:xs) =
       let rest = go (i+1) xs
       in
@@ -141,45 +141,45 @@ boolsToRzValue xs0 = go 0 xs0
     go i (False:xs) = go (i+1) xs
 
 -- TODO: Use a fast implementation
-rotate :: Int -> RzValue -> RzValue
+rotate :: Natural -> RzValue -> RzValue
 rotate i = boolsToRzValue . go i . rzValueToBools
   where
-    go :: Int -> [a] -> [a]
-    go = drop <> take
+    go :: Natural -> [a] -> [a]
+    go n xs = drop (fromIntegral n) xs <> take (fromIntegral n) xs
 
 rzValue :: MonadReader (QEnv a) m => Natural -> m RzValue
 rzValue val = do
   QEnv xs <- ask
-  pure (RzValue (length xs) val)
+  pure (RzValue (intToNatural (length xs)) val)
 
-(!) :: RzValue -> Int -> Bool
-(!) (RzValue _ v) i = testBit v i
+(!) :: RzValue -> Natural -> Bool
+(!) (RzValue _ v) i = testBit v (fromIntegral i)
 
-rzSetBit :: RzValue -> Int -> Bool -> RzValue
+rzSetBit :: RzValue -> Natural -> Bool -> RzValue
 rzSetBit (RzValue sz f) i b = RzValue sz $
   if b
-  then setBit f i
-  else clearBit f i
+  then setBit f (fromIntegral i)
+  else clearBit f (fromIntegral i)
 
-nOnes :: Int -> QSym RzValue
+nOnes :: Natural -> QSym RzValue
 nOnes n | n < 0 = error "nOnes: negative argument"
-nOnes n = rzValue ((1 `shiftL` n) - 1)
+nOnes n = rzValue ((1 `shiftL` (fromIntegral n)) - 1)
 
 -- Left shift
 -- TODO: Should we update the bit size?
-shiftLeft :: RzValue -> Int -> RzValue
+shiftLeft :: RzValue -> Natural -> RzValue
 shiftLeft (RzValue sz f) n =
-  RzValue sz (f `shiftL` n)
+  RzValue sz (f `shiftL` (fromIntegral n))
 
-complementBit :: RzValue -> Int -> RzValue
+complementBit :: RzValue -> Natural -> RzValue
 complementBit (RzValue sz f) i =
-  RzValue sz (f `Bits.complementBit` i)
+  RzValue sz (f `Bits.complementBit` (fromIntegral i))
 
-toRzValue :: Integral a => Int -> a -> RzValue
+toRzValue :: Integral a => Natural -> a -> RzValue
 toRzValue size = RzValue size . fromIntegral
 
 -- Apply the function to bits below the given index
-mapBitsBelow :: Int -> RzValue -> (Int -> Bool) -> RzValue
+mapBitsBelow :: Natural -> RzValue -> (Natural -> Bool) -> RzValue
 mapBitsBelow i0 v0 f = go i0 v0
   where
     go i v
@@ -203,7 +203,7 @@ allFalse = rzValue 0
 
 newtype QEnv a = QEnv [(Var, a)] --(Var -> a)
 
-type QEnv' = QEnv Int
+type QEnv' = QEnv Natural
 
 envGet' :: QEnv a -> Var -> a
 envGet' (QEnv xs) v =
@@ -211,8 +211,8 @@ envGet' (QEnv xs) v =
   in
   r
 
-qenvSize :: QEnv a -> Int
-qenvSize (QEnv xs) = length xs
+qenvSize :: QEnv a -> Natural
+qenvSize (QEnv xs) = intToNatural (length xs)
 
 newtype QState a = QState (Var -> a)
 
@@ -248,7 +248,7 @@ mkState :: QEnv a -> [(Var, Value)] -> QState Value
 mkState env [] = emptyState env
 mkState env ((p, v):rest) = update' (mkState env rest) p v
 
-stEquiv :: [Var] -> QEnv Int -> QState Value -> QState Value -> Property
+stEquiv :: [Var] -> QEnv Natural -> QState Value -> QState Value -> Property
 stEquiv vars env st1 st2 =
     conjoin (map go vars)
   where
@@ -263,7 +263,7 @@ mkRzValue' 0 = RzValue 1 0
 mkRzValue' i =
   let sz = integerLog2 (fromIntegral i) + 1
   in
-  RzValue sz (fromIntegral i)
+  RzValue (intToNatural sz) (fromIntegral i)
 
 
 -- stateFromVars :: [(Var, Bvector)] -> QState Value
@@ -278,7 +278,7 @@ mkRzValue' i =
 --     then new
 --     else atVar env j
 
--- stEquiv :: [Var] -> QEnv Int -> QState Value -> QState Value -> Property
+-- stEquiv :: [Var] -> QEnv Natural -> QState Value -> QState Value -> Property
 -- stEquiv vars env st st' =
 --   forAll (elements vars) $ \x ->
 --     counterexample (show (showVar st x, showVar st' x)) $
@@ -291,7 +291,7 @@ mkRzValue' i =
 --     go n =
 --       showValue (atPosi st (Posi x n)) ++ ", " ++ go (n + 1)
 
--- varEquiv :: QState Value -> QState Value -> Var -> Int -> Property
+-- varEquiv :: QState Value -> QState Value -> Var -> Natural -> Property
 -- varEquiv st st' var n =
 --   n /= 0 ==>
 --     let n' = n - 1
@@ -311,7 +311,7 @@ mkRzValue' i =
 -- upToCutoff :: RzValue -> [Bool]
 -- upToCutoff = zipWith (flip (!)) [0..bitCheckCutoff] . repeat
 
--- toInt :: RzValue -> Int
+-- toInt :: RzValue -> Natural
 -- toInt = go 0 . upToCutoff
 --   where
 --     go i [] = 0
@@ -335,3 +335,7 @@ mkRzValue' i =
 --     Nothing -> error $ "Cannot find " ++ show x ++ " in " ++ show xs
 --     Just y -> y
 --
+
+
+intToNatural :: Int -> Natural
+intToNatural = fromIntegral

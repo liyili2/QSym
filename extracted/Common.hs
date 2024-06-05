@@ -1,6 +1,9 @@
 {-# LANGUAGE NPlusKPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
 
+import Numeric.Natural
+
+
 module Common
   where
 
@@ -13,7 +16,7 @@ type Prod = (,)
 --    Pair a b
 --   deriving (Eq, Show)
 
-type Nat = Int
+type Nat = Natural
 -- data Nat =
 --    O
 --  | S Nat
@@ -42,7 +45,7 @@ data Exp =
  | Seq Exp Exp
  deriving (Show)
 
-type Rz_val = Int
+type Rz_val = Natural
 
 data Val =
    Nval Bool Rz_val

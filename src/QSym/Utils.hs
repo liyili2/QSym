@@ -34,14 +34,14 @@ import Numeric.Natural
 -- data BitVector =
 --   BitVector
 --   { bvNatural :: Natural
---   , bvNumOfBits :: Int -- Number of bits we've used
+--   , bvNumOfBits :: Natural -- Number of bits we've used
 --   }
 --   deriving (Show)
 
 
 
 
-newtype Var = Var Int
+newtype Var = Var Natural
   deriving (Show, Eq, Ord)
 
 xVar, yVar, zVar :: Var
@@ -49,11 +49,11 @@ xVar = Var 0
 yVar = Var 1
 zVar = Var 2
 
--- data Bvector = Bvector Int -- Bit length
+-- data Bvector = Bvector Natural -- Bit length
 --                        Word64 -- Actual bits
 --   deriving (Show, Eq, Ord)
 --
--- genBvector :: Int -> Gen Bvector
+-- genBvector :: Natural -> Gen Bvector
 -- genBvector maxSize =
 --   Bvector maxSize <$> choose (0, 2^maxSize - 1)
 --

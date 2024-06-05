@@ -18,6 +18,9 @@ module QSym.QState ()
 import QSym.Utils
 import Test.QuickCheck
 
--- bitCheckCutoff :: Int
+import Numeric.Natural
+
+
+-- bitCheckCutoff :: Natural
 -- bitCheckCutoff = 63
 

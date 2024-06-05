@@ -4,8 +4,11 @@
 
 module Equiv (st_equivb, Tree (..), Tree0 (..), State) where
 
+import Numeric.Natural
+
+
 import qualified Prelude
-import Prelude (Bool (..), Int, Maybe (..), min, max, succ, Eq (..), Num (..), (&&), (||), mod, Ord ((<), (>), (>=), (<=)), Show)
+import Prelude (Bool (..), Natural, Maybe (..), min, max, succ, Eq (..), Num (..), (&&), (||), mod, Ord ((<), (>), (>=), (<=)), Show)
 import Data.Bits (shiftR)
 
 import Common
@@ -106,7 +109,7 @@ compSpec2Type :: a1 -> a1 -> Comparison -> CompSpecT a1
 compSpec2Type _ _ =
   compareSpec2Type
 
-add :: Int -> Int -> Int
+add :: Natural -> Natural -> Natural
 add = (+)
 
 bool_dec :: Bool -> Bool -> Bool
@@ -128,19 +131,19 @@ iff_reflect b =
    True -> and_rec (\_ _ -> ReflectT);
    False -> and_rec (\_ _ -> ReflectF)}
 
-eqb :: Int -> Int -> Bool
+eqb :: Natural -> Natural -> Bool
 eqb = (==)
 
-compare :: Int -> Int -> Comparison
+compare :: Natural -> Natural -> Comparison
 compare = \ n m -> if n==m then Eq else if n<m then Lt else Gt
 
--- succ :: Int -> Int
+-- succ :: Natural -> Natural
 -- succ = Pervasives.succ
 
-add0 :: Int -> Int -> Int
+add0 :: Natural -> Natural -> Natural
 add0 = (+)
 
-add_carry :: Int -> Int -> Int
+add_carry :: Natural -> Natural -> Natural
 add_carry x y =
   (\ f2p1 f2p f1 p -> if p==1 then f1 () else if p `mod` 2 == 0 then f2p (p `shiftR` 1) else f2p1 (p `shiftR` 1))
     (\p ->
@@ -163,7 +166,7 @@ add_carry x y =
       y)
     x
 
-pred_double :: Int -> Int
+pred_double :: Natural -> Natural
 pred_double x =
   (\ f2p1 f2p f1 p -> if p==1 then f1 () else if p `mod` 2 == 0 then f2p (p `shiftR` 1) else f2p1 (p `shiftR` 1))
     (\p -> (\ p->1+2*p) ((\ p->2*p) p))
@@ -171,10 +174,10 @@ pred_double x =
     (\_ -> 1)
     x
 
-compare_cont :: Comparison -> Int -> Int -> Comparison
+compare_cont :: Comparison -> Natural -> Natural -> Comparison
 compare_cont = \ c x y -> if x==y then c else if x<y then Lt else Gt
 
-compare0 :: Int -> Int -> Comparison
+compare0 :: Natural -> Natural -> Comparison
 compare0 = \ x y -> if x==y then Eq else if x<y then Lt else Gt
 
 fold_right :: (a2 -> a1 -> a1) -> a1 -> ([] a2) -> a1
@@ -183,7 +186,7 @@ fold_right f a0 l =
    [] -> a0;
    ( : ) b t -> f b (fold_right f a0 t)}
 
-double :: Int -> Int
+double :: Natural -> Natural
 double x =
   (\ f0 fp fn z -> if z==0 then f0 () else if z>0 then fp z else fn (-z))
     (\_ -> 0)
@@ -191,7 +194,7 @@ double x =
     (\p -> (~-) ((\ p->2*p) p))
     x
 
-succ_double :: Int -> Int
+succ_double :: Natural -> Natural
 succ_double x =
   (\ f0 fp fn z -> if z==0 then f0 () else if z>0 then fp z else fn (-z))
     (\_ ->  1)
@@ -199,7 +202,7 @@ succ_double x =
     (\p -> (~-) (pred_double p))
     x
 
-pred_double0 :: Int -> Int
+pred_double0 :: Natural -> Natural
 pred_double0 x =
   (\ f0 fp fn z -> if z==0 then f0 () else if z>0 then fp z else fn (-z))
     (\_ -> (~-) 1)
@@ -207,7 +210,7 @@ pred_double0 x =
     (\p -> (~-) ((\ p->1+2*p) p))
     x
 
-pos_sub :: Int -> Int -> Int
+pos_sub :: Natural -> Natural -> Natural
 pos_sub x y =
   (\ f2p1 f2p f1 p -> if p==1 then f1 () else if p `mod` 2 == 0 then f2p (p `shiftR` 1) else f2p1 (p `shiftR` 1))
     (\p ->
@@ -230,25 +233,25 @@ pos_sub x y =
       y)
     x
 
-add1 :: Int -> Int -> Int
+add1 :: Natural -> Natural -> Natural
 add1 = (+)
 
-compare1 :: Int -> Int -> Comparison
+compare1 :: Natural -> Natural -> Comparison
 compare1 = \ x y -> if x==y then Eq else if x<y then Lt else Gt
 
-leb :: Int -> Int -> Bool
+leb :: Natural -> Natural -> Bool
 leb x y =
   case compare1 x y of {
    Gt -> False;
    _ -> True}
 
-ltb :: Int -> Int -> Bool
+ltb :: Natural -> Natural -> Bool
 ltb x y =
   case compare1 x y of {
    Lt -> True;
    _ -> False}
 
--- max :: Int -> Int -> Int
+-- max :: Natural -> Natural -> Natural
 -- max = Pervasives.max
 
 type Decidable = Bool
@@ -271,43 +274,43 @@ compare_rec :: a1 -> a1 -> (() -> a2) -> (() -> a2) -> (() -> a2) -> (Compare
 compare_rec =
   compare_rect
 
-type T = Int
+type T = Natural
 
-_0 :: Int
+_0 :: Natural
 _0 =
   0
 
-_1 :: Int
+_1 :: Natural
 _1 =
    1
 
-_2 :: Int
+_2 :: Natural
 _2 =
    ((\ p->2*p) 1)
 
-add2 :: Int -> Int -> Int
+add2 :: Natural -> Natural -> Natural
 add2 =
   add1
 
-max0 :: Int -> Int -> Int
+max0 :: Natural -> Natural -> Natural
 max0 =
   max
 
-ltb0 :: Int -> Int -> Bool
+ltb0 :: Natural -> Natural -> Bool
 ltb0 =
   ltb
 
-leb0 :: Int -> Int -> Bool
+leb0 :: Natural -> Natural -> Bool
 leb0 =
   leb
 
-gt_le_dec :: Int -> Int -> Bool
+gt_le_dec :: Natural -> Natural -> Bool
 gt_le_dec i j =
   let {b = ltb j i} in case b of {
                         True -> True;
                         False -> False}
 
-ge_lt_dec :: Int -> Int -> Bool
+ge_lt_dec :: Natural -> Natural -> Bool
 ge_lt_dec i j =
   let {b = ltb i j} in case b of {
                         True -> False;
@@ -320,56 +323,56 @@ dec :: Dec -> Decidable
 dec dec0 =
   dec0
 
-beq_reflect :: Int -> Int -> Reflect
+beq_reflect :: Natural -> Natural -> Reflect
 beq_reflect x y =
   iff_reflect (eqb x y)
 
-compare2 :: Int -> Int -> Compare Int
+compare2 :: Natural -> Natural -> Compare Natural
 compare2 x y =
   case compare x y of {
    Eq -> EQ;
    Lt -> LT;
    Gt -> GT}
 
-eq_dec :: Int -> Int -> Bool
+eq_dec :: Natural -> Natural -> Bool
 eq_dec =
   (==)
 
-type T0 = Int
+type T0 = Natural
 
-eq_dec0 :: Int -> Int -> Bool
+eq_dec0 :: Natural -> Natural -> Bool
 eq_dec0 =
   eq_dec
 
-lt_dec :: Int -> Int -> Bool
+lt_dec :: Natural -> Natural -> Bool
 lt_dec x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare2 x y)
 
-eqb0 :: Int -> Int -> Bool
+eqb0 :: Natural -> Natural -> Bool
 eqb0 x y =
   case eq_dec0 x y of {
    True -> True;
    False -> False}
 
-type T1 = Int
+type T1 = Natural
 
-eq_dec1 :: Int -> Int -> Bool
+eq_dec1 :: Natural -> Natural -> Bool
 eq_dec1 =
   eq_dec
 
-lt_dec0 :: Int -> Int -> Bool
+lt_dec0 :: Natural -> Natural -> Bool
 lt_dec0 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare2 x y)
 
-eqb1 :: Int -> Int -> Bool
+eqb1 :: Natural -> Natural -> Bool
 eqb1 x y =
   case eq_dec1 x y of {
    True -> True;
    False -> False}
 
-type T2 = ( , ) Int Int
+type T2 = ( , ) Natural Natural
 
-compare3 :: T2 -> T2 -> Compare (( , ) Int Int)
+compare3 :: T2 -> T2 -> Compare (( , ) Natural Natural)
 compare3 x y =
   case x of {
     (x1, x2) ->
@@ -390,41 +393,41 @@ eq_dec2 :: T2 -> T2 -> Bool
 eq_dec2 x y =
   compare_rec x y (\_ -> False) (\_ -> True) (\_ -> False) (compare3 x y)
 
-type T3 = Int
+type T3 = Natural
 
-eq_dec3 :: Int -> Int -> Bool
+eq_dec3 :: Natural -> Natural -> Bool
 eq_dec3 =
   eq_dec
 
-lt_dec1 :: Int -> Int -> Bool
+lt_dec1 :: Natural -> Natural -> Bool
 lt_dec1 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare2 x y)
 
-eqb2 :: Int -> Int -> Bool
+eqb2 :: Natural -> Natural -> Bool
 eqb2 x y =
   case eq_dec3 x y of {
    True -> True;
    False -> False}
 
-type T4 = Int
+type T4 = Natural
 
-eq_dec4 :: Int -> Int -> Bool
+eq_dec4 :: Natural -> Natural -> Bool
 eq_dec4 =
   eq_dec
 
-lt_dec2 :: Int -> Int -> Bool
+lt_dec2 :: Natural -> Natural -> Bool
 lt_dec2 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare2 x y)
 
-eqb3 :: Int -> Int -> Bool
+eqb3 :: Natural -> Natural -> Bool
 eqb3 x y =
   case eq_dec4 x y of {
    True -> True;
    False -> False}
 
-type T5 = ( , ) Int Int
+type T5 = ( , ) Natural Natural
 
-compare4 :: T5 -> T5 -> Compare (( , ) Int Int)
+compare4 :: T5 -> T5 -> Compare (( , ) Natural Natural)
 compare4 x y =
   case x of {
     (x1, x2) ->
@@ -445,7 +448,7 @@ eq_dec5 :: T5 -> T5 -> Bool
 eq_dec5 x y =
   compare_rec x y (\_ -> False) (\_ -> True) (\_ -> False) (compare4 x y)
 
-type Key = ( , ) Int Int
+type Key = ( , ) Natural Natural
 
 data Tree elt =
    Leaf
@@ -471,7 +474,7 @@ height m =
    Leaf -> _0;
    Node _ _ _ _ h -> h}
 
-cardinal :: (Tree a1) -> Int
+cardinal :: (Tree a1) -> Natural
 cardinal m =
   case m of {
    Leaf -> 0;
@@ -487,7 +490,7 @@ is_empty m =
    Leaf -> True;
    Node _ _ _ _ _ -> False}
 
-mem :: (( , ) Int Int) -> (Tree a1) -> Bool
+mem :: (( , ) Natural Natural) -> (Tree a1) -> Bool
 mem x m =
   case m of {
    Leaf -> False;
@@ -497,7 +500,7 @@ mem x m =
      EQ -> True;
      GT -> mem x r}}
 
-find :: (( , ) Int Int) -> (Tree a1) -> Maybe a1
+find :: (( , ) Natural Natural) -> (Tree a1) -> Maybe a1
 find x m =
   case m of {
    Leaf -> Nothing;
@@ -577,7 +580,7 @@ merge s1 s2 =
         (s2', p) -> case p of {
                    (x, d) -> bal s1 x d s2'}}}}
 
-remove :: (( , ) Int Int) -> (Tree a1) -> Tree a1
+remove :: (( , ) Natural Natural) -> (Tree a1) -> Tree a1
 remove x m =
   case m of {
    Leaf -> Leaf;
@@ -623,7 +626,7 @@ t_right t =
   case t of {
    Mktriple _ _ t_right1 -> t_right1}
 
-split :: (( , ) Int Int) -> (Tree a1) -> Triple a1
+split :: (( , ) Natural Natural) -> (Tree a1) -> Triple a1
 split x m =
   case m of {
    Leaf -> Mktriple Leaf Nothing Leaf;
@@ -686,7 +689,7 @@ cons m e =
    Leaf -> e;
    Node l x d r _ -> cons l (More x d r e)}
 
-equal_more :: (a1 -> a1 -> Bool) -> (( , ) Int Int) -> a1 -> ((Enumeration
+equal_more :: (a1 -> a1 -> Bool) -> (( , ) Natural Natural) -> a1 -> ((Enumeration
               a1) -> Bool) -> (Enumeration a1) -> Bool
 equal_more cmp x1 d1 cont e2 =
   case e2 of {
@@ -762,73 +765,73 @@ map2 f =
   map2_opt (\_ d o -> f (Just d) o) (map_option (\_ d -> f (Just d) Nothing))
     (map_option (\_ d' -> f Nothing (Just d')))
 
-type T6 = ( , ) Int Int
+type T6 = ( , ) Natural Natural
 
-eq_dec6 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eq_dec6 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eq_dec6 =
   eq_dec2
 
-lt_dec3 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+lt_dec3 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 lt_dec3 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare3 x y)
 
-eqb4 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eqb4 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eqb4 x y =
   case eq_dec6 x y of {
    True -> True;
    False -> False}
 
-type T7 = ( , ) Int Int
+type T7 = ( , ) Natural Natural
 
-eq_dec7 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eq_dec7 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eq_dec7 =
   eq_dec2
 
-lt_dec4 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+lt_dec4 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 lt_dec4 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare3 x y)
 
-eqb5 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eqb5 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eqb5 x y =
   case eq_dec7 x y of {
    True -> True;
    False -> False}
 
-type T8 = ( , ) Int Int
+type T8 = ( , ) Natural Natural
 
-eq_dec8 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eq_dec8 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eq_dec8 =
   eq_dec2
 
-lt_dec5 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+lt_dec5 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 lt_dec5 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare3 x y)
 
-eqb6 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eqb6 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eqb6 x y =
   case eq_dec8 x y of {
    True -> True;
    False -> False}
 
-type T9 = ( , ) Int Int
+type T9 = ( , ) Natural Natural
 
-eq_dec9 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eq_dec9 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eq_dec9 =
   eq_dec2
 
-lt_dec6 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+lt_dec6 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 lt_dec6 x y =
   compare_rec x y (\_ -> True) (\_ -> False) (\_ -> False) (compare3 x y)
 
-eqb7 :: (( , ) Int Int) -> (( , ) Int Int) -> Bool
+eqb7 :: (( , ) Natural Natural) -> (( , ) Natural Natural) -> Bool
 eqb7 x y =
   case eq_dec9 x y of {
    True -> True;
    False -> False}
 
-type Key0 = ( , ) Int Int
+type Key0 = ( , ) Natural Natural
 
-type T10 elt = [] (( , ) (( , ) Int Int) elt)
+type T10 elt = [] (( , ) (( , ) Natural Natural) elt)
 
 empty0 :: T10 a1
 empty0 =
@@ -854,17 +857,17 @@ mem0 k s =
 
 data R_mem elt =
    R_mem_0 (T10 elt)
- | R_mem_1 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_mem_2 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_mem_3 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
+ | R_mem_1 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_mem_2 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_mem_3 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
  Bool (R_mem elt)
 
-r_mem_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-              Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-              () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-              a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> Bool -> (R_mem
+r_mem_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+              Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+              () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+              a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> Bool -> (R_mem
               a1) -> a2 -> a2) -> (T10 a1) -> Bool -> (R_mem a1) -> a2
 r_mem_rect k f f0 f1 f2 _ _ r =
   case r of {
@@ -874,21 +877,21 @@ r_mem_rect k f f0 f1 f2 _ _ r =
    R_mem_3 s k' _x l _res r0 ->
     f2 s k' _x l __ __ __ _res r0 (r_mem_rect k f f0 f1 f2 l _res r0)}
 
-r_mem_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-             Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-             () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-             a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> Bool -> (R_mem
+r_mem_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+             Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+             () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+             a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> Bool -> (R_mem
              a1) -> a2 -> a2) -> (T10 a1) -> Bool -> (R_mem a1) -> a2
 r_mem_rec =
   r_mem_rect
 
-mem_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-            Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> ()
-            -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-            (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-            a1) -> (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1))
+mem_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+            Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> ()
+            -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+            (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+            a1) -> (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1))
             -> () -> () -> () -> a2 -> a2) -> (T10 a1) -> a2
 mem_rect k f2 f1 f0 f s =
   eq_rect_r
@@ -921,11 +924,11 @@ mem_rect k f2 f1 f0 f s =
           EQ -> f9 __ __;
           GT -> f8 __ __}}}) (mem0 k s)
 
-mem_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-           Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> ()
-           -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-           (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-           a1) -> (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1))
+mem_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+           Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> ()
+           -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+           (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+           a1) -> (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1))
            -> () -> () -> () -> a2 -> a2) -> (T10 a1) -> a2
 mem_rec =
   mem_rect
@@ -953,17 +956,17 @@ find0 k s =
 
 data R_find elt =
    R_find_0 (T10 elt)
- | R_find_1 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_find_2 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_find_3 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
+ | R_find_1 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_find_2 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_find_3 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
  (Maybe elt) (R_find elt)
 
 r_find_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-               Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () ->
-               () -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-               a1) -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (Maybe
+               Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () ->
+               () -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+               a1) -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (Maybe
                a1) -> (R_find a1) -> a2 -> a2) -> (T10 a1) -> (Maybe
                a1) -> (R_find a1) -> a2
 r_find_rect k f f0 f1 f2 _ _ r =
@@ -974,23 +977,23 @@ r_find_rect k f f0 f1 f2 _ _ r =
    R_find_3 s k' x s' _res r0 ->
     f2 s k' x s' __ __ __ _res r0 (r_find_rect k f f0 f1 f2 s' _res r0)}
 
-r_find_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-              Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-              () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-              a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (Maybe
+r_find_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+              Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+              () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+              a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (Maybe
               a1) -> (R_find a1) -> a2 -> a2) -> (T10 a1) -> (Maybe
               a1) -> (R_find a1) -> a2
 r_find_rec =
   r_find_rect
 
-find_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-             Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-             () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-             a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2 -> a2) ->
+find_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+             Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+             () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+             a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2 -> a2) ->
              (T10 a1) -> a2
 find_rect k f2 f1 f0 f s =
   eq_rect_r
@@ -1024,11 +1027,11 @@ find_rect k f2 f1 f0 f s =
           EQ -> f9 __ __;
           GT -> f8 __ __}}}) (find0 k s)
 
-find_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-            Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> ()
-            -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-            (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-            a1) -> (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1))
+find_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+            Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> ()
+            -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+            (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+            a1) -> (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1))
             -> () -> () -> () -> a2 -> a2) -> (T10 a1) -> a2
 find_rec =
   find_rect
@@ -1056,17 +1059,17 @@ add4 k x s =
 
 data R_add elt =
    R_add_0 (T10 elt)
- | R_add_1 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_add_2 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
- | R_add_3 (T10 elt) (( , ) Int Int) elt ([] (( , ) (( , ) Int Int) elt))
+ | R_add_1 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_add_2 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
+ | R_add_3 (T10 elt) (( , ) Natural Natural) elt ([] (( , ) (( , ) Natural Natural) elt))
  (T10 elt) (R_add elt)
 
 r_add_rect :: Key0 -> a1 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-              Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> ()
-              -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-              a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (T10 a1) ->
+              Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> ()
+              -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+              a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (T10 a1) ->
               (R_add a1) -> a2 -> a2) -> (T10 a1) -> (T10 a1) -> (R_add
               a1) -> a2
 r_add_rect k x f f0 f1 f2 _ _ r =
@@ -1078,21 +1081,21 @@ r_add_rect k x f f0 f1 f2 _ _ r =
     f2 s k' y l __ __ __ _res r0 (r_add_rect k x f f0 f1 f2 l _res r0)}
 
 r_add_rec :: Key0 -> a1 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-             Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> ()
-             -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-             a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (T10 a1) ->
+             Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> ()
+             -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+             a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (T10 a1) ->
              (R_add a1) -> a2 -> a2) -> (T10 a1) -> (T10 a1) -> (R_add
              a1) -> a2
 r_add_rec =
   r_add_rect
 
 add_rect :: Key0 -> a1 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-            Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> ()
-            -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-            (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-            a1) -> (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1))
+            Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> ()
+            -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+            (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+            a1) -> (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1))
             -> () -> () -> () -> a2 -> a2) -> (T10 a1) -> a2
 add_rect k x f2 f1 f0 f s =
   eq_rect_r
@@ -1127,10 +1130,10 @@ add_rect k x f2 f1 f0 f s =
           GT -> f8 __ __}}}) (add4 k x s)
 
 add_rec :: Key0 -> a1 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-           Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-           () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-           (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-           a1) -> (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1))
+           Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+           () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+           (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+           a1) -> (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1))
            -> () -> () -> () -> a2 -> a2) -> (T10 a1) -> a2
 add_rec =
   add_rect
@@ -1160,20 +1163,20 @@ remove0 k s =
 
 data R_remove elt =
    R_remove_0 (T10 elt)
- | R_remove_1 (T10 elt) (( , ) Int Int) elt ([]
-                                            (( , ) (( , ) Int Int) elt))
- | R_remove_2 (T10 elt) (( , ) Int Int) elt ([]
-                                            (( , ) (( , ) Int Int) elt))
- | R_remove_3 (T10 elt) (( , ) Int Int) elt ([]
-                                            (( , ) (( , ) Int Int) elt))
+ | R_remove_1 (T10 elt) (( , ) Natural Natural) elt ([]
+                                            (( , ) (( , ) Natural Natural) elt))
+ | R_remove_2 (T10 elt) (( , ) Natural Natural) elt ([]
+                                            (( , ) (( , ) Natural Natural) elt))
+ | R_remove_3 (T10 elt) (( , ) Natural Natural) elt ([]
+                                            (( , ) (( , ) Natural Natural) elt))
  (T10 elt) (R_remove elt)
 
 r_remove_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-                 Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () ->
-                 () -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 ->
-                 ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2)
-                 -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-                 (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (T10
+                 Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () ->
+                 () -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 ->
+                 ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2)
+                 -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+                 (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (T10
                  a1) -> (R_remove a1) -> a2 -> a2) -> (T10 a1) -> (T10
                  a1) -> (R_remove a1) -> a2
 r_remove_rect k f f0 f1 f2 _ _ r =
@@ -1185,22 +1188,22 @@ r_remove_rect k f f0 f1 f2 _ _ r =
     f2 s k' x l __ __ __ _res r0 (r_remove_rect k f f0 f1 f2 l _res r0)}
 
 r_remove_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-                Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () ->
-                () -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 ->
-                ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) ->
-                ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-                (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> (T10
+                Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () ->
+                () -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 ->
+                ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) ->
+                ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+                (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> (T10
                 a1) -> (R_remove a1) -> a2 -> a2) -> (T10 a1) -> (T10
                 a1) -> (R_remove a1) -> a2
 r_remove_rec =
   r_remove_rect
 
 remove_rect :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , )
-               Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () ->
-               () -> () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-               a1) -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2 -> a2) ->
+               Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () ->
+               () -> () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+               a1) -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2 -> a2) ->
                (T10 a1) -> a2
 remove_rect k f2 f1 f0 f s =
   eq_rect_r
@@ -1234,12 +1237,12 @@ remove_rect k f2 f1 f0 f s =
           EQ -> f9 __ __;
           GT -> f8 __ __}}}) (remove0 k s)
 
-remove_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Int
-              Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> () ->
-              () -> a2) -> ((T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2) -> ((T10
-              a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2 -> a2) ->
+remove_rec :: Key0 -> ((T10 a1) -> () -> a2) -> ((T10 a1) -> (( , ) Natural
+              Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () ->
+              () -> a2) -> ((T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2) -> ((T10
+              a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2 -> a2) ->
               (T10 a1) -> a2
 remove_rec =
   remove_rect
@@ -1266,13 +1269,13 @@ fold0 f m acc =
 
 data R_fold elt a =
    R_fold_0 (T10 elt) a
- | R_fold_1 (T10 elt) a (( , ) Int Int) elt ([]
-                                            (( , ) (( , ) Int Int) elt))
+ | R_fold_1 (T10 elt) a (( , ) Natural Natural) elt ([]
+                                            (( , ) (( , ) Natural Natural) elt))
  a (R_fold elt a)
 
 r_fold_rect :: (Key0 -> a1 -> a2 -> a2) -> ((T10 a1) -> a2 -> () -> a3) ->
-               ((T10 a1) -> a2 -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> a2 -> (R_fold a1
+               ((T10 a1) -> a2 -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> a2 -> (R_fold a1
                a2) -> a3 -> a3) -> (T10 a1) -> a2 -> a2 -> (R_fold a1
                a2) -> a3
 r_fold_rect f f0 f1 _ _ _ r =
@@ -1282,15 +1285,15 @@ r_fold_rect f f0 f1 _ _ _ r =
     f1 m acc k e m' __ _res r0 (r_fold_rect f f0 f1 m' (f k e acc) _res r0)}
 
 r_fold_rec :: (Key0 -> a1 -> a2 -> a2) -> ((T10 a1) -> a2 -> () -> a3) ->
-              ((T10 a1) -> a2 -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> a2 -> (R_fold a1 a2) -> a3
+              ((T10 a1) -> a2 -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> a2 -> (R_fold a1 a2) -> a3
               -> a3) -> (T10 a1) -> a2 -> a2 -> (R_fold a1 a2) -> a3
 r_fold_rec =
   r_fold_rect
 
 fold_rect :: (Key0 -> a1 -> a2 -> a2) -> ((T10 a1) -> a2 -> () -> a3) ->
-             ((T10 a1) -> a2 -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> a3 -> a3) -> (T10 a1) -> a2
+             ((T10 a1) -> a2 -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> a3 -> a3) -> (T10 a1) -> a2
              -> a3
 fold_rect f1 f0 f m acc =
   eq_rect_r
@@ -1310,8 +1313,8 @@ fold_rect f1 f0 f m acc =
     (fold0 f1 m acc)
 
 fold_rec :: (Key0 -> a1 -> a2 -> a2) -> ((T10 a1) -> a2 -> () -> a3) -> ((T10
-            a1) -> a2 -> (( , ) Int Int) -> a1 -> ([]
-            (( , ) (( , ) Int Int) a1)) -> () -> a3 -> a3) -> (T10 a1) -> a2
+            a1) -> a2 -> (( , ) Natural Natural) -> a1 -> ([]
+            (( , ) (( , ) Natural Natural) a1)) -> () -> a3 -> a3) -> (T10 a1) -> a2
             -> a3
 fold_rec =
   fold_rect
@@ -1345,25 +1348,25 @@ equal0 cmp m m' =
 
 data R_equal elt =
    R_equal_0 (T10 elt) (T10 elt)
- | R_equal_1 (T10 elt) (T10 elt) (( , ) Int Int) elt ([]
-                                                     (( , ) (( , ) Int Int)
-                                                     elt)) (( , ) Int Int)
- elt ([] (( , ) (( , ) Int Int) elt)) Bool (R_equal elt)
- | R_equal_2 (T10 elt) (T10 elt) (( , ) Int Int) elt ([]
-                                                     (( , ) (( , ) Int Int)
-                                                     elt)) (( , ) Int Int)
- elt ([] (( , ) (( , ) Int Int) elt)) (Compare (( , ) Int Int))
+ | R_equal_1 (T10 elt) (T10 elt) (( , ) Natural Natural) elt ([]
+                                                     (( , ) (( , ) Natural Natural)
+                                                     elt)) (( , ) Natural Natural)
+ elt ([] (( , ) (( , ) Natural Natural) elt)) Bool (R_equal elt)
+ | R_equal_2 (T10 elt) (T10 elt) (( , ) Natural Natural) elt ([]
+                                                     (( , ) (( , ) Natural Natural)
+                                                     elt)) (( , ) Natural Natural)
+ elt ([] (( , ) (( , ) Natural Natural) elt)) (Compare (( , ) Natural Natural))
  | R_equal_3 (T10 elt) (T10 elt) (T10 elt) (T10 elt)
 
 r_equal_rect :: (a1 -> a1 -> Bool) -> ((T10 a1) -> (T10 a1) -> () -> () ->
-                a2) -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 ->
-                ([] (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int
-                Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () -> ()
+                a2) -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 ->
+                ([] (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural
+                Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () -> ()
                 -> () -> Bool -> (R_equal a1) -> a2 -> a2) -> ((T10 a1) ->
-                (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-                (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-                ([] (( , ) (( , ) Int Int) a1)) -> () -> (Compare
-                (( , ) Int Int)) -> () -> () -> a2) -> ((T10 a1) -> (T10
+                (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+                (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+                ([] (( , ) (( , ) Natural Natural) a1)) -> () -> (Compare
+                (( , ) Natural Natural)) -> () -> () -> a2) -> ((T10 a1) -> (T10
                 a1) -> (T10 a1) -> () -> (T10 a1) -> () -> () -> a2) -> (T10
                 a1) -> (T10 a1) -> Bool -> (R_equal a1) -> a2
 r_equal_rect cmp f f0 f1 f2 _ _ _ r =
@@ -1376,26 +1379,26 @@ r_equal_rect cmp f f0 f1 f2 _ _ _ r =
    R_equal_3 m m' _x _x0 -> f2 m m' _x __ _x0 __ __}
 
 r_equal_rec :: (a1 -> a1 -> Bool) -> ((T10 a1) -> (T10 a1) -> () -> () -> a2)
-               -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-               (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-               ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> Bool ->
+               -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+               (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+               ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> Bool ->
                (R_equal a1) -> a2 -> a2) -> ((T10 a1) -> (T10 a1) -> (( , )
-               Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) -> () ->
-               (( , ) Int Int) -> a1 -> ([] (( , ) (( , ) Int Int) a1)) ->
-               () -> (Compare (( , ) Int Int)) -> () -> () -> a2) -> ((T10
+               Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) -> () ->
+               (( , ) Natural Natural) -> a1 -> ([] (( , ) (( , ) Natural Natural) a1)) ->
+               () -> (Compare (( , ) Natural Natural)) -> () -> () -> a2) -> ((T10
                a1) -> (T10 a1) -> (T10 a1) -> () -> (T10 a1) -> () -> () ->
                a2) -> (T10 a1) -> (T10 a1) -> Bool -> (R_equal a1) -> a2
 r_equal_rec =
   r_equal_rect
 
 equal_rect :: (a1 -> a1 -> Bool) -> ((T10 a1) -> (T10 a1) -> () -> () -> a2)
-              -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-              ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2 ->
-              a2) -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-              (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-              ([] (( , ) (( , ) Int Int) a1)) -> () -> (Compare
-              (( , ) Int Int)) -> () -> () -> a2) -> ((T10 a1) -> (T10
+              -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+              ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2 ->
+              a2) -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+              (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+              ([] (( , ) (( , ) Natural Natural) a1)) -> () -> (Compare
+              (( , ) Natural Natural)) -> () -> () -> a2) -> ((T10 a1) -> (T10
               a1) -> (T10 a1) -> () -> (T10 a1) -> () -> () -> a2) -> (T10
               a1) -> (T10 a1) -> a2
 equal_rect cmp f2 f1 f0 f m m' =
@@ -1448,13 +1451,13 @@ equal_rect cmp f2 f1 f0 f m m' =
               _ -> f12 __}}}}}) (equal0 cmp m m')
 
 equal_rec :: (a1 -> a1 -> Bool) -> ((T10 a1) -> (T10 a1) -> () -> () -> a2)
-             -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-             ([] (( , ) (( , ) Int Int) a1)) -> () -> () -> () -> a2 -> a2)
-             -> ((T10 a1) -> (T10 a1) -> (( , ) Int Int) -> a1 -> ([]
-             (( , ) (( , ) Int Int) a1)) -> () -> (( , ) Int Int) -> a1 ->
-             ([] (( , ) (( , ) Int Int) a1)) -> () -> (Compare
-             (( , ) Int Int)) -> () -> () -> a2) -> ((T10 a1) -> (T10
+             -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+             ([] (( , ) (( , ) Natural Natural) a1)) -> () -> () -> () -> a2 -> a2)
+             -> ((T10 a1) -> (T10 a1) -> (( , ) Natural Natural) -> a1 -> ([]
+             (( , ) (( , ) Natural Natural) a1)) -> () -> (( , ) Natural Natural) -> a1 ->
+             ([] (( , ) (( , ) Natural Natural) a1)) -> () -> (Compare
+             (( , ) Natural Natural)) -> () -> () -> a2) -> ((T10 a1) -> (T10
              a1) -> (T10 a1) -> () -> (T10 a1) -> () -> () -> a2) -> (T10
              a1) -> (T10 a1) -> a2
 equal_rec =
@@ -1585,7 +1588,7 @@ data R_mem0 elt =
  | R_mem_6 (Tree elt) (Tree elt) Key elt (Tree elt) T
  | R_mem_7 (Tree elt) (Tree elt) Key elt (Tree elt) T Bool (R_mem0 elt)
 
-r_mem_rect0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
+r_mem_rect0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
                (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () ->
                Bool -> (R_mem0 a1) -> a2 -> a2) -> ((Tree a1) -> (Tree
                a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () -> a2) ->
@@ -1601,7 +1604,7 @@ r_mem_rect0 x f f0 f1 f2 _ _ r =
    R_mem_7 m l y _x r0 _x0 _res r1 ->
     f2 m l y _x r0 _x0 __ __ __ _res r1 (r_mem_rect0 x f f0 f1 f2 r0 _res r1)}
 
-r_mem_rec0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
+r_mem_rec0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
               (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () ->
               Bool -> (R_mem0 a1) -> a2 -> a2) -> ((Tree a1) -> (Tree
               a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () -> a2) ->
@@ -1619,7 +1622,7 @@ data R_find0 elt =
  | R_find_7 (Tree elt) (Tree elt) Key elt (Tree elt) T (Maybe elt) (R_find0
                                                                     elt)
 
-r_find_rect0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree
+r_find_rect0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree
                 a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
                 -> () -> (Maybe a1) -> (R_find0 a1) -> a2 -> a2) -> ((Tree
                 a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
@@ -1636,7 +1639,7 @@ r_find_rect0 x f f0 f1 f2 _ _ r =
    R_find_7 m l y d r0 _x _res r1 ->
     f2 m l y d r0 _x __ __ __ _res r1 (r_find_rect0 x f f0 f1 f2 r0 _res r1)}
 
-r_find_rec0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
+r_find_rec0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
                (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () ->
                (Maybe a1) -> (R_find0 a1) -> a2 -> a2) -> ((Tree a1) ->
                (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () ->
@@ -1823,7 +1826,7 @@ data R_remove0 elt =
  | R_remove_7 (Tree elt) (Tree elt) Key elt (Tree elt) T (Tree elt) (R_remove0
                                                                     elt)
 
-r_remove_rect0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree
+r_remove_rect0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree
                   a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
                   -> () -> (Tree a1) -> (R_remove0 a1) -> a2 -> a2) -> ((Tree
                   a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
@@ -1841,7 +1844,7 @@ r_remove_rect0 x f f0 f1 f2 _ _ r =
     f2 m l y d r0 _x __ __ __ _res r1
       (r_remove_rect0 x f f0 f1 f2 r0 _res r1)}
 
-r_remove_rec0 :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree
+r_remove_rec0 :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree
                  a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
                  -> () -> (Tree a1) -> (R_remove0 a1) -> a2 -> a2) -> ((Tree
                  a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
@@ -1890,7 +1893,7 @@ data R_split elt =
  | R_split_3 (Tree elt) (Tree elt) Key elt (Tree elt) T (Triple elt)
  (R_split elt) (Tree elt) (Maybe elt) (Tree elt)
 
-r_split_rect :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree
+r_split_rect :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree
                 a1) -> (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> ()
                 -> () -> (Triple a1) -> (R_split a1) -> a2 -> (Tree a1) ->
                 (Maybe a1) -> (Tree a1) -> () -> a2) -> ((Tree a1) -> (Tree
@@ -1910,7 +1913,7 @@ r_split_rect x f f0 f1 f2 _ _ r =
     f2 m l y d r0 _x __ __ __ _res r1 (r_split_rect x f f0 f1 f2 r0 _res r1)
       rl o rr __}
 
-r_split_rec :: (( , ) Int Int) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
+r_split_rec :: (( , ) Natural Natural) -> ((Tree a1) -> () -> a2) -> ((Tree a1) ->
                (Tree a1) -> Key -> a1 -> (Tree a1) -> T -> () -> () -> () ->
                (Triple a1) -> (R_split a1) -> a2 -> (Tree a1) -> (Maybe
                a1) -> (Tree a1) -> () -> a2) -> ((Tree a1) -> (Tree a1) ->
@@ -2039,7 +2042,7 @@ this b =
 
 type T11 elt = Bst elt
 
-type Key1 = ( , ) Int Int
+type Key1 = ( , ) Natural Natural
 
 empty1 :: T11 a1
 empty1 =
@@ -2082,7 +2085,7 @@ elements1 :: (T11 a1) -> [] (( , ) Key1 a1)
 elements1 m =
   elements (this m)
 
-cardinal0 :: (T11 a1) -> Int
+cardinal0 :: (T11 a1) -> Natural
 cardinal0 m =
   cardinal (this m)
 
@@ -2094,24 +2097,24 @@ equal1 :: (a1 -> a1 -> Bool) -> (T11 a1) -> (T11 a1) -> Bool
 equal1 cmp m m' =
   equal cmp (this m) (this m')
 
-type T12 = Int
+type T12 = Natural
 
-eq_dec10 :: Int -> Int -> Bool
+eq_dec10 :: Natural -> Natural -> Bool
 eq_dec10 =
   eq_dec
 
-compare5 :: Int -> Int -> Comparison
+compare5 :: Natural -> Natural -> Comparison
 compare5 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-type Elt = Int
+type Elt = Natural
 
 data Tree0 =
    Leaf0
- | Node0 T Tree0 Int Tree0
+ | Node0 T Tree0 Natural Tree0
  deriving (Show)
 
 empty2 :: Tree0
@@ -2124,7 +2127,7 @@ is_empty2 t =
    Leaf0 -> True;
    Node0 _ _ _ _ -> False}
 
-mem2 :: Int -> Tree0 -> Bool
+mem2 :: Natural -> Tree0 -> Bool
 mem2 x t =
   case t of {
    Leaf0 -> False;
@@ -2160,40 +2163,40 @@ fold2 f t base =
    Leaf0 -> base;
    Node0 _ l x r -> fold2 f r (f x (fold2 f l base))}
 
-elements_aux0 :: ([] Int) -> Tree0 -> [] Int
+elements_aux0 :: ([] Natural) -> Tree0 -> [] Natural
 elements_aux0 acc s =
   case s of {
    Leaf0 -> acc;
    Node0 _ l x r -> elements_aux0 (( : ) x (elements_aux0 acc r)) l}
 
-elements2 :: Tree0 -> [] Int
+elements2 :: Tree0 -> [] Natural
 elements2 =
   elements_aux0 []
 
-rev_elements_aux :: ([] Int) -> Tree0 -> [] Int
+rev_elements_aux :: ([] Natural) -> Tree0 -> [] Natural
 rev_elements_aux acc s =
   case s of {
    Leaf0 -> acc;
    Node0 _ l x r -> rev_elements_aux (( : ) x (rev_elements_aux acc l)) r}
 
-rev_elements :: Tree0 -> [] Int
+rev_elements :: Tree0 -> [] Natural
 rev_elements =
   rev_elements_aux []
 
-cardinal1 :: Tree0 -> Int
+cardinal1 :: Tree0 -> Natural
 cardinal1 s =
   case s of {
    Leaf0 -> 0;
    Node0 _ l _ r -> succ (add (cardinal1 l) (cardinal1 r))}
 
-maxdepth :: Tree0 -> Int
+maxdepth :: Tree0 -> Natural
 maxdepth s =
   case s of {
    Leaf0 -> 0;
    Node0 _ l _ r -> succ
     (max (maxdepth l) (maxdepth r))}
 
-mindepth :: Tree0 -> Int
+mindepth :: Tree0 -> Natural
 mindepth s =
   case s of {
    Leaf0 -> 0;
@@ -2232,7 +2235,7 @@ cons0 s e =
    Leaf0 -> e;
    Node0 _ l x r -> cons0 l (More0 x r e)}
 
-compare_more :: Int -> (Enumeration0 -> Comparison) -> Enumeration0 ->
+compare_more :: Natural -> (Enumeration0 -> Comparison) -> Enumeration0 ->
                 Comparison
 compare_more x1 cont e2 =
   case e2 of {
@@ -2267,7 +2270,7 @@ equal2 s1 s2 =
    Eq -> True;
    _ -> False}
 
-subsetl :: (Tree0 -> Bool) -> Int -> Tree0 -> Bool
+subsetl :: (Tree0 -> Bool) -> Natural -> Tree0 -> Bool
 subsetl subset_l1 x1 s2 =
   case s2 of {
    Leaf0 -> False;
@@ -2279,7 +2282,7 @@ subsetl subset_l1 x1 s2 =
             True -> subset_l1 s2;
             False -> False}}}
 
-subsetr :: (Tree0 -> Bool) -> Int -> Tree0 -> Bool
+subsetr :: (Tree0 -> Bool) -> Natural -> Tree0 -> Bool
 subsetr subset_r1 x1 s2 =
   case s2 of {
    Leaf0 -> False;
@@ -2320,19 +2323,19 @@ height0 s =
    Leaf0 -> _0;
    Node0 h _ _ _ -> h}
 
-singleton :: Int -> Tree0
+singleton :: Natural -> Tree0
 singleton x =
   Node0 _1 Leaf0 x Leaf0
 
-create0 :: T13 -> Int -> T13 -> Tree0
+create0 :: T13 -> Natural -> T13 -> Tree0
 create0 l x r =
   Node0 (add2 (max0 (height0 l) (height0 r)) _1) l x r
 
-assert_false0 :: T13 -> Int -> T13 -> Tree0
+assert_false0 :: T13 -> Natural -> T13 -> Tree0
 assert_false0 =
   create0
 
-bal0 :: T13 -> Int -> T13 -> Tree0
+bal0 :: T13 -> Natural -> T13 -> Tree0
 bal0 l x r =
   let {hl = height0 l} in
   let {hr = height0 r} in
@@ -2363,7 +2366,7 @@ bal0 l x r =
             create0 (create0 l x rll) rlx (create0 rlr rx rr)}}};
      False -> create0 l x r}}
 
-add6 :: Int -> Tree0 -> Tree0
+add6 :: Natural -> Tree0 -> Tree0
 add6 x s =
   case s of {
    Leaf0 -> Node0 _1 Leaf0 x Leaf0;
@@ -2410,7 +2413,7 @@ merge0 s1 s2 =
       case remove_min0 l2 x2 r2 of {
         (s2', m) -> bal0 s1 m s2'}}}
 
-remove2 :: Int -> Tree0 -> Tree0
+remove2 :: Natural -> Tree0 -> Tree0
 remove2 x s =
   case s of {
    Leaf0 -> Leaf0;
@@ -2449,7 +2452,7 @@ t_right0 t =
   case t of {
    Mktriple0 _ _ t_right1 -> t_right1}
 
-split0 :: Int -> Tree0 -> Triple0
+split0 :: Natural -> Tree0 -> Triple0
 split0 x s =
   case s of {
    Leaf0 -> Mktriple0 Leaf0 False Leaf0;
@@ -2526,7 +2529,7 @@ partition f s =
          True -> (,) (join0 l1 x r1) (concat0 l2 r2);
          False -> (,) (concat0 l1 r1) (join0 l2 x r2)}}}}
 
-ltb_tree :: Int -> Tree0 -> Bool
+ltb_tree :: Natural -> Tree0 -> Bool
 ltb_tree x s =
   case s of {
    Leaf0 -> True;
@@ -2535,7 +2538,7 @@ ltb_tree x s =
      GT -> (&&) (ltb_tree x l) (ltb_tree x r);
      _ -> False}}
 
-gtb_tree :: Int -> Tree0 -> Bool
+gtb_tree :: Natural -> Tree0 -> Bool
 gtb_tree x s =
   case s of {
    Leaf0 -> True;
@@ -2551,37 +2554,37 @@ isok s =
    Node0 _ l x r ->
     (&&) ((&&) ((&&) (isok l) (isok r)) (ltb_tree x l)) (gtb_tree x r)}
 
-type T14 = Int
+type T14 = Natural
 
-compare7 :: Int -> Int -> Comparison
+compare7 :: Natural -> Natural -> Comparison
 compare7 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-eq_dec11 :: Int -> Int -> Bool
+eq_dec11 :: Natural -> Natural -> Bool
 eq_dec11 =
   eq_dec10
 
-type T15 = Int
+type T15 = Natural
 
-compare8 :: Int -> Int -> Comparison
+compare8 :: Natural -> Natural -> Comparison
 compare8 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-eq_dec12 :: Int -> Int -> Bool
+eq_dec12 :: Natural -> Natural -> Bool
 eq_dec12 =
   eq_dec11
 
-eq_dec13 :: Int -> Int -> Bool
+eq_dec13 :: Natural -> Natural -> Bool
 eq_dec13 =
   eq_dec10
 
-lt_dec7 :: Int -> Int -> Bool
+lt_dec7 :: Natural -> Natural -> Bool
 lt_dec7 x y =
   let {
    c = compSpec2Type x y
@@ -2594,7 +2597,7 @@ lt_dec7 x y =
    CompLtT -> True;
    _ -> False}
 
-eqb8 :: Int -> Int -> Bool
+eqb8 :: Natural -> Natural -> Bool
 eqb8 x y =
   case eq_dec13 x y of {
    True -> True;
@@ -2602,47 +2605,47 @@ eqb8 x y =
 
 data R_min_elt =
    R_min_elt_0 Tree0
- | R_min_elt_1 Tree0 T Tree0 Int Tree0
- | R_min_elt_2 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 (Maybe Elt)
+ | R_min_elt_1 Tree0 T Tree0 Natural Tree0
+ | R_min_elt_2 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 (Maybe Elt)
  R_min_elt
 
 data R_max_elt =
    R_max_elt_0 Tree0
- | R_max_elt_1 Tree0 T Tree0 Int Tree0
- | R_max_elt_2 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 (Maybe Elt)
+ | R_max_elt_1 Tree0 T Tree0 Natural Tree0
+ | R_max_elt_2 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 (Maybe Elt)
  R_max_elt
 
-type T16 = Int
+type T16 = Natural
 
-compare9 :: Int -> Int -> Comparison
+compare9 :: Natural -> Natural -> Comparison
 compare9 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-eq_dec14 :: Int -> Int -> Bool
+eq_dec14 :: Natural -> Natural -> Bool
 eq_dec14 =
   eq_dec10
 
-type T17 = Int
+type T17 = Natural
 
-compare10 :: Int -> Int -> Comparison
+compare10 :: Natural -> Natural -> Comparison
 compare10 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-eq_dec15 :: Int -> Int -> Bool
+eq_dec15 :: Natural -> Natural -> Bool
 eq_dec15 =
   eq_dec14
 
-eq_dec16 :: Int -> Int -> Bool
+eq_dec16 :: Natural -> Natural -> Bool
 eq_dec16 =
   eq_dec10
 
-lt_dec8 :: Int -> Int -> Bool
+lt_dec8 :: Natural -> Natural -> Bool
 lt_dec8 x y =
   let {
    c = compSpec2Type x y
@@ -2655,7 +2658,7 @@ lt_dec8 x y =
    CompLtT -> True;
    _ -> False}
 
-eqb9 :: Int -> Int -> Bool
+eqb9 :: Natural -> Natural -> Bool
 eqb9 x y =
   case eq_dec16 x y of {
    True -> True;
@@ -2668,67 +2671,67 @@ flatten_e0 e =
    More0 x t r -> ( : ) x (app (elements2 t) (flatten_e0 r))}
 
 data R_bal0 =
-   R_bal_9 T13 Int T13
- | R_bal_10 T13 Int T13 T Tree0 Int Tree0
- | R_bal_11 T13 Int T13 T Tree0 Int Tree0
- | R_bal_12 T13 Int T13 T Tree0 Int Tree0 T Tree0 Int Tree0
- | R_bal_13 T13 Int T13
- | R_bal_14 T13 Int T13 T Tree0 Int Tree0
- | R_bal_15 T13 Int T13 T Tree0 Int Tree0
- | R_bal_16 T13 Int T13 T Tree0 Int Tree0 T Tree0 Int Tree0
- | R_bal_17 T13 Int T13
+   R_bal_9 T13 Natural T13
+ | R_bal_10 T13 Natural T13 T Tree0 Natural Tree0
+ | R_bal_11 T13 Natural T13 T Tree0 Natural Tree0
+ | R_bal_12 T13 Natural T13 T Tree0 Natural Tree0 T Tree0 Natural Tree0
+ | R_bal_13 T13 Natural T13
+ | R_bal_14 T13 Natural T13 T Tree0 Natural Tree0
+ | R_bal_15 T13 Natural T13 T Tree0 Natural Tree0
+ | R_bal_16 T13 Natural T13 T Tree0 Natural Tree0 T Tree0 Natural Tree0
+ | R_bal_17 T13 Natural T13
 
 data R_remove_min0 =
    R_remove_min_2 Tree0 Elt T13
- | R_remove_min_3 Tree0 Elt T13 T Tree0 Int Tree0 (( , ) T13 Elt) R_remove_min0
+ | R_remove_min_3 Tree0 Elt T13 T Tree0 Natural Tree0 (( , ) T13 Elt) R_remove_min0
  T13 Elt
 
 data R_merge0 =
    R_merge_3 Tree0 Tree0
- | R_merge_4 Tree0 Tree0 T Tree0 Int Tree0
- | R_merge_5 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Elt
+ | R_merge_4 Tree0 Tree0 T Tree0 Natural Tree0
+ | R_merge_5 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Elt
 
 data R_concat0 =
    R_concat_3 Tree0 Tree0
- | R_concat_4 Tree0 Tree0 T Tree0 Int Tree0
- | R_concat_5 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Elt
+ | R_concat_4 Tree0 Tree0 T Tree0 Natural Tree0
+ | R_concat_5 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Elt
 
 data R_inter =
    R_inter_0 Tree0 Tree0
- | R_inter_1 Tree0 Tree0 T Tree0 Int Tree0
- | R_inter_2 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Bool
+ | R_inter_1 Tree0 Tree0 T Tree0 Natural Tree0
+ | R_inter_2 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Bool
  T13 Tree0 R_inter Tree0 R_inter
- | R_inter_3 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Bool
+ | R_inter_3 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Bool
  T13 Tree0 R_inter Tree0 R_inter
 
 data R_diff =
    R_diff_0 Tree0 Tree0
- | R_diff_1 Tree0 Tree0 T Tree0 Int Tree0
- | R_diff_2 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Bool
+ | R_diff_1 Tree0 Tree0 T Tree0 Natural Tree0
+ | R_diff_2 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Bool
  T13 Tree0 R_diff Tree0 R_diff
- | R_diff_3 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Bool
+ | R_diff_3 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Bool
  T13 Tree0 R_diff Tree0 R_diff
 
 data R_union =
    R_union_0 Tree0 Tree0
- | R_union_1 Tree0 Tree0 T Tree0 Int Tree0
- | R_union_2 Tree0 Tree0 T Tree0 Int Tree0 T Tree0 Int Tree0 T13 Bool
+ | R_union_1 Tree0 Tree0 T Tree0 Natural Tree0
+ | R_union_2 Tree0 Tree0 T Tree0 Natural Tree0 T Tree0 Natural Tree0 T13 Bool
  T13 Tree0 R_union Tree0 R_union
 
-type T18 = Int
+type T18 = Natural
 
-compare11 :: Int -> Int -> Comparison
+compare11 :: Natural -> Natural -> Comparison
 compare11 x y =
   case compare2 x y of {
    LT -> Lt;
    EQ -> Eq;
    GT -> Gt}
 
-eq_dec17 :: Int -> Int -> Bool
+eq_dec17 :: Natural -> Natural -> Bool
 eq_dec17 =
   eq_dec10
 
-type Elt0 = Int
+type Elt0 = Natural
 
 type T_ = T13
   -- singleton inductive, whose constructor was Mkt
@@ -2795,7 +2798,7 @@ fold3 :: (Elt0 -> a1 -> a1) -> T19 -> a1 -> a1
 fold3 f s =
   fold2 f (this0 s)
 
-cardinal2 :: T19 -> Int
+cardinal2 :: T19 -> Natural
 cardinal2 s =
   cardinal1 (this0 s)
 
@@ -2874,7 +2877,7 @@ dec_val_eq v v' =
          ReflectT -> eq_rec_r z1' False z1;
          ReflectF -> False}}}}
 
-var_equivb :: State -> State -> Var -> Int -> Bool
+var_equivb :: State -> State -> Var -> Natural -> Bool
 var_equivb st st' var n =
   (\ fO fS n -> if n==0 then fO () else fS (n-1))
     (\_ -> True)
@@ -2884,6 +2887,6 @@ var_equivb st st' var n =
      False -> False})
     n
 
-st_equivb :: T19 -> (Elt0 -> Int) -> State -> State -> Bool
+st_equivb :: T19 -> (Elt0 -> Natural) -> State -> State -> Bool
 st_equivb vars env st st' =
   for_all0 (\x -> var_equivb st st' x (env x)) vars
