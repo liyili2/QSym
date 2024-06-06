@@ -133,9 +133,15 @@ timesRotate (NVal b r) n q = do
 timesRotate (QVal rc r) n q = do
   pure $ QVal rc (r+(2^(n-1-q)))
 
+-- timesRotateR :: Value -> Natural -> Natural -> QSym Value
+-- timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r `rzSubtract` (2^(n-1-q))) else NVal b r
+-- timesRotateR (QVal rc r) n q = pure $ QVal rc (r `rzSubtract` (2^(n-1-q)))
+
+
 timesRotateR :: Value -> Natural -> Natural -> QSym Value
-timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (r `rzSubtract` (2^(n-1-q))) else NVal b r
-timesRotateR (QVal rc r) n q = pure $ QVal rc (r `rzSubtract` (2^(n-1-q)))
+timesRotateR (NVal b r) n q = pure $ if b ! n then NVal b (if r > (2^(n-1-q)) then r - (2^(n-1-q)) else r + 2^n - (2^(n-1-q))) else NVal b r
+timesRotateR (QVal rc r) n q = pure $ QVal rc (if r > (2^(n-1-q)) then r - (2^(n-1-q)) else r + 2^n - (2^(n-1-q)))
+
 
 cutN :: RzValue -> Natural -> RzValue
 cutN (RzValue _sz f) newSz = RzValue newSz f
@@ -195,6 +201,7 @@ reverse (NVal v r) x = do
   pure $ NVal (complementBit v n) r
 reverse (QVal v r) x = pure (QVal v r)
 
+-- TODO:maybe fix, its ok for now
 turnQFT :: Value -> Natural -> Value
 turnQFT (NVal v r) n = QVal r (rotate n v)
 turnQFT (QVal v r) n = QVal v r

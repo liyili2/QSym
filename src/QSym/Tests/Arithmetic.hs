@@ -91,13 +91,14 @@ rzDivModOut size = rzDivMod (size+1) xVar yVar
 
 -- | x = (x % M, x / M) circuit.
 rzDivMod :: Natural -> Var -> Var -> Natural -> Expr
+rzDivMod 0 _ _ _ = error "divmod is 0"
 rzDivMod n x ex m =
   let i = findNum m (n-1)
   in
   Rev x <>
   QFT x 0 <>
   rzModer' (i + 1) n x ex (mkRzValue' ((2^i) * m)) <>
-  invExpr (Rev x <> QFT x 0)
+  invExpr ( QFT x 0)
 
 rzModer' :: Natural -> Natural -> Var -> Var -> RzValue -> Expr
 rzModer' 0 _ x _ _ = SKIP
@@ -107,7 +108,7 @@ rzModer' i n x ex m =
   rzCompareHalf3 x n (Posi ex j) m <> QFT x 0 <>
   CU (Posi ex j) (rzAdder x n m) <>
   X (Posi ex j) <>
-  rzModer' j n x ex (cutN (divTwoSpec m) n)
+  rzModer' j n x ex ((divTwoSpec m))
 
 divTwoSpec :: RzValue -> RzValue
 divTwoSpec v = v `div` 2
@@ -116,7 +117,7 @@ divTwoSpec v = v `div` 2
 -- compare x < m
 rzCompareHalf3 :: Var -> Natural -> Posi -> RzValue -> Expr
 rzCompareHalf3 x n c m =
-  let p = Posi x 0
+  let p = Posi x (n-1)
   in
   rzSub x n m <>
   RQFT x 0 <>
@@ -138,6 +139,45 @@ rzSub' x n size fm =
 
 rzSub :: Var -> Natural -> RzValue -> Expr
 rzSub x n = rzSub' x n n
+
+modSub :: Natural -> Natural -> Natural -> Natural
+modSub size a b = (a - b + 2^size) `mod` (2^size)
+
+rzSub_test :: Var -> Natural -> RzValue -> Expr
+rzSub_test x n v =
+  block
+    [ QFT x 0
+    , rzSub' x n n v
+    , RQFT x 0
+    ]
+
+rzSubEnv :: Natural -> QEnv Natural
+rzSubEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
+
+checkrzSub :: Property
+checkrzSub = 
+  forAll (choose (2, 2 ^ 8)) $ \(xi :: Int) ->
+  forAll (choose (2, 2 ^ 8)) $ \(ni :: Int) ->
+    let
+      x = intToNatural xi
+      n = intToNatural ni
+      toValue rz = NVal rz rz
+      expectedSum = (modSub n n x)
+      env = rzSubEnv n
+      vars = getVars(rzSub (Var x) n (mkRzValue' n))
+      initialState = mkState env [(xVar, toValue (fromIntegral x)), (yVar, toValue (fromIntegral n))]
+      expectedState = mkState env [(xVar, toValue (fromIntegral expectedSum))]
+      expr = rzSub xVar n (mkRzValue' n)
+    in
+    stEquiv vars env
+      (execQSym env initialState (interpret expr))
+      expectedState
+
+
+
+
+
+
 
 rzAdder' :: Var -> Natural -> Natural -> RzValue -> Expr
 rzAdder' _ n _ _ | n < 0 = error $ "rzAdder': negative n: " ++ show n
