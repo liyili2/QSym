@@ -114,7 +114,7 @@ divTwoSpec :: RzValue -> RzValue
 divTwoSpec v = v `div` 2
   --RzValue $ \i -> f ! (i + 1)
 
--- compare x < m
+-- compare x < m --> the value is stored in c : 1 or 0
 rzCompareHalf3 :: Var -> Natural -> Posi -> RzValue -> Expr
 rzCompareHalf3 x n c m =
   let p = Posi x (n-1)
@@ -142,6 +142,8 @@ rzSub x n = rzSub' x n n
 
 modSub :: Natural -> Natural -> Natural -> Natural
 modSub size a b = (a - b + 2^size) `mod` (2^size)
+
+x stores 10 , m = 20 --> 5, 2^5, (x-m) ---> 2^5 + 10 - 20 = 22 
 
 rzSub_test :: Var -> Natural -> RzValue -> Expr
 rzSub_test x n v =
@@ -222,9 +224,29 @@ checkrzAdder =
 
 
 
+--Fixpoint rz_full_adder' (x:var) (n:nat) (size:nat) (y:var) :=
+---  match n with
+--  | 0 => (SKIP (x,0))
+--  | S m => ((CU (y,m) (SR (size - n) x)); rz_full_adder' x m size y)
+--  end.
+-- Definition rz_full_adder (x:var) (n:nat) (y:var) := rz_full_adder' x n n y.
+
+-- we have two arrays, x and y, and they have the same size (size), x,y ---> x,(x+y)%2^size
 
 
 
+---multiplication given array x, and a number M, and an extra qubit array ex (ex starts with 0),
+---- result is x,ex ---> x, (x*M) % 2^size
+
+---Fixpoint nat_mult' (n:nat) (size:nat) (x:var) (ex:var) (M:nat->bool) :=
+--  match n with 
+--  | 0 => SKIP (x,0)
+--  | S m => one_cu_adder ex size (x,m) M; 
+--          nat_mult' m size x ex (cut_n (times_two_spec M) size)
+--  end.
+--Definition nat_mult (size:nat) (x:var) (re:var) (M:nat -> bool) := 
+--   (Rev x; Rev re) ; QFT re size; nat_mult' size size x re M;
+--  RQFT re size; inv_exp ( (Rev x; Rev re)).
 
 
 findNum :: Natural -> Natural -> Natural
