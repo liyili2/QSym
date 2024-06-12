@@ -13,7 +13,7 @@ import QSym.Tests.Arithmetic
 main :: IO ()
 main = 
   mapM_ quickCheck
-    [  checkDivMod
+    [  checkrzDivMod
       --checkrzSub
     -- , checkAdder
     -- , checkrzAdder

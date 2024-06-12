@@ -60,31 +60,59 @@ interpretDivMod n m state =
     (interpret
       (rzDivModOut n m))
 
-checkDivMod :: Property
-checkDivMod =
-  -- forAll (choose (0, 60)) $ \n ->
-  -- forAll (pure 10) $ \n ->
-  -- forAll (pure 60) $ \n ->
-  -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
-  -- forAll (genBvector n) $ \vx ->
-  forAll (pure 5) $ \(nw :: Word64) ->
-  forAll (pure 5) $ \(mw :: Word64) ->
-  let n, m :: Natural
-      n = fromNatural nw
-      m = fromNatural mw
-      mkRzValue = toRzValue n
-      toValue rz = NVal rz rz -- TODO: Does this make sense? 
-      env = divModEnv n
-  in
-  forAll (pure (mkRzValue (22 :: Word64))) $ \vx ->
-  stEquiv (divModVars n) env
-    (interpretDivMod n m
-      (mkState env [(xVar, toValue vx)]))
-    (mkState
-      env
-      [(xVar, toValue (vx `mod` mkRzValue mw))
-      ,(yVar, toValue (vx `div` mkRzValue mw))
-      ])
+
+rzDivModEnv :: Natural -> QEnv Natural
+rzDivModEnv n = mkQEnv $ zip (map Var [0..2]) (repeat (n + 1))
+
+checkrzDivMod :: Property
+checkrzDivMod = 
+  forAll (choose (1, 2 ^ maxVecSizeExponent)) $ \(ni :: Int) ->
+  forAll (choose (1, 2 ^ maxVecSizeExponent)) $ \(mi :: Int) ->
+    let
+      n = intToNatural (maxVecSizeExponent)
+      m = intToNatural mi
+      x = intToNatural ni
+      ex = intToNatural 0
+      env = rzDivModEnv n
+      toValue rz = NVal rz rz
+      vars = getVars(rzDivMod n (Var x) (Var ex) m)
+      initialState = mkState env [(xVar, toValue (fromIntegral x)), (yVar, toValue (fromIntegral ex))]
+      expectedState = mkState env [(xVar, toValue (fromIntegral (x `div` m))),(yVar, toValue (fromIntegral (x `mod` m)))]
+      expr = rzDivMod n (Var x) (Var ex) m
+    in
+    stEquiv vars env
+      (execQSym env initialState (interpret expr))
+      expectedState
+
+
+
+
+
+-- checkDivMod :: Property
+-- checkDivMod =
+--   -- forAll (choose (0, 60)) $ \n ->
+--   -- forAll (pure 10) $ \n ->
+--   -- forAll (pure 60) $ \n ->
+--   -- forAll (choose (1, 2^min n 30 - 1)) $ \m ->
+--   -- forAll (genBvector n) $ \vx ->
+--   forAll (pure 5) $ \(nw :: Word64) ->
+--   forAll (pure 5) $ \(mw :: Word64) ->
+--   let n, m :: Natural
+--       n = fromNatural nw
+--       m = fromNatural mw
+--       mkRzValue = toRzValue n
+--       toValue rz = NVal rz rz -- TODO: Does this make sense? 
+--       env = divModEnv n
+--   in
+--   forAll (pure (mkRzValue (22 :: Word64))) $ \vx ->
+--   stEquiv (divModVars n) env
+--     (interpretDivMod n m
+--       (mkState env [(xVar, toValue vx)]))
+--     (mkState
+--       env
+--       [(xVar, toValue (vx `mod` mkRzValue mw))
+--       ,(yVar, toValue (vx `div` mkRzValue mw))
+--       ])
 
 rzDivModOut :: Natural -> Natural -> Expr
 rzDivModOut size = rzDivMod (size+1) xVar yVar
@@ -143,7 +171,7 @@ rzSub x n = rzSub' x n n
 modSub :: Natural -> Natural -> Natural -> Natural
 modSub size a b = (a - b + 2^size) `mod` (2^size)
 
-x stores 10 , m = 20 --> 5, 2^5, (x-m) ---> 2^5 + 10 - 20 = 22 
+-- x stores 10 , m = 20 --> 5, 2^5, (x-m) ---> 2^5 + 10 - 20 = 22 
 
 rzSub_test :: Var -> Natural -> RzValue -> Expr
 rzSub_test x n v =
