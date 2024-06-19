@@ -21,6 +21,11 @@ import Data.Word
 -- import Data.Bits
 import Numeric.Natural
 
+-- needed for the checkInitV test to determine the bit size of the random number
+-- note: since this import is used in both this file and Monad.hs in the exact 
+--       same way, it might be a good idea to implement a helper function.
+import Math.NumberTheory.Logarithms
+
 maxVecSizeExponent :: Int
 maxVecSizeExponent = 20
 
@@ -347,5 +352,57 @@ checkAdder =
     (execQSym env initialState (interpret (adder n xVar yVar (Posi zVar 0))))
     expectedState
 
+-- |initV (see: https://github.com/inQWIRE/VQO/blob/main/OQASM.v#L431C10-L431C17)
+-- Initialize qubits given a bitstring b and empty qubits |0>
+--  where:
+--    var is the empty qubits of type `Posi`
+--    bits is a function that returns a boolean for a natural number index into a bitstring of type `(Natural -> Bool)`
+-- 
+-- returns an AST of expressions that produce |b> of type `Expr`
+initV :: Posi -> (Natural -> Bool) -> Expr
+initV var bits -- should bits instead be a byte string?
+  | (posiInt var) == 0 = SKIP
+  | otherwise = 
+    let next = prevPos(var) in
+      if bits(posiInt next) then
+        Seq (initV next bits) (X next)
+      else
+        initV next bits
 
+-- |acceptNaturalInstead converts a function that takes an integer and converts
+-- it to a function that takes a natural. This is used by the checkInitV test case.
+acceptNaturalInstead :: (Integral a, Num t1) => (t1 -> t2) -> a -> t2
+acceptNaturalInstead f = (\nat -> (f (fromInteger (toInteger nat))))
 
+-- [test case]: initV
+checkInitV :: Property
+checkInitV = 
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(randomNumI :: Int) ->
+  let
+    -- set up a simple test case for now.
+    randomNum = intToNatural randomNumI
+    -- we need to know how large randomNum is in bytes so that we can
+    -- initialize the qubit properly
+    numSizeInBytes = intToNatural (integerLog2 (fromIntegral randomNum) + 1)
+    -- helper function to convert a number into an NVal
+    toValue rz = NVal rz rz
+    -- bits
+    -- testBit is a builtin Data.Bits function (https://hackage.haskell.org/package/base-4.14.1.0/docs/Data-Bits.html#v:testBit)
+    -- acceptNaturalInstead works around the fact that testBit takes an Int as it's "indexing" argument
+    bits = acceptNaturalInstead $ testBit randomNum
+    -- empty qubits of the required size
+    var = Posi xVar (numSizeInBytes + 1)
+    vars = getVars (initV var bits)
+    -- initialize the environment
+    env = mkQEnv [(xVar, 0)]
+    -- initial state should be a qubit initialized to 0
+    initialState = mkState env [(xVar, toValue (RzValue numSizeInBytes 0))]
+    -- expected state is our qubit now set to the test int
+    -- this will only change the first RzValue, not the second
+    expectedState = mkState env [(xVar, NVal (fromIntegral randomNum) (RzValue numSizeInBytes 0))]
+  in
+    stEquiv 
+      vars 
+      env 
+      (execQSym env initialState (interpret (initV var bits))) 
+      expectedState

@@ -191,8 +191,8 @@ bool2RzValue False = rzValue 0
 bool2RzValue True = rzValue 1
 
 data Value
-  = NVal RzValue RzValue
-  | QVal RzValue RzValue
+  = NVal RzValue RzValue -- nor type
+  | QVal RzValue RzValue -- phi type
   deriving (Eq, Show)
   
 allFalse :: MonadReader (QEnv a) m => m RzValue

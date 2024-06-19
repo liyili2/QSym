@@ -21,6 +21,9 @@ getPosiVar (Posi x _) = x
 nextPos :: Posi -> Posi
 nextPos (Posi x i) = Posi x (i + 1)
 
+-- returns a posi where posiInt has been decreased by one.
+prevPos :: Posi -> Posi
+prevPos (Posi x i) = Posi x (i - 1)
 
 data Expr
   = SKIP -- do nothing
