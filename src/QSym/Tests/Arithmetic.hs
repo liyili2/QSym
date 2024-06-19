@@ -355,10 +355,10 @@ checkAdder =
 -- |initV (see: https://github.com/inQWIRE/VQO/blob/main/OQASM.v#L431C10-L431C17)
 -- Initialize qubits given a bitstring b and empty qubits |0>
 --  where:
---    var is the empty qubits of type `Posi`
---    bits is a function that returns a boolean for a natural number index into a bitstring of type `(Natural -> Bool)`
+--    var of type `Posi` is the empty qubit array
+--    bits of type `(Natural -> Bool)` is a function that returns a boolean for a natural number index into a bitstring
 -- 
--- returns an AST of expressions that produce |b> of type `Expr`
+-- return of type `Expr`: an AST of expressions that produce |b>
 initV :: Posi -> (Natural -> Bool) -> Expr
 initV var bits -- should bits instead be a byte string?
   | (posiInt var) == 0 = SKIP
