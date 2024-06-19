@@ -191,7 +191,7 @@ bool2RzValue False = rzValue 0
 bool2RzValue True = rzValue 1
 
 data Value
-  = NVal RzValue RzValue -- nor type
+  = NVal RzValue RzValue -- nor type (state, amplitude)
   | QVal RzValue RzValue -- phi type
   deriving (Eq, Show)
   
