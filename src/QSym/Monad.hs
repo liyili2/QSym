@@ -257,13 +257,18 @@ stEquiv vars env st1 st2 =
 
     lookup v (QState s) = s v
 
+-- |getSizeInBits
+-- returns the number of bits as a natural number that an Integral type takes up.
+getSizeInBits :: (Integral a) => a -> Natural
+getSizeInBits n = intToNatural $ integerLog2 (fromIntegral n) + 1
+
 -- TODO: Is this reasonable?
 mkRzValue' :: (HasCallStack, Show a, Integral a) => a -> RzValue
 mkRzValue' 0 = RzValue 1 0
 mkRzValue' i =
-  let sz = integerLog2 (fromIntegral i) + 1
+  let sz = getSizeInBits i
   in
-  RzValue (intToNatural sz) (fromIntegral i)
+  RzValue sz (fromIntegral i)
 
 
 -- stateFromVars :: [(Var, Bvector)] -> QState Value
