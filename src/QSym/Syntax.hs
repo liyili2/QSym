@@ -22,6 +22,7 @@ nextPos :: Posi -> Posi
 nextPos (Posi x i) = Posi x (i + 1)
 
 -- returns a posi where posiInt has been decreased by one.
+-- a natural complement to nextPos
 prevPos :: Posi -> Posi
 prevPos (Posi x i) = Posi x (i - 1)
 
