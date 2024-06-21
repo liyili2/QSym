@@ -85,6 +85,7 @@ interpret expr =
       interpret e1
       interpret e2
 
+-- inverses an `Expr` syntax tree. Equivalent to inv_exp in the VQO code.
 invExpr :: Expr -> Expr
 invExpr e0 =
   case e0 of
@@ -102,6 +103,7 @@ invExpr e0 =
     RQFT x b -> QFT x b
     Seq p1 p2 -> Seq (invExpr p2) (invExpr p1)
 
+-- Controlled NOT gate on the second posi by the first.
 cnot :: Posi -> Posi -> Expr
 cnot x y = CU x (X y)
 
