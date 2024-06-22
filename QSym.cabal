@@ -105,6 +105,7 @@ executable QSym
                          mtl,
                          integer-logarithms,
                          containers,
+                         hashable <= 1.4.3.0,
                          QSym
 
 
