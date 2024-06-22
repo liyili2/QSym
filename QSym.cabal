@@ -91,12 +91,32 @@ executable QSym
 
     main-is:             Main.hs
 
+    build-tool-depends: alex:alex, happy:happy
+
     other-modules: QSym.QState
                    QSym.Syntax
                    QSym.Interpret
                    QSym.Monad
                    QSym.Utils
                    QSym.Tests.Arithmetic
+                   Qafny.Syntax.AST
+                   Qafny.Syntax.ASTFactory
+                   Qafny.Syntax.ASTUtils
+                   Qafny.Syntax.Emit
+                   Qafny.Syntax.EmitBinding
+                   Qafny.Syntax.IR
+                   Qafny.Syntax.Lexer
+                   Qafny.Syntax.Parser
+                   Qafny.Syntax.ParserUtils
+                   Qafny.Syntax.Render
+                   Qafny.Syntax.Subst
+                   Qafny.Syntax.Token
+                   Data.Sum
+                   Qafny.Analysis.Interval
+                   Qafny.Analysis.Normalize
+                   Qafny.Analysis.Partial
+                   Qafny.TTG
+                   Qafny.Utils.Common
 
     build-depends:       base,
                          tasty,
@@ -106,6 +126,11 @@ executable QSym
                          integer-logarithms,
                          containers,
                          hashable <= 1.4.3.0,
+                         array,
+                         prettyprinter,
+                         text,
+                         recursion-schemes,
+                         lens,
                          QSym
 
 
