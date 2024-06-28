@@ -102,6 +102,9 @@ Information flows between these two kinds of code. The classical parts use \text
 \]
 
 \section{Denotational semantics}
+A QSym program consists of a list of commands (or ``statements''). These commands can, in turn, involve expressions.
+
+
     \fbox{
       \begin{minipage}{\textwidth}
       \[
@@ -119,6 +122,8 @@ Information flows between these two kinds of code. The classical parts use \text
 
 \subsection{Semantics of expressions}
 
+Expressions are, in general, \textit{open} expressions: they generally have free variables. These expressions will consist of typical bitwise operations and arithmetic operations. The free variables refer to locations in quantum state.
+
 \[
   \begin{array}{c}
     % \Esem{e_1, e_2}(a, b) = \Esem{e_2}(b) \circ \Esem{e_1}(a)\\\\
@@ -128,6 +133,8 @@ Information flows between these two kinds of code. The classical parts use \text
 \]
 
 \subsection{Semantics of statements}
+
+A statement performs some transformation to the quantum state. This will typically involve evaluating some given expression.
 
 \subsubsection{``Apply'' semantics}
 
