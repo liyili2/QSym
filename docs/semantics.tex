@@ -131,7 +131,14 @@ Information flows between these two kinds of code. The classical parts use \text
 
 \subsubsection{``Apply'' semantics}
 
-The expression $e$ in the command $\ell \Apply e$ will generally by an \textit{open} expression. That is, it typically has free variables. The value of this variable ranges over the quantum states. This is a kind of ``map'' operation over the (probability-weighted) possibilities. This amounts to applying the expression to every entry in the $\State$.
+The expression $e$ in the command $\ell \Apply e$ will generally by an \textit{open} expression. That is, it typically has free variables. The value of this variable ranges over the quantum states. This is a kind of ``map'' operation over the (probability-weighted) possibilities. This amounts to applying the expression to the value part of the matching entry in the $\State$. The value part is the second item of an entry (the first item is the locus).
+
+An entry will ``match'' the apply expression if the locus of the entry is the same as the locus of the apply, up to permutation.
+
+\subsubsection{``Permute'' semantics}
+
+The $\Permute(\ell, \ell')$ command will take two ``equivalent'' loci (see the previous subsection). That is, a pair of loci which are the same up to permutation. Then, it will permute the bits of the value at that locus in such a way that the loci will match exactly.
+
 
 \subsubsection{Denotation}
 
