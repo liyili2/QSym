@@ -6,6 +6,8 @@
 \usepackage{amssymb}
 \usepackage{listings}
 \usepackage{varwidth}
+\usepackage{tikz}
+\usepackage{tikz-cd}
 % \usepackage{syntax}
 % \usepackage{simplebnf}
 
@@ -55,7 +57,24 @@ A QSym program can be divided up into two kinds of code:
   \item Quantum parts
 \end{enumerate}
 
-Information flows between these two kinds of code. The classical parts use \textit{symbolic} execution while the quantum parts are tested using \textit{concrete} execution. Together, these make up a \textit{concolic} testing framework for quantum programs.
+Information flows between these two kinds of code. The classical parts use \textit{symbolic} execution while the quantum parts are tested using \textit{concrete} execution. Together, these make up a \textit{concolic} testing framework for quantum programs. In Fig~\ref{fig:control-flow}, the classical code uses symbolic execution while the quantum code uses concrete execution.
+
+\begin{figure}
+% https://q.uiver.app/#q=WzAsNixbMCwxLCJcXHRleHRub3JtYWx7Q2xhc3NpY2FsIGNvZGV9Il0sWzEsMSwiXFx0ZXh0bm9ybWFse1F1YW50dW0gY29kZX0iXSxbMiwwLCJcXHRleHRub3JtYWx7Q2xhc3NpY2FsIGNvZGV9Il0sWzIsMiwiXFx0ZXh0bm9ybWFse0NsYXNzaWNhbCBjb2RlfSJdLFszLDEsIlxcdGV4dG5vcm1hbHtRdWFudHVtIGNvZGV9Il0sWzQsMSwiXFx0ZXh0bm9ybWFse0NsYXNzaWNhbCBjb2RlfSJdLFsxLDJdLFsxLDNdLFswLDFdLFsyLDRdLFszLDRdLFs0LDVdXQ==
+\[\begin{tikzcd}
+	&& {\textnormal{Classical code}} \\
+	{\textnormal{Classical code}} & {\textnormal{Quantum code}} && {\textnormal{Quantum code}} & {\textnormal{Classical code}} \\
+	&& {\textnormal{Classical code}}
+	\arrow[from=1-3, to=2-4]
+	\arrow[from=2-1, to=2-2]
+	\arrow[from=2-2, to=1-3]
+	\arrow[from=2-2, to=3-3]
+	\arrow[from=2-4, to=2-5]
+	\arrow[from=3-3, to=2-4]
+\end{tikzcd}\]
+  \caption{Control flow of representative program}
+  \label{fig:control-flow}
+\end{figure}
 
 \section{Syntax}
 
@@ -112,7 +131,7 @@ Information flows between these two kinds of code. The classical parts use \text
 
 \subsubsection{``Apply'' semantics}
 
-
+The expression $e$ in the command $\ell \Apply e$ will generally by an \textit{open} expression. That is, it typically has free variables. The value of this variable ranges over the quantum states. This is a kind of ``map'' operation over the (probability-weighted) possibilities. This amounts to applying the expression to every entry in the $\State$.
 
 \subsubsection{Denotation}
 
