@@ -269,7 +269,7 @@ Now, the \texttt{if} condition.\\
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {q[0]}; &[-0.5cm] 
       \node[operator] (H21) {H}; &
-      \node[phase] (P12) {}; &
+      \node[phase] (P12) {};
     \coordinate (end0); \\
 
       \node (q1) {q[1]}; &[-0.5cm] 
@@ -279,7 +279,7 @@ Now, the \texttt{if} condition.\\
   };
   \begin{pgfonlayer}{background}
         % Draw background box.
-    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) ] {};
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (P12) ] {};
         % Draw lines.
         \draw[thick] (q0) -- (end0)  (q1) -- (end1);
     \end{pgfonlayer}
