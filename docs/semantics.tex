@@ -340,7 +340,7 @@ Here, we look at the GHZ example with $n=4$.
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single]
   x[0] <- H;
-  for j in [i, 4) && x[j-1]
+  for j in [1, 4) && x[j-1]
     x[j] <- x[j] + 1;
   \end{lstlisting}
 \end{minipage}
@@ -387,7 +387,7 @@ Step 1.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   !\colorbox{yellow}{x[0] <- H;}!
-  for j in [i, 4) && x[j-1]
+  for j in [1, 4) && x[j-1]
     x[j] <- x[j] + 1;
   \end{lstlisting}
 \end{minipage}
@@ -435,7 +435,7 @@ Step 2.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+  !\colorbox{yellow}{for j in [1, 4) \&\& x[j-1]}!
     x[j] <- x[j] + 1;
   \end{lstlisting}
 \end{minipage}
@@ -484,7 +484,7 @@ Step 3.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  for j in [i, 4) && x[j-1]
+  for j in [1, 4) && x[j-1]
     !\colorbox{yellow}{x[j] <- x[j] + 1;}!
   \end{lstlisting}
 \end{minipage}
@@ -535,7 +535,7 @@ Step 4.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+  !\colorbox{yellow}{for j in [1, 4) \&\& x[j-1]}!
     x[j] <- x[j] + 1;
   \end{lstlisting}
 \end{minipage}
@@ -587,7 +587,7 @@ Step 5.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  for j in [i, 4) && x[j-1]
+  for j in [1, 4) && x[j-1]
     !\colorbox{yellow}{x[j] <- x[j] + 1;}!
   \end{lstlisting}
 \end{minipage}
@@ -640,7 +640,7 @@ Step 6.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+  !\colorbox{yellow}{for j in [1, 4) \&\& x[j-1]}!
     x[j] <- x[j] + 1;
   \end{lstlisting}
 \end{minipage}
@@ -694,7 +694,7 @@ Step 7.\\
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
   x[0] <- H;
-  for j in [i, 4) && x[j-1]
+  for j in [1, 4) && x[j-1]
     !\colorbox{yellow}{x[j] <- x[j] + 1;}!
   \end{lstlisting}
 \end{minipage}
