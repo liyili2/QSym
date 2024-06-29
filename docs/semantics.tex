@@ -382,7 +382,7 @@ Here, we look at the GHZ example with $n=4$.
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 1.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -430,7 +430,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 2.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -479,7 +479,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 3.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -530,7 +530,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 4.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -557,11 +557,11 @@ Next step.\\
       \node (q0) {x[0]}; &[-0.5cm]
       \node[operator] (H21) {H}; &
       \node[phase] (P12) {}; &
-      \node[phase] (P13) {};
     \coordinate (end0); \\
 
       \node (q1) {x[1]}; &[-0.5cm] &
       \node[circlewc] (C1) {}; &
+      \node[phase] (P13) {};
     \coordinate (end1); \\
 
       \node (q2) {x[2]}; &[-0.5cm] & &
@@ -582,7 +582,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 5.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -608,12 +608,12 @@ Next step.\\
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {x[0]}; &[-0.5cm]
       \node[operator] (H21) {H}; &
-      \node[phase] (P12) {}; &
-      \node[phase] (P13) {}; &
+      \node[phase] (P12) {}; & &
     \coordinate (end0); \\
 
       \node (q1) {x[1]}; &[-0.5cm] &
-      \node[circlewc] (C1) {}; & &
+      \node[circlewc] (C1) {}; &
+      \node[phase] (P13) {}; &
     \coordinate (end1); \\
 
       \node (q2) {x[2]}; &[-0.5cm] & &
@@ -635,7 +635,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 6.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -661,17 +661,17 @@ Next step.\\
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {x[0]}; &[-0.5cm]
       \node[operator] (H21) {H}; &
-      \node[phase] (P12) {}; &
-      \node[phase] (P13) {}; &
-      \node[phase] (P14) {};
+      \node[phase] (P12) {}; & &
     \coordinate (end0); \\
 
       \node (q1) {x[1]}; &[-0.5cm] &
-      \node[circlewc] (C1) {}; & &
+      \node[circlewc] (C1) {}; &
+      \node[phase] (P13) {}; &
     \coordinate (end1); \\
 
       \node (q2) {x[2]}; &[-0.5cm] & &
       \node[circlewc] (C2) {}; &
+      \node[phase] (P14) {};
     \coordinate (end2); \\
 
       \node (q3) {x[3]}; &[-0.5cm] & & &
@@ -689,7 +689,7 @@ Next step.\\
 \end{tikzpicture}
 \end{minipage}
 
-Next step.\\
+Step 7.\\
 
 \begin{minipage}{.5\textwidth}
   \begin{lstlisting}[frame=single, escapechar=!]
@@ -715,17 +715,17 @@ Next step.\\
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {x[0]}; &[-0.5cm]
       \node[operator] (H21) {H}; &
-      \node[phase] (P12) {}; &
-      \node[phase] (P13) {}; &
-      \node[phase] (P14) {}; &
+      \node[phase] (P12) {}; & & &
     \coordinate (end0); \\
 
       \node (q1) {x[1]}; &[-0.5cm] &
-      \node[circlewc] (C1) {}; & & &
+      \node[circlewc] (C1) {}; &
+      \node[phase] (P13) {}; & &
     \coordinate (end1); \\
 
       \node (q2) {x[2]}; &[-0.5cm] & &
-      \node[circlewc] (C2) {}; & &
+      \node[circlewc] (C2) {}; &
+      \node[phase] (P14) {}; &
     \coordinate (end2); \\
 
       \node (q3) {x[3]}; &[-0.5cm] & & &
