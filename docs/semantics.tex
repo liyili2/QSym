@@ -265,6 +265,7 @@ Now, the \texttt{if} condition.\\
     \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
     \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
     \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{circlewc} = [draw,circle,cross,minimum width=0.3 cm]
     %
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {q[0]}; &[-0.5cm] 
@@ -306,6 +307,11 @@ Finally, the body of the \texttt{if}.\\
     \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
     \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
     \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
     %
     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
       \node (q0) {q[0]}; &[-0.5cm] 
@@ -314,7 +320,7 @@ Finally, the body of the \texttt{if}.\\
     \coordinate (end0); \\
 
       \node (q1) {q[1]}; &[-0.5cm]  &
-      \node[operator] (H21) {bit flip}; &
+      \node[circlewc] (H21) {}; &
     \coordinate (end1); \\
     %
   };
@@ -326,6 +332,418 @@ Finally, the body of the \texttt{if}.\\
     \end{pgfonlayer}
 \end{tikzpicture}
 \end{minipage}
+
+\subsubsection{Loop example}
+
+Here, we look at the GHZ example with $n=4$.
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single]
+  x[0] <- H;
+  for j in [i, 4) && x[j-1]
+    x[j] <- x[j] + 1;
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm] 
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] 
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] 
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] 
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  !\colorbox{yellow}{x[0] <- H;}!
+  for j in [i, 4) && x[j-1]
+    x[j] <- x[j] + 1;
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+    x[j] <- x[j] + 1;
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {};
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  for j in [i, 4) && x[j-1]
+    !\colorbox{yellow}{x[j] <- x[j] + 1;}!
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+      \node[circlewc] (C1) {}; &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] & &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] & &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3)
+                     (P12) -- (C1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+    x[j] <- x[j] + 1;
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+      \node[phase] (P13) {};
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+      \node[circlewc] (C1) {}; &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] & &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] & &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) (P13) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3)
+                     (P12) -- (C1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  for j in [i, 4) && x[j-1]
+    !\colorbox{yellow}{x[j] <- x[j] + 1;}!
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+      \node[phase] (P13) {}; &
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+      \node[circlewc] (C1) {}; & &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] & &
+      \node[circlewc] (C2) {}; &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] & & &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) (P13) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3)
+                     (P12) -- (C1)  (P13) -- (C2);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  !\colorbox{yellow}{for j in [i, 4) \&\& x[j-1]}!
+    x[j] <- x[j] + 1;
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+      \node[phase] (P13) {}; &
+      \node[phase] (P14) {};
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+      \node[circlewc] (C1) {}; & &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] & &
+      \node[circlewc] (C2) {}; &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] & & &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) (P13) (P14) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3)
+                     (P12) -- (C1)  (P13) -- (C2);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next step.\\
+
+\begin{minipage}{.5\textwidth}
+  \begin{lstlisting}[frame=single, escapechar=!]
+  x[0] <- H;
+  for j in [i, 4) && x[j-1]
+    !\colorbox{yellow}{x[j] <- x[j] + 1;}!
+  \end{lstlisting}
+\end{minipage}
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    \tikzstyle{cross} =[path picture={ 
+\draw[thick,black](path picture bounding box.north) -- (path picture bounding box.south) (path picture bounding box.west) -- (path picture bounding box.east);
+}],
+    \tikzstyle{circlewc} = [draw,fill=white,circle,cross,minimum width=0.3 cm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {x[0]}; &[-0.5cm]
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+      \node[phase] (P13) {}; &
+      \node[phase] (P14) {}; &
+    \coordinate (end0); \\
+
+      \node (q1) {x[1]}; &[-0.5cm] &
+      \node[circlewc] (C1) {}; & & &
+    \coordinate (end1); \\
+
+      \node (q2) {x[2]}; &[-0.5cm] & &
+      \node[circlewc] (C2) {}; & &
+    \coordinate (end2); \\
+
+      \node (q3) {x[3]}; &[-0.5cm] & & &
+      \node[circlewc] (C3) {}; &
+    \coordinate (end3); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) (q2) (end2) (q3) (end3) (P12) (P13) (P14) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (H21)  (H21) -- (end0)  (q1) -- (end1)
+                     (q2) -- (end2)  (q3) -- (end3)
+                     (P12) -- (C1)  (P13) -- (C2)  (P14) -- (C3);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
 
 
 \subsubsection{Denotation}
