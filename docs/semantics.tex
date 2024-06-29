@@ -8,9 +8,13 @@
 \usepackage{varwidth}
 \usepackage{tikz}
 \usepackage{tikz-cd}
+\usepackage{nameref}
+\usepackage{caption}
+\usepackage{subcaption}
 % \usepackage{syntax}
 % \usepackage{simplebnf}
 
+\usetikzlibrary{backgrounds,fit,decorations.pathreplacing,calc}
 \lstset{basicstyle=\ttfamily, mathescape=true, literate={~} {$\sim$}{1}}
 
 \newcommand {\ra} {\rightarrow}
@@ -40,6 +44,8 @@
 \newcommand {\Rename} {\textsf{Rename}}
 \newcommand {\Permute} {\textsf{Permute}}
 \newcommand {\loceq} {\approx}
+
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
 
 \begin{document}
 
@@ -145,6 +151,183 @@ An entry will ``match'' the apply expression if the locus of the entry is the sa
 \subsubsection{``Permute'' semantics}
 
 The $\Permute(\ell, \ell')$ command will take two ``equivalent'' loci (see the previous subsection). That is, a pair of loci which are the same up to permutation. Then, it will permute the bits of the value at that locus in such a way that the loci will match exactly.
+
+For example, if we have $\Permute(x[0, 3) \uplus y[0, 2))(y[0, 2)\uplus x[0, 3))$ then we would swap the two identified bit vectors in the quantum state.
+
+\subsubsection{Step-by-Step Example}
+
+Consider the following program, which puts its input into an evenly weighted superposition (a Bell pair) and inverts the bits in one of the elements of the array:
+
+\begin{lstlisting}[frame=single]
+  q[0] <- H;
+
+  if (q[0]) {
+    q[1] <- (x => x + 1);
+  }
+\end{lstlisting}
+
+We will build the circuit by going through this program line-by-line. We start with a circuit that just consists of input wires. This is the circuit before the main part of the program (at this point, we've only taken into account the free variables).\\
+
+\begin{minipage}{.5\textwidth}
+\begin{lstlisting}[frame=single]
+  q[0] <- H;
+
+  if (q[0]) {
+    q[1] <- (x => x + 1);
+  }
+\end{lstlisting}
+\end{minipage}%
+~~~
+\begin{minipage}{.5\textwidth}
+% Based on https://tex.stackexchange.com/a/44270/186240
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {q[0]}; &[-0.5cm] 
+    &[-0.3cm]
+    \coordinate (end0); \\
+
+      \node (q1) {q[1]}; &[-0.5cm] 
+    &[-0.3cm]
+    \coordinate (end1); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (end0)  (q1) -- (end1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Next, we deal with the apply with the Hadamard gate.\\
+
+\begin{minipage}{.5\textwidth}
+\begin{lstlisting}[frame=single, escapechar=!] 
+  !\colorbox{yellow}{q[0] <- H;}!
+
+  if (q[0]) {
+    q[1] <- (x => x + 1);
+  }
+\end{lstlisting}
+  \end{minipage}%
+  ~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {q[0]}; &[-0.5cm] 
+      \node[operator] (H21) {H}; &
+    \coordinate (end0); \\
+
+      \node (q1) {q[1]}; &[-0.5cm] 
+    &[-0.3cm]
+    \coordinate (end1); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (end0)  (q1) -- (end1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+  \end{minipage}
+
+Now, the \texttt{if} condition.\\
+
+\begin{minipage}{.5\textwidth}
+\begin{lstlisting}[frame=single, escapechar=!] 
+  q[0] <- H;
+
+  !\colorbox{yellow}{if (q[0]) \{}!
+    q[1] <- (x => x + 1);
+  }
+\end{lstlisting}
+\end{minipage}%
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {q[0]}; &[-0.5cm] 
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+    \coordinate (end0); \\
+
+      \node (q1) {q[1]}; &[-0.5cm] 
+    &[-0.3cm]
+    \coordinate (end1); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (end0)  (q1) -- (end1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+
+Finally, the body of the \texttt{if}.\\
+
+\begin{minipage}{.5\textwidth}
+\begin{lstlisting}[frame=single, escapechar=!] 
+  q[0] <- H;
+
+  if (q[0]) {
+    !\colorbox{yellow}{q[1] <- (x => x + 1);}!
+  }
+\end{lstlisting}
+\end{minipage}%
+~~~
+\begin{minipage}{.5\textwidth}
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {q[0]}; &[-0.5cm] 
+      \node[operator] (H21) {H}; &
+      \node[phase] (P12) {}; &
+    \coordinate (end0); \\
+
+      \node (q1) {q[1]}; &[-0.5cm]  &
+      \node[operator] (H21) {bit flip}; &
+    \coordinate (end1); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (end0) (q1) (end1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (end0)  (q1) -- (end1)  (P12) -- (H21);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
 
 
 \subsubsection{Denotation}
