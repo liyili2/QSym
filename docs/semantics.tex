@@ -11,12 +11,27 @@
 \usepackage{nameref}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{empheq}
+\usepackage[most]{tcolorbox}
 % \usepackage{syntax}
 % \usepackage{simplebnf}
 
 \usetikzlibrary{backgrounds,fit,decorations.pathreplacing,calc}
 \lstset{basicstyle=\ttfamily, mathescape=true, literate={~} {$\sim$}{1}}
 
+\definecolor{lightgreen}{HTML}{90EE90}
+
+% Based on https://tex.stackexchange.com/a/288326/186240
+\newtcbox{\condition}[1][]{%
+    nobeforeafter, math upper, tcbox raise base,
+    enhanced, colframe=blue!30!black,
+    colback=lightgreen, boxrule=1pt,
+    #1}
+
+\newcommand {\ite} {\textsf{if}}
+\newcommand {\Ra} {\Rightarrow}
+\newcommand {\deref} {\textsf{deref}}
+\newcommand {\apply} {\textsf{apply}}
 \newcommand {\ra} {\rightarrow}
 \newcommand {\labinfer} [3] [] {\infer[{\textsc{#1}}]{#2}{#3}}
 \newcommand {\Type} {\textsf{Type}}
@@ -208,9 +223,10 @@ We will build the circuit by going through this program line-by-line. We start w
 \end{minipage}
 
 \noindent
-\textit{Step 0}: $q[0, 2) \pointsto v$
-\\
-\textit{Step 1}: $q[0] \pointsto a \sep q[1] \pointsto b$
+
+  \begin{empheq}[box=\condition]{equation*}
+q[0] \pointsto a \land q[1] \pointsto b
+  \end{empheq}
 
 Next, we deal with the apply with the Hadamard gate.\\
 
@@ -253,7 +269,9 @@ Next, we deal with the apply with the Hadamard gate.\\
   \end{minipage}
 
   \noindent
-\textit{Step 2}: $q[0] \pointsto H(a) \sep q[1] \pointsto b$
+\begin{empheq}[box=\condition]{equation*}
+  \cdots \land q[0]' \pointsto \apply(H, \deref(q[0])) \sep q[1]' \pointsto \deref(q[1])
+\end{empheq}
 \\
 Now, the \texttt{if} condition.\\
 
@@ -342,6 +360,12 @@ Finally, the body of the \texttt{if}.\\
     \end{pgfonlayer}
 \end{tikzpicture}
 \end{minipage}
+
+\begin{empheq}[box=\condition]{equation*}
+  \begin{gathered}
+    \cdots \land q[0]'' \pointsto \deref(q[0]') \\ \land q[1]'' \pointsto \ite(\deref(q[0]'), \apply((x \Ra x + 1), \deref(q[1]')), \deref(q[1]'))
+  \end{gathered}
+\end{empheq}
 
 \subsubsection{Loop example}
 
