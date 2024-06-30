@@ -44,6 +44,8 @@
 \newcommand {\Rename} {\textsf{Rename}}
 \newcommand {\Permute} {\textsf{Permute}}
 \newcommand {\loceq} {\approx}
+\newcommand {\sep} {\ast}
+\newcommand {\pointsto} {\mapsto}
 
 \newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
 
@@ -205,6 +207,11 @@ We will build the circuit by going through this program line-by-line. We start w
 \end{tikzpicture}
 \end{minipage}
 
+\noindent
+\textit{Step 0}: $q[0, 2) \pointsto v$
+\\
+\textit{Step 1}: $q[0] \pointsto a \sep q[1] \pointsto b$
+
 Next, we deal with the apply with the Hadamard gate.\\
 
 \begin{minipage}{.5\textwidth}
@@ -245,6 +252,9 @@ Next, we deal with the apply with the Hadamard gate.\\
 \end{tikzpicture}
   \end{minipage}
 
+  \noindent
+\textit{Step 2}: $q[0] \pointsto H(a) \sep q[1] \pointsto b$
+\\
 Now, the \texttt{if} condition.\\
 
 \begin{minipage}{.5\textwidth}

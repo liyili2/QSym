@@ -77,6 +77,7 @@ library
                       containers,
                       QuickCheck,
                       integer-logarithms,
+                      prettyprinter,
                       mtl
 
     -- Directories containing source files.
@@ -98,6 +99,7 @@ executable QSym
                    QSym.Interpret
                    QSym.Monad
                    QSym.Utils
+                   QSym.Logic.Syntax
                    QSym.Tests.Arithmetic
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory

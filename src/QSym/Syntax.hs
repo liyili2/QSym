@@ -7,6 +7,7 @@ import qualified Data.Bits as Bits
 
 import Numeric.Natural
 
+import Prettyprinter
 
 data Posi = -- posi is x[v] where x is a quantum variable and v is an aexp
   Posi
@@ -40,10 +41,14 @@ data Expr
   | QFT Var Natural -- QFT x i means "for array named x, change its type from Nor to Phi i"
   | RQFT Var Natural -- RQFT x i means "for array named x, change its type from Phi i to Nor"
   | Seq Expr Expr
-  -- deriving (Show)
+  deriving (Show)
 
 block :: [Expr] -> Expr  
 block = mconcat
+
+-- TODO: Implement this properly
+instance Pretty Expr where
+  pretty = pretty . pprExpr
 
 pprExpr :: Expr -> String
 pprExpr SKIP = "SKIP"
