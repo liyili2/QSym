@@ -4,3 +4,5 @@ dist-newstyle
 *.aux
 *.log
 *.pdf
+.DS_Store
+docs/semantics.synctex.gz
