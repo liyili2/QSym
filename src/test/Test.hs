@@ -13,7 +13,9 @@ import QSym.Tests.Arithmetic
 main :: IO ()
 main = 
   mapM_ quickCheck
-    [  checkInitV
+    [  checkInitV,
+       checkFlipBits,
+       checkNotIsHighBitSet
     --checkrzDivMod
       --checkrzSub
     -- , checkAdder

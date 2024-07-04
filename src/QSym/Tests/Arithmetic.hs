@@ -30,7 +30,7 @@ maxVecSizeExponent :: Int
 maxVecSizeExponent = 20
 
 
--- Get the variables in an exp
+-- Get the variables in an expression ast
 getVars :: Expr -> [Var]
 getVars = Set.toList . go
   where
@@ -301,10 +301,13 @@ fromNatural x
   | x >= 0    = fromIntegral x
   | otherwise = error "fromIntegral: negative number"
 
-
+-- |maj (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L27)
+-- an implementation of a modmult adder based on classical circuits
 maj :: Posi -> Posi -> Posi -> Expr
 maj a b c = cnot c b <> cnot c a <> ccx a b c
 
+-- |uma (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L28)
+-- an implementation of a modmult adder based on classical circuits
 uma :: Posi -> Posi -> Posi -> Expr
 uma a b c = ccx a b c <> cnot c a <> cnot a b
 
@@ -312,6 +315,9 @@ majSeq' :: Natural -> Var -> Var -> Posi -> Expr
 majSeq' 0 x y c = maj c (Posi y 0) (Posi x 0)
 majSeq' n x y c = majSeq' (n - 1) x y c <> maj (Posi x (n - 1)) (Posi y n) (Posi x n)
 
+-- |majSeq (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L37)
+-- The following defines n-bits MAJ and UMA circuit. 
+-- Eventually, MAJ circuit takes [x][y] and produce [x][(x+y) % 2 ^ n]
 majSeq :: Natural -> Var -> Var -> Posi -> Expr
 majSeq n x y c = majSeq' (n - 1) x y c
 
@@ -319,6 +325,9 @@ umaSeq' :: Natural -> Var -> Var -> Posi -> Expr
 umaSeq' 0 x y c = uma c (Posi y 0) (Posi x 0)
 umaSeq' n x y c = uma (Posi x (n - 1)) (Posi y n) (Posi x n) <> umaSeq' (n - 1) x y c
 
+-- |majSeq (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L37)
+-- The following defines n-bits MAJ and UMA circuit. 
+-- Eventually, UMA circuit takes [x][y] and produce [x][(x+y) % 2 ^ n]
 umaSeq :: Natural -> Var -> Var -> Posi -> Expr
 umaSeq n x y c = umaSeq' (n - 1) x y c
 
@@ -381,9 +390,9 @@ checkInitV =
   let
     -- set up a simple test case for now.
     randomNum = intToNatural randomNumI
-    -- we need to know how large randomNum is in bytes so that we can
+    -- we need to know how large randomNum is in bits so that we can
     -- initialize the qubit properly
-    numSizeInBytes = intToNatural (integerLog2 (fromIntegral randomNum) + 1)
+    numSizeInBits = getSizeInBits randomNum
     -- helper function to convert a number into an NVal
     toValue rz = NVal rz rz
     -- bits
@@ -391,18 +400,136 @@ checkInitV =
     -- acceptNaturalInstead works around the fact that testBit takes an Int as it's "indexing" argument
     bits = acceptNaturalInstead $ testBit randomNum
     -- empty qubits of the required size
-    var = Posi xVar (numSizeInBytes + 1)
+    var = Posi xVar (numSizeInBits + 1)
     vars = getVars (initV var bits)
     -- initialize the environment
-    env = mkQEnv [(xVar, 0)]
+    -- only one variable (our 0 initialized qubit array), with a size equal to the number of bytes
+    -- needed to store our bitstring
+    env = mkQEnv [(xVar, numSizeInBits)]
     -- initial state should be a qubit initialized to 0
-    initialState = mkState env [(xVar, toValue (RzValue numSizeInBytes 0))]
+    initialState = mkState env [(xVar, toValue (RzValue numSizeInBits 0))]
     -- expected state is our qubit now set to the test int
     -- this will only change the first RzValue, not the second
-    expectedState = mkState env [(xVar, NVal (fromIntegral randomNum) (RzValue numSizeInBytes 0))]
+    expectedState = mkState env [(xVar, NVal (fromIntegral randomNum) (RzValue numSizeInBits 0))]
   in
     stEquiv 
       vars 
       env 
       (execQSym env initialState (interpret (initV var bits))) 
       expectedState
+
+-- |notIsHighBitSet (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L55)
+-- part of the comparator circuit, highbit n x c2
+--  where:
+--    n of type `Natural` is the size of the qubit array stored in x.
+--    x of type `Var` is the variable that stores the bitstring.
+--    c2 of type `Posi` is the qubit array that we should flip if the first bit of x is 0.
+-- return of type `Expr`: an AST of expressions that flips c2 if the first bit of x is 0.
+--
+-- a.k.a: Called highbit in VQO.
+-- [VQO Note]: The following implements an comparator. 
+--             The first step is to adjust the adder circuit above to be
+--             MAJ;high_bit_manipulate;UMA.
+--             This is based on a binary number circuit observation that:
+--             To compare if x < y, we just need to do x - y, and see the high bit of the binary
+--             format of x - y. If the high_bit is zero, that means that x >= y;
+--             otherwise x < y.
+notIsHighBitSet :: Natural -> Var -> Posi -> Expr
+notIsHighBitSet n x c2 = X (Posi x (n - 1)) <> X c2 <> cnot (Posi x (n - 1)) c2 <> X c2 <> X (Posi x (n - 1))
+-- [q]: why do we apply the x gate 2 times to c2?
+
+-- [test case]: isHighBitSet
+checkNotIsHighBitSet :: Property
+-- there are two things that we can randomize here:
+--  (1) the number of bits in the qubit string
+--  (2) whether or not the highest bit is set
+checkNotIsHighBitSet =
+  forAll (choose (2, maxVecSizeExponent)) $ \(qubitStrSizeI :: Int) ->
+  forAll (choose (False, True)) $ \(isBitSet :: Bool) -> -- represents whether the highest bit should be a one or a zero for this test.
+  let
+    qubitStrSize = intToNatural qubitStrSizeI
+    -- We use xVar for the qubit string to test and yVar for the result.
+    -- the posi that the result is stored in
+    result = Posi yVar 0
+    -- grab the vars that are used.
+    vars = getVars (notIsHighBitSet qubitStrSize xVar result)
+    -- helper function for making NVal
+    toValue rz = NVal rz rz
+    -- helper function for making NVal that sets the amplitude to 0.
+    toValueZeroAmp rz = NVal rz (RzValue (rzBitCount rz) 0) 
+    -- initialize the environment.
+    -- xVar should have the random number of bits, whilst yVar should only have one
+    env = mkQEnv [(xVar, qubitStrSize), (yVar, 1)]
+    -- this is the qubit value that the function will test
+    qubitValue = if isBitSet then 2^(qubitStrSize - 1) else 0
+    -- create the initial state. The highest bit in xVar should be set to 1 or 0
+    -- yVar should be blank
+    initialState = mkState env [(xVar, toValue (RzValue qubitStrSize qubitValue)), (yVar, toValue (fromIntegral 0))]
+    -- create the expected state. xVar shouldn't change.
+    -- yVar should be a 1 or a 0 depending on isBitNotSet
+    -- we can use fromEnum to get the correct value for yVar because Haskell's Bool implments the Enum trait
+    expectedState = mkState env [(xVar, toValue (RzValue qubitStrSize qubitValue)), (yVar, toValueZeroAmp (fromIntegral (fromEnum (not isBitSet))))]
+  in
+    stEquiv
+      vars
+      env
+      (execQSym env initialState (interpret (notIsHighBitSet qubitStrSize xVar result)))
+      expectedState
+
+-- |highb01 (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L57C1-L58C1)
+highb01 :: Natural -> Var -> Var -> Posi -> Posi -> Expr
+highb01 n x y c1 c2 = majSeq n x y c1 <> notIsHighBitSet n x c2 <> invExpr (majSeq n x y c1)
+-- [q]: is calling invExpr here really any different than just calling umajSeq?
+
+-- |flipBits (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L59-L65)
+-- For a qubit string variable x of arbitrary size n, it produces an Expression AST that flips every single bit in the string.
+-- where:
+--  n of type `Natural` is the length of the qubit string.
+--  x of type `Var` is the variable identifier.
+-- return of type `Expr` is the AST that will flip every bit in the qubit string when interpreted.
+-- 
+-- a.k.a: Called negator0 in VQO.
+-- [VQO Note]: The following will do the negation of the first input value in the qubit sequence 00[x][y][z].
+--             The actual effect is to make the sequence to be 00[-x][y][z].
+flipBits :: Natural -> Var -> Expr
+flipBits n x
+  | n == 0 = SKIP
+  | otherwise = Seq (flipBits (n - 1) x) (X (Posi x (n - 1)))
+
+-- [test case]: flipBits
+checkFlipBits :: Property
+checkFlipBits =
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(randomNumI :: Int) ->
+  let
+    -- convert random num to a natural number to be used by var
+    randomNum = intToNatural randomNumI
+    -- get the size of random num in bits
+    numSizeInBits = getSizeInBits randomNum
+    -- we only need one var for this test, so we use the xVar definition found
+    -- in Utils.hs
+    -- retrieve a list of all the vars used in the function
+    vars = getVars (flipBits numSizeInBits xVar)
+    -- intialize the environment
+    env = mkQEnv [(xVar, numSizeInBits)]
+    -- initial state should be our qubit set to the random number
+    -- [q]: unknown what the amplitude should be here?
+    initialState = mkState env [(xVar, (NVal (RzValue numSizeInBits randomNum) (RzValue numSizeInBits 0)))]
+    -- expected state is the inverse of the initial state. (i.e. all bits flipped)
+    flipped = xor randomNum (2^numSizeInBits - 1)
+    expectedState = mkState env [(xVar, (NVal (RzValue numSizeInBits flipped) (RzValue numSizeInBits 0)))]
+  in
+    stEquiv
+      vars
+      env
+      (execQSym env initialState (interpret (flipBits numSizeInBits xVar)))
+      expectedState
+
+-- |comparator01 (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L73)
+-- [VQO Note]: The actual comparator implementation. 
+--             We first flip the x positions, then use the high-bit comparator above. 
+--             Then, we use an inverse circuit of flipping x positions to turn the
+--             low bits back to store the value x.
+--             The actual implementation in the comparator is to do (x' + y)' as x - y,
+--             and then, the high-bit actually stores the boolean result of x - y < 0.
+comparator01 :: Natural -> Var -> Var -> Posi -> Posi -> Expr
+comparator01 n x y c1 c2 = X c1 <> flipBits n x <> highb01 n x y c1 c2 <> invExpr (X c1 <> flipBits n x)
