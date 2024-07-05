@@ -217,7 +217,12 @@ qenvSize (QEnv xs) = intToNatural (length xs)
 
 newtype QState a = QState (Var -> a)
 
--- helper method to print the QState
+-- |showQState returns a string representation of a QState given the state 
+--  and a list of variables
+--  where:
+--    st of type `QState` is the state to convert to a string
+--    vars of type `[Var]` is a list of the variables that should be examined
+--  return of type `String`: the String representation of the QState and variables
 showQState :: Show a => QState a -> [Var] -> String
 showQState st vars = "QState" ++ show (enumVars vars)
   where
