@@ -202,6 +202,7 @@ allFalse = rzValue 0
 -- basisVal b = NVal b allFalse
 
 newtype QEnv a = QEnv [(Var, a)] --(Var -> a)
+  deriving (Show)
 
 type QEnv' = QEnv Natural
 
@@ -215,6 +216,12 @@ qenvSize :: QEnv a -> Natural
 qenvSize (QEnv xs) = intToNatural (length xs)
 
 newtype QState a = QState (Var -> a)
+
+-- helper method to print the QState
+showQState :: Show a => QState a -> [Var] -> String
+showQState st vars = "QState" ++ show (enumVars vars)
+  where
+    enumVars vars = zip vars (map (stateGet' st) vars)
 
 type QState' = QState Value
 
