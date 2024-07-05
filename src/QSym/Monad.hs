@@ -224,7 +224,7 @@ newtype QState a = QState (Var -> a)
 --    vars of type `[Var]` is a list of the variables that should be examined
 --  return of type `String`: the String representation of the QState and variables
 showQState :: Show a => QState a -> [Var] -> String
-showQState st vars = "QState" ++ show (enumVars vars)
+showQState st vars = "QState " ++ show (enumVars vars)
   where
     enumVars vars = zip vars (map (stateGet' st) vars)
 
