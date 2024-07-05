@@ -22,7 +22,7 @@ main = do
        checkNotIsHighBitSet,
        checkAddAndCompare
     --checkrzDivMod
-      --checkrzSub
+    --checkrzSub
     -- , checkAdder
     -- , checkrzAdder
     ];
