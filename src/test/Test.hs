@@ -20,7 +20,9 @@ main = do
     [ checkInitV,
       checkFlipBits,
       checkNotIsHighBitSet,
-      checkAddAndCompare
+      checkMajSeq,
+      checkAddAndCompare,
+      checkComparator
     --checkrzDivMod
     --checkrzSub
     -- , checkAdder

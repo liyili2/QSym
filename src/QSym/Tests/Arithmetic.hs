@@ -321,13 +321,43 @@ majSeq' n x y c = majSeq' (n - 1) x y c <> maj (Posi x (n - 1)) (Posi y n) (Posi
 majSeq :: Natural -> Var -> Var -> Posi -> Expr
 majSeq n x y c = majSeq' (n - 1) x y c
 
+--[test case]: majSeq
+checkMajSeq :: Property
+checkMajSeq =
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(xInt :: Int) ->
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(yInt :: Int) ->
+  let
+    xValue = intToNatural xInt
+    yValue = intToNatural yInt
+    bitCount = maximum [(getSizeInBits xValue), (getSizeInBits yValue)] -- find n
+    result = mod (xValue + yValue) (2 ^ bitCount) -- see the documentation for majSeq
+    -- create a one bit posi to store the carry bit
+    carryVar = zVar -- much more useful name
+    carryBit = Posi carryVar 0
+    -- create the AST and get the vars
+    expr = majSeq bitCount xVar yVar carryBit
+    vars = getVars expr
+    -- create a qenv
+    env = mkQEnv [(xVar, bitCount + 1), (yVar, bitCount + 1), (carryVar, 1)]
+    -- helper function to duplicate an RzValue across both fields of the NVal
+    toValue rz = NVal rz rz
+    toValueZeroAmp rz = NVal rz (RzValue (rzBitCount rz) 0) 
+    -- helper function to convert a natural number into an NVal
+    natToNVal nat = toValueZeroAmp (fromIntegral nat)
+    -- create the initial state
+    initialState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0)]
+    -- create the expected state
+    expectedState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal result), (carryVar, natToNVal 0)]
+  in
+    stEquiv vars env (execQSym env initialState (interpret expr)) expectedState
+
 umaSeq' :: Natural -> Var -> Var -> Posi -> Expr
 umaSeq' 0 x y c = uma c (Posi y 0) (Posi x 0)
 umaSeq' n x y c = uma (Posi x (n - 1)) (Posi y n) (Posi x n) <> umaSeq' (n - 1) x y c
 
 -- |umaSeq (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L37)
 -- The following defines n-bits MAJ and UMA circuit. 
--- Eventually, UMA circuit takes [x][y] and produce [x][(x+y) % 2 ^ n]
+-- Eventually, UMA circuit takes [x][(x+y) % 2 ^ n] and produce [x][y]
 umaSeq :: Natural -> Var -> Var -> Posi -> Expr
 umaSeq n x y c = umaSeq' (n - 1) x y c
 
@@ -489,7 +519,7 @@ checkNotIsHighBitSet =
 --
 -- a.k.a: Called highb01 in VQO.
 addAndCompare :: Natural -> Var -> Var -> Posi -> Posi -> Expr
-addAndCompare n x y c1 c2 = majSeq n x y c1 <> notIsHighBitSet n y c2 <> invExpr (majSeq n x y c1)
+addAndCompare n x y c1 c2 = majSeq n x y c1 <> notIsHighBitSet n x c2 <> invExpr (majSeq n x y c1)
 -- [q]: is calling invExpr here really any different than just calling umajSeq?
 
 -- [test case]: addAndCompare
@@ -536,13 +566,11 @@ checkAddAndCompare =
     -- initialize the expected state
     -- xVar, yVar, and carryBit are unchanged
     -- result bit should be 1 if summing xValue and yValue unsets the highest bit
+    -- the amplitude of result bit should not change
+    -- q: rewrite to use some kind of array replace operation?
     expectedState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0), (resultVar, NVal (fromIntegral (fromEnum highBitNotSet)) (RzValue 1 0))]
   in
-    stEquiv
-      vars
-      env
-      (execQSym env initialState (interpret expr))
-      expectedState
+    stEquiv vars env (execQSym env initialState (interpret expr)) expectedState
 
 -- |flipBits (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L59-L65)
 -- For a qubit string variable x of arbitrary size n, it produces an Expression AST that flips every single bit in the string.
@@ -595,5 +623,32 @@ checkFlipBits =
 --             low bits back to store the value x.
 --             The actual implementation in the comparator is to do (x' + y)' as x - y,
 --             and then, the high-bit actually stores the boolean result of x - y < 0.
-comparator01 :: Natural -> Var -> Var -> Posi -> Posi -> Expr
-comparator01 n x y c1 c2 = X c1 <> flipBits n x <> addAndCompare n x y c1 c2 <> invExpr (X c1 <> flipBits n x)
+comparator :: Natural -> Var -> Var -> Posi -> Posi -> Expr
+comparator n x y c1 c2 = X c1 <> flipBits n x <> addAndCompare n x y c1 c2 <> invExpr (X c1 <> flipBits n x)
+
+checkComparator :: Property
+checkComparator = 
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(xInt :: Int) ->
+  forAll (choose (0, 2^maxVecSizeExponent)) $ \(yInt :: Int) -> 
+  let
+    xValue = intToNatural xInt -- convert the random test variable to a natural
+    yValue = intToNatural yInt -- convert the random test variable to a natural
+    bitCount = maximum [(getSizeInBits xValue), (getSizeInBits yValue)] -- find n for the comparator
+
+    carryVar = zVar -- alias for a better understanding
+    carryBit = Posi carryVar 0 -- needed for comparator
+
+    resultVar = Var 3 -- a place for the result
+    resultBit = Posi resultVar 0 -- needed for comparator
+
+    expr = comparator bitCount xVar yVar carryBit resultBit
+    vars = getVars expr
+    -- the environment basically stores the bit count of the variables
+    env = mkQEnv [(xVar, bitCount), (yVar, bitCount), (carryVar, 1), (resultVar, 1)]
+    -- helper value to convert an rz value into an NVal
+    toValueZeroAmp rz = NVal rz (RzValue (rzBitCount rz) 0) 
+    -- helper function to convert a natural number into an NVal
+    natToNVal nat = toValueZeroAmp (fromIntegral nat)
+    intialState = mkState env [(xVar, xValue), (yVar, yValue), (carryVar), (resultVar)]
+  in
+    stEquiv vars env (execQSym env initialState (interpret expr)) expectedState
