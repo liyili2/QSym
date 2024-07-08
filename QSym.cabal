@@ -68,7 +68,7 @@ library
                      QSym.Monad
                      QSym.Utils
                      QSym.Tests.Arithmetic
-                     QSym.ASTLogic
+                     -- QSym.ASTLogic
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -101,8 +101,9 @@ executable QSym
                    QSym.Monad
                    QSym.Utils
                    QSym.Logic.Syntax
+                   QSym.Logic.GenConstraint
                    QSym.Tests.Arithmetic
-                   QSym.ASTLogic
+                   -- QSym.ASTLogic
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils
