@@ -17,10 +17,10 @@ main = do
 {
   -- run all of the tests and create a list of the results of each
   result <- mapM quickCheckResult
-    [  checkInitV,
-       checkFlipBits,
-       checkNotIsHighBitSet,
-       checkAddAndCompare
+    [ checkInitV,
+      checkFlipBits,
+      checkNotIsHighBitSet,
+      checkAddAndCompare
     --checkrzDivMod
     --checkrzSub
     -- , checkAdder
