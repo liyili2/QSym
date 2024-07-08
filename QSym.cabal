@@ -68,7 +68,11 @@ library
                      QSym.Monad
                      QSym.Utils
                      QSym.Tests.Arithmetic
+<<<<<<< HEAD
                      QSym.Logic.Syntax
+=======
+                     -- QSym.ASTLogic
+>>>>>>> f63a5530df5f47160cb47c4388a683c35c19985f
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -101,8 +105,13 @@ executable QSym
                    QSym.Monad
                    QSym.Utils
                    QSym.Logic.Syntax
+                   QSym.Logic.GenConstraint
                    QSym.Tests.Arithmetic
+<<<<<<< HEAD
                    QSym.Syntax.Logic
+=======
+                   -- QSym.ASTLogic
+>>>>>>> f63a5530df5f47160cb47c4388a683c35c19985f
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils
