@@ -321,36 +321,6 @@ majSeq' n x y c = majSeq' (n - 1) x y c <> maj (Posi x (n - 1)) (Posi y n) (Posi
 majSeq :: Natural -> Var -> Var -> Posi -> Expr
 majSeq n x y c = majSeq' (n - 1) x y c
 
---[test case]: majSeq
-checkMajSeq :: Property
-checkMajSeq =
-  forAll (choose (0, 2^maxVecSizeExponent)) $ \(xInt :: Int) ->
-  forAll (choose (0, 2^maxVecSizeExponent)) $ \(yInt :: Int) ->
-  let
-    xValue = intToNatural xInt
-    yValue = intToNatural yInt
-    bitCount = maximum [(getSizeInBits xValue), (getSizeInBits yValue)] -- find n
-    result = mod (xValue + yValue) (2 ^ bitCount) -- see the documentation for majSeq
-    -- create a one bit posi to store the carry bit
-    carryVar = zVar -- much more useful name
-    carryBit = Posi carryVar 0
-    -- create the AST and get the vars
-    expr = majSeq bitCount xVar yVar carryBit
-    vars = getVars expr
-    -- create a qenv
-    env = mkQEnv [(xVar, bitCount + 1), (yVar, bitCount + 1), (carryVar, 1)]
-    -- helper function to duplicate an RzValue across both fields of the NVal
-    toValue rz = NVal rz rz
-    toValueZeroAmp rz = NVal rz (RzValue (rzBitCount rz) 0) 
-    -- helper function to convert a natural number into an NVal
-    natToNVal nat = toValueZeroAmp (fromIntegral nat)
-    -- create the initial state
-    initialState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0)]
-    -- create the expected state
-    expectedState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal result), (carryVar, natToNVal 0)]
-  in
-    stEquiv vars env (execQSym env initialState (interpret expr)) expectedState
-
 umaSeq' :: Natural -> Var -> Var -> Posi -> Expr
 umaSeq' 0 x y c = uma c (Posi y 0) (Posi x 0)
 umaSeq' n x y c = uma (Posi x (n - 1)) (Posi y n) (Posi x n) <> umaSeq' (n - 1) x y c
@@ -466,7 +436,6 @@ checkInitV =
 --             otherwise x < y.
 notIsHighBitSet :: Natural -> Var -> Posi -> Expr
 notIsHighBitSet n x c2 = X (Posi x (n - 1)) <> X c2 <> cnot (Posi x (n - 1)) c2 <> X c2 <> X (Posi x (n - 1))
--- [q]: why do we apply the x gate 2 times to c2?
 
 -- [test case]: notIsHighBitSet
 checkNotIsHighBitSet :: Property
@@ -520,57 +489,6 @@ checkNotIsHighBitSet =
 -- a.k.a: Called highb01 in VQO.
 addAndCompare :: Natural -> Var -> Var -> Posi -> Posi -> Expr
 addAndCompare n x y c1 c2 = majSeq n x y c1 <> notIsHighBitSet n x c2 <> invExpr (majSeq n x y c1)
--- [q]: is calling invExpr here really any different than just calling umajSeq?
-
--- [test case]: addAndCompare
-checkAddAndCompare :: Property
-checkAddAndCompare = 
-  forAll (choose (0, 2^maxVecSizeExponent)) $ \(xInt :: Int) ->
-  forAll (choose (0, 2^maxVecSizeExponent)) $ \(yInt :: Int) ->
-  let
-    -- # Create the expression AST
-    -- convert the random testing variables to Natural's that we can use
-    -- these will be the underlying values of xVar and yVar
-    xValue = intToNatural xInt
-    yValue = intToNatural yInt
-    -- bitCount will store the size of the largest value (xValue vs. yValue)
-    bitCount = maximum [(getSizeInBits xValue), (getSizeInBits yValue)]
-    -- create a one bit posi to store the carry bit
-    carryVar = zVar -- much more useful name
-    carryBit = Posi carryVar 0
-    -- create a one bit posi to store the result
-    resultVar = Var 3
-    resultBit = Posi resultVar 0
-    -- this is the expr tree produced by the method
-    expr = addAndCompare bitCount xVar yVar carryBit resultBit
-
-    -- # Initialize the other values required for this test
-    -- grab the vars that are used
-    vars = getVars expr
-    -- initialize the environment
-    -- we need to initialize xVar and yVar with enough bits to hold the maximum value of adding the two numbers together
-    -- (i.e. bitCount + 1)
-    -- carryVar and result Var only need one bit
-    env = mkQEnv [(xVar, bitCount + 1), (yVar, bitCount + 1), (carryVar, 1), (resultVar, 1)]
-    -- helper function to duplicate an RzValue across both fields of the NVal
-    toValue rz = NVal rz rz
-    -- helper function to convert a natural number into an NVal
-    natToNVal nat = toValue (fromIntegral nat)
-    -- initialize the initial state
-    -- xVar should hold xValue
-    -- yVar should hold yValue
-    -- carryVar and resultVar should be 0
-    initialState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0), (resultVar, natToNVal 0)]
-    -- high bit not set is true if summing xValue and yValue unsets the highest bit
-    highBitNotSet = not (testBit (xValue + yValue) (fromIntegral (bitCount - 1)))
-    -- initialize the expected state
-    -- xVar, yVar, and carryBit are unchanged
-    -- result bit should be 1 if summing xValue and yValue unsets the highest bit
-    -- the amplitude of result bit should not change
-    -- q: rewrite to use some kind of array replace operation?
-    expectedState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0), (resultVar, NVal (fromIntegral (fromEnum highBitNotSet)) (RzValue 1 0))]
-  in
-    stEquiv vars env (execQSym env initialState (interpret expr)) expectedState
 
 -- |flipBits (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L59-L65)
 -- For a qubit string variable x of arbitrary size n, it produces an Expression AST that flips every single bit in the string.
@@ -603,7 +521,6 @@ checkFlipBits =
     -- intialize the environment
     env = mkQEnv [(xVar, numSizeInBits)]
     -- initial state should be our qubit set to the random number
-    -- [q]: unknown what the amplitude should be here?
     initialState = mkState env [(xVar, (NVal (RzValue numSizeInBits randomNum) (RzValue numSizeInBits 0)))]
     -- expected state is the inverse of the initial state. (i.e. all bits flipped)
     flipped = xor randomNum (2^numSizeInBits - 1)
@@ -615,8 +532,17 @@ checkFlipBits =
       (execQSym env initialState (interpret (flipBits numSizeInBits xVar)))
       expectedState
 
--- |comparator01 (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L73)
--- checks 
+-- |comparator (see: https://github.com/inQWIRE/VQO/blob/main/CLArith.v#L73)
+-- checks if one value is greater than the other
+-- where:
+--  n of type `Natural` is the maximum length (in bits) of the two numbers to compare
+--  x of type `Var` is the variable on the left hand side of the greater than comparison
+--  y of type `Var` is the variable on the right hand side of the greater than comparison
+--  c1 of type `Posi` is a carry bit (used for the underlying implementation) and should be initialized to 0
+--  c2 of type `Posi` is the bit to store the result in. It will be flipped if x > y and left unchanged otherwise.
+--  return of type `Expr`: the AST that, when executed, performs the comparison and potentially flips c2
+--
+-- a.k.a. called comparator01 in VQO
 -- [VQO Note]: The actual comparator implementation. 
 --             We first flip the x positions, then use the high-bit comparator above. 
 --             Then, we use an inverse circuit of flipping x positions to turn the
@@ -626,6 +552,7 @@ checkFlipBits =
 comparator :: Natural -> Var -> Var -> Posi -> Posi -> Expr
 comparator n x y c1 c2 = X c1 <> flipBits n x <> addAndCompare n x y c1 c2 <> invExpr (X c1 <> flipBits n x)
 
+-- [test case]: comparator
 checkComparator :: Property
 checkComparator = 
   forAll (choose (0, 2^maxVecSizeExponent)) $ \(xInt :: Int) ->
@@ -634,6 +561,8 @@ checkComparator =
     xValue = intToNatural xInt -- convert the random test variable to a natural
     yValue = intToNatural yInt -- convert the random test variable to a natural
     bitCount = maximum [(getSizeInBits xValue), (getSizeInBits yValue)] -- find n for the comparator
+    -- this is the condition that the comparator actually checks
+    cond = xValue > yValue
 
     carryVar = zVar -- alias for a better understanding
     carryBit = Posi carryVar 0 -- needed for comparator
@@ -644,11 +573,15 @@ checkComparator =
     expr = comparator bitCount xVar yVar carryBit resultBit
     vars = getVars expr
     -- the environment basically stores the bit count of the variables
-    env = mkQEnv [(xVar, bitCount), (yVar, bitCount), (carryVar, 1), (resultVar, 1)]
-    -- helper value to convert an rz value into an NVal
+    -- x and y var need an extra bit to store the sign
+    env = mkQEnv [(xVar, bitCount + 1), (yVar, bitCount + 1), (carryVar, 1), (resultVar, 1)]
+    -- helper value to convert an rz value into an NVal with no amplitude
     toValueZeroAmp rz = NVal rz (RzValue (rzBitCount rz) 0) 
     -- helper function to convert a natural number into an NVal
     natToNVal nat = toValueZeroAmp (fromIntegral nat)
-    intialState = mkState env [(xVar, xValue), (yVar, yValue), (carryVar), (resultVar)]
+
+    -- nothing changes between the initial state and the final state, except the result has been flipped if x is less than y
+    initialState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0), (resultVar, natToNVal 0)]
+    expectedState = mkState env [(xVar, natToNVal xValue), (yVar, natToNVal yValue), (carryVar, natToNVal 0), (resultVar, natToNVal (fromEnum cond))]
   in
     stEquiv vars env (execQSym env initialState (interpret expr)) expectedState

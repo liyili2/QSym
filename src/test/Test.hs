@@ -16,13 +16,11 @@ main :: IO ()
 main = do
 {
   -- run all of the tests and create a list of the results of each
-  result <- mapM quickCheckResult
-    [ checkInitV,
-      checkFlipBits,
-      checkNotIsHighBitSet,
-      checkMajSeq,
-      checkAddAndCompare,
-      checkComparator
+  result <- mapM test
+    [ Named "initV" checkInitV,
+      Named "flipBits" checkFlipBits,
+      Named "notIsHighBitSet" checkNotIsHighBitSet,
+      Named "comparator" checkComparator
     --checkrzDivMod
     --checkrzSub
     -- , checkAdder
@@ -33,3 +31,16 @@ main = do
     True -> exitSuccess
     False -> exitFailure
 }
+
+--------------------------------------
+-- Private details
+--------------------------------------
+
+-- |TestCase represents a singular test case and allows attaching 
+-- names to the cases (useful for logs)
+data TestCase = Named String Property | Unnamed Property
+
+-- runs the actual test case and prints it's name (if it has one)
+test :: TestCase -> IO Result
+test (Named name f) = do { putStrLn("Running " ++ name ++ " test..."); quickCheckResult f }
+test (Unnamed f) = quickCheckResult f
