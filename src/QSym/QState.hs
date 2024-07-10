@@ -16,7 +16,6 @@ module QSym.QState ()
   where
 
 import QSym.Utils
-import Test.QuickCheck
 
 import Numeric.Natural
 

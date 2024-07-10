@@ -26,7 +26,6 @@ module QSym.Utils
   )
   where
 
-import Test.QuickCheck (Gen, choose, Property, forAll, chooseAny, (===))
 import Data.Bits
 import Data.Word
 import Numeric.Natural
