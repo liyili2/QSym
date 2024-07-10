@@ -16,9 +16,9 @@ main = defaultMain (testGroup "Arithmetic" [
   testProperty "initV" checkInitV, 
   testProperty "flipBits" checkFlipBits,
   testProperty "notIsHighBitSet" checkNotIsHighBitSet,
-  testProperty "comparator" checkComparator])
-
---checkrzDivMod
---checkrzSub
--- , checkAdder
--- , checkrzAdder
+  testProperty "comparator" checkComparator,
+  --testProperty "rzDivMod" checkrzDivMod,
+  --testProperty "rzSub" checkrzSub,
+  --testProperty "adder" checkAdder,
+  --testProperty "rzAdder" checkrzAdder
+])
