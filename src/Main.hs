@@ -10,8 +10,6 @@ import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
 
-import QSym.Tests.Arithmetic
-
 import Qafny.Syntax.Parser
 import Qafny.Syntax.AST
 import Qafny.TTG
