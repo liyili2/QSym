@@ -2,7 +2,7 @@
 
 module Main where
 
--- required for utf-8 text file support
+-- required for utf-8 text file enforcement
 import qualified Data.Text.IO.Utf8 as Utf8
 import Data.Text (unpack)
 

@@ -67,7 +67,8 @@ library
                      QSym.Interpret
                      QSym.Monad
                      QSym.Utils
-                     -- QSym.ASTLogic
+                     -- TODO: Move to an internal library to avoid exposing this code on the public interface
+                     QSym.Tests.Arithmetic 
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
