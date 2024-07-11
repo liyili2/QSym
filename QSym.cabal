@@ -67,7 +67,6 @@ library
                      QSym.Interpret
                      QSym.Monad
                      QSym.Utils
-                     QSym.Tests.Arithmetic
                      -- QSym.ASTLogic
 
     -- LANGUAGE extensions used by modules in this package.
@@ -133,7 +132,7 @@ executable QSym
                          hashable <= 1.4.3.0,
                          array,
                          prettyprinter,
-                         text,
+                         text >= 2.1,
                          recursion-schemes,
                          lens,
                          QSym

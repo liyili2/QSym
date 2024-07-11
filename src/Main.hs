@@ -2,6 +2,10 @@
 
 module Main where
 
+-- required for utf-8 text file support
+import qualified Data.Text.IO.Utf8 as Utf8
+import Data.Text (unpack)
+
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
@@ -14,7 +18,7 @@ import Data.Sum
 
 import qualified QSym.Syntax as QSym
 
--- Bell pair:
+-- Bell pair example:
 --
 --
 -- q[0] ---> [H] --+------->
@@ -44,4 +48,5 @@ interpretExpr (EOp2 OAdd x y) = undefined
 
 main :: IO ()
 main = do
-  (print . scanAndParse) =<< readFile "tests/BellPair.qfy"
+  -- unpack converts Data.Text.Text to a String
+  (print . scanAndParse . unpack) =<< Utf8.readFile "tests/BellPair.qfy"
