@@ -6,6 +6,3 @@ dist-newstyle
 *.pdf
 .DS_Store
 docs/semantics.synctex.gz
-
-# can be used to load arbitrary code into ghci without committing that to the repository
-ghci_script.hs
