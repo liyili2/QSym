@@ -46,6 +46,7 @@ data Expr
 block :: [Expr] -> Expr  
 block = mconcat
 
+-- pretty print expression
 -- TODO: Implement this properly
 instance Pretty Expr where
   pretty = pretty . pprExpr
