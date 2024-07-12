@@ -4,7 +4,7 @@ The project designs a symbolic execution engine for quantum programs based on Qa
 
 ## Issues
 
-##### Error: "<stdout>: commitBuffer: invalid argument (invalid character XX)" on Windows
+### Error: "<stdout>: commitBuffer: invalid argument (invalid character XX)" on Windows
 
 > Also may present as a lexer issue on a UTF-8 character.
 
