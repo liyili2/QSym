@@ -1,14 +1,15 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP, AllowAmbiguousTypes #-}
 
 module Main where
 
 -- required for utf-8 text file enforcement
 import qualified Data.Text.IO.Utf8 as Utf8
-import Data.Text (unpack)
+import qualified Data.Text as Text
 
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
+import QSym.Logic.GenConstraint (astConstraints)
 
 import Qafny.Syntax.Parser
 import Qafny.Syntax.AST
@@ -48,5 +49,10 @@ interpretExpr (EOp2 OAdd x y) = undefined
 
 main :: IO ()
 main = do
-  -- unpack converts Data.Text.Text to a String
-  (print . scanAndParse . unpack) =<< Utf8.readFile "tests/BellPair.qfy"
+  -- TODO: read filename in from the command line
+  file_text <- Utf8.readFile "tests/BellPair.qfy"
+  -- read in the qafny code and convert into an AST
+  -- unpack converts Data.Text.Text (from Utf8.readFile) to a String
+  let qafny_ast = (scanAndParse . Text.unpack) file_text 
+  -- TODO: potentially add more context to this error message such as filename
+  either error (print . astConstraints) qafny_ast

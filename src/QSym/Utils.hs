@@ -1,6 +1,7 @@
 module QSym.Utils
   (Var (..)
   ,xVar, yVar, zVar
+  ,cmap
   -- ,Posi (..)
   -- ,getPosiVar
   -- ,nextPos
@@ -47,6 +48,15 @@ xVar, yVar, zVar :: Var
 xVar = Var 0
 yVar = Var 1
 zVar = Var 2
+
+-- |cmap or concat map, works similarly to map except instead of adding all of the results
+-- to a list, it concatenates all of the results into a singular list
+-- where:
+--  f of type `(a -> [b]) is the function to apply
+--  list of type `[a]` is the elements to apply the function to
+-- return of type `[b]` the list of all the results
+cmap :: (a -> [b]) -> [a] -> [b]
+cmap f (x : xs) = (f x) ++ (cmap f xs) 
 
 -- data Bvector = Bvector Natural -- Bit length
 --                        Word64 -- Actual bits
