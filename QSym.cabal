@@ -102,6 +102,8 @@ executable QSym
                    QSym.Utils
                    QSym.Logic.Syntax
                    QSym.Logic.GenConstraint
+                   QSym.Logic.SMT
+                   QSym.Logic.ToSMT
                    QSym.Tests.Arithmetic
                    -- QSym.ASTLogic
                    Qafny.Syntax.AST
@@ -136,6 +138,7 @@ executable QSym
                          text >= 2.1,
                          recursion-schemes,
                          lens,
+                         -- sbv,
                          QSym
 
 
