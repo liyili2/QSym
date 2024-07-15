@@ -21,7 +21,7 @@ data SimpleExpr
   deriving (Show, Eq)
 
 -- | Invariant: Ranges in list should be disjoint
-newtype Locus = Locus [Range]
+newtype Locus = Locus { unLocus :: [Range] }
   deriving (Show, Eq)
 
 -- | Keeps track of the time step
@@ -46,6 +46,19 @@ data LExpr
 
 data Lambda a = String :=> a
   deriving (Show)
+
+lambdaApply :: Lambda SimpleExpr -> SimpleExpr -> SimpleExpr
+lambdaApply (x :=> body) e = go body
+  where
+    go (Var v)
+      | v == x = e
+      | otherwise = Var v
+    go (Add a b) = Add (go a) (go b)
+    go (Xor a b) = Xor (go a) (go b)
+    go (Lit i) = Lit i
+    go (LocusVar locus) = LocusVar locus
+    go (Hadamard h) = Hadamard h
+
 
 type LExprProp = Prop LExpr
 type LExprConjunct = Conjunct LExpr
