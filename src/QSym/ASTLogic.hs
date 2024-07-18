@@ -1,12 +1,10 @@
-module Qdym.ASTLogic
-    where
+module QSym.ASTLogic where
 
 import QSym.Syntax
 import QSym.QState
 import QSym.Monad
 import QSym.Utils
 import QSym.Logic.Syntax
-import QSym.Tests.Arithmetic
 
 -- Map of loci and corresponding vars. When a new var is created, it gets added to the front of the corresponding locus's list
 type LMap = [(Locus, [Var])]

@@ -67,6 +67,8 @@ library
                      QSym.Interpret
                      QSym.Monad
                      QSym.Utils
+                     QSym.Logic.Syntax
+                     QSym.Logic.GenConstraint
                      -- TODO: Move to an internal library to avoid exposing this code on the public interface
                      QSym.Tests.Arithmetic 
 
@@ -79,6 +81,7 @@ library
                       QuickCheck,
                       integer-logarithms,
                       prettyprinter,
+                      recursion-schemes,
                       mtl
 
     -- Directories containing source files.
@@ -105,7 +108,7 @@ executable QSym
                    QSym.Logic.SMT
                    QSym.Logic.ToSMT
                    QSym.Tests.Arithmetic
-                   -- QSym.ASTLogic
+                   QSym.ASTLogic
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils

@@ -6,8 +6,8 @@ import Prettyprinter
 data Range =
   Range
   { rangeName :: String
-  , rangeStart :: SimpleExpr
-  , rangeEnd :: SimpleExpr
+  , rangeStart :: SimpleExpr -- inclusive
+  , rangeEnd :: SimpleExpr -- exclusive
   }
   deriving (Show, Eq)
 
@@ -30,6 +30,7 @@ data Stepped a = Current a | Step (Stepped a)
 
 type SteppedLocus = Stepped Locus
 
+-- Proposition
 newtype Prop a = Prop [Conjunct a]
   deriving (Show, Semigroup, Monoid)
 
