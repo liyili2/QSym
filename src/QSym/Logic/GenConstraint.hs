@@ -66,7 +66,7 @@ blockConstraints (lhs :*=: rhs) = do
   env <- ask
   -- add the unchanged properties
   -- let unchanged = enumerateUnchanged (allBindings env) locus
-  Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
+  pure $ Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf cond part body) = undefined
 

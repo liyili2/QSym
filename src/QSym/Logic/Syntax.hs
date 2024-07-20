@@ -3,6 +3,8 @@ module QSym.Logic.Syntax
 
 import Prettyprinter
 
+import Data.Coerce
+
 data Range =
   Range
   { rangeName :: String
@@ -23,6 +25,13 @@ data SimpleExpr
 -- | Invariant: Ranges in list should be disjoint
 newtype Locus = Locus { unLocus :: [Range] }
   deriving (Show, Eq)
+
+invLocus :: Locus -> Locus
+invLocus = coerce rev
+  where
+    rev :: [Range] -> [Range]
+    rev = reverse
+    {-# INLINE rev #-}
 
 -- | Keeps track of the time step
 data Stepped a = Current a | Step (Stepped a)
