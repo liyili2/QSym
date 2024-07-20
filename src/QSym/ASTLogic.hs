@@ -1,11 +1,17 @@
 module QSym.ASTLogic
     where
 
+import Prelude hiding (lookup)
+import qualified Prelude
+
 import QSym.Syntax
 import QSym.QState
 import QSym.Monad
 import QSym.Utils
 import QSym.Logic.Syntax
+
+import Numeric
+import Data.Complex
 
 -- Map of loci and corresponding vars. When a new var is created, it gets added to the front of the corresponding locus's list
 type LMap = [(Locus, [Var])]
@@ -21,7 +27,7 @@ data Pred =
     Not Pred | 
     And Pred Pred |     
     Or Pred Pred |      
-    Imply Pred Pred |
+    Imply Pred Pred
     deriving (Eq, Show, Ord)
 
 -- Arithmetic Expression, Comes from page 10 figure 7 in https://arxiv.org/pdf/2211.06411
