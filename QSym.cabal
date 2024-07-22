@@ -71,6 +71,17 @@ library
                      QSym.Logic.GenConstraint
                      -- TODO: Move to an internal library to avoid exposing this code on the public interface
                      QSym.Tests.Arithmetic 
+                     Data.Sum
+                     QSym.Logic.SMT
+                     Qafny.Analysis.Normalize
+                     Qafny.Analysis.Partial
+                     Qafny.Syntax.AST
+                     Qafny.Syntax.EmitBinding
+                     Qafny.Syntax.IR
+                     Qafny.Syntax.Subst
+                     Qafny.Syntax.Token
+                     Qafny.TTG
+                     Qafny.Utils.Common
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -82,7 +93,8 @@ library
                       integer-logarithms,
                       prettyprinter,
                       recursion-schemes,
-                      mtl
+                      mtl,
+                      lens
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -108,7 +120,7 @@ executable QSym
                    QSym.Logic.SMT
                    QSym.Logic.ToSMT
                    QSym.Tests.Arithmetic
-                   QSym.ASTLogic
+                   -- QSym.ASTLogic
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils

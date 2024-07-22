@@ -46,6 +46,7 @@ newtype Prop a = Prop [Conjunct a]
 data Conjunct a
   = PointsTo SteppedLocus a
   | Unchanged SteppedLocus -- | x[i,j)' = x[i,j)
+  | If a a
   deriving (Show)
 
 data LExpr
@@ -140,6 +141,7 @@ instance Steppable a => Steppable (Prop a) where
 instance Steppable a => Steppable (Conjunct a) where
   step (PointsTo lhs rhs) = PointsTo (step lhs) (step rhs)
   step (Unchanged x) = Unchanged (step x)
+  step (If x y) = If (step x) (step y)
 
 instance Steppable SimpleExpr where
   step (Xor x y) = Xor (step x) (step y)

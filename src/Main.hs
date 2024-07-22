@@ -17,6 +17,8 @@ import Qafny.TTG
 
 import Data.Sum
 
+import Prettyprinter
+
 import qualified QSym.Syntax as QSym
 
 -- Bell pair example:
@@ -54,5 +56,8 @@ main = do
   -- read in the qafny code and convert into an AST
   -- unpack converts Data.Text.Text (from Utf8.readFile) to a String
   let qafny_ast = (scanAndParse . Text.unpack) file_text 
+
+  -- print qafny_ast
+
   -- TODO: potentially add more context to this error message such as filename
-  either error (print . astConstraints) qafny_ast
+  either error (print . pretty . astConstraints 3) qafny_ast
