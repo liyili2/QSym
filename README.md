@@ -14,3 +14,16 @@ This is a strange issue, mostly due to the long-standing lack of support for UTF
 - [terminal haskell package](https://hackage.haskell.org/package/terminal)
 - [UTF-8 input/output in from Haskell in Windows](https://stackoverflow.com/questions/66928909/utf-8-input-output-in-from-haskell-in-windows)
 - [Haskell with UTF-8](https://serokell.io/blog/haskell-with-utf8)
+
+### Error:  Ambiguous type variable ‘a0’ arising from a use of ‘pretty’, especially when using the QSym.Logic.SMT module
+
+Don't forget to enable the haskell option "OverloadedStrings".
+
+GHCi:
+```
+ghci> :set -XOverloadedStrings
+```
+Haskell Source:
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+```
