@@ -2,6 +2,8 @@ module QSym.Utils
   (Var (..)
   ,xVar, yVar, zVar
   ,cmap
+  ,toLowerString
+  ,indexed
   -- ,Posi (..)
   -- ,getPosiVar
   -- ,nextPos
@@ -31,6 +33,8 @@ import Data.Bits
 import Data.Word
 import Numeric.Natural
 
+import Data.Char (toLower)
+
 -- data BitVector =
 --   BitVector
 --   { bvNatural :: Natural
@@ -57,6 +61,14 @@ zVar = Var 2
 -- return of type `[b]` the list of all the results
 cmap :: (a -> [b]) -> [a] -> [b]
 cmap f (x : xs) = (f x) ++ (cmap f xs) 
+
+-- |toLowerString converts a `String` to a lowercase version of the same string
+toLowerString :: String -> String
+toLowerString = map toLower
+
+-- |indexed returns an array of tuples of the index and the value, given a list
+indexed :: [a] -> [(Int, a)]
+indexed list = zip [0..] list
 
 -- data Bvector = Bvector Natural -- Bit length
 --                        Word64 -- Actual bits

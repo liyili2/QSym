@@ -70,10 +70,9 @@ library
                      QSym.ASTLogic
                      QSym.Logic.Syntax
                      QSym.Logic.GenConstraint
-                     -- TODO: Move to an internal library to avoid exposing this code on the public interface
-                     QSym.Tests.Arithmetic 
                      Data.Sum
                      QSym.Logic.SMT
+                     QSym.Logic.SMTBackend
                      Qafny.Analysis.Normalize
                      Qafny.Analysis.Partial
                      Qafny.Syntax.AST
@@ -83,6 +82,8 @@ library
                      Qafny.Syntax.Token
                      Qafny.TTG
                      Qafny.Utils.Common
+                     -- TODO: Move to an internal library to avoid exposing this code on the public interface
+                     QSym.Tests.Arithmetic 
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -95,7 +96,15 @@ library
                       prettyprinter,
                       recursion-schemes,
                       mtl,
-                      lens
+                      lens,
+                      -- dependencies required for interacting with the SMT solver:
+                      smtlib-backends,
+                      -- smtlib-backends-cvc5 is still experimental
+                      smtlib-backends-process,
+                      -- output from the SMT solver
+                      bytestring,
+                      -- required for parsing output from the SMT solver
+                      regex-tdfa
 
     -- Directories containing source files.
     hs-source-dirs:   src

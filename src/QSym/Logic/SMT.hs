@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-} -- needs to be set in any files that use this module for prettyprinting to work
 
 module QSym.Logic.SMT
   (SMT
@@ -8,9 +8,16 @@ module QSym.Logic.SMT
   ,int
   ,bool
   ,getNames
+  ,assert
 
   ,varMap
 
+  ,Block
+  -- block constructors
+  ,one
+  ,smtBlock
+
+  -- boolean operations
   ,and'
   ,or'
   ,(^&&^)
@@ -24,10 +31,16 @@ module QSym.Logic.SMT
   ,true
   ,false
 
+  -- conditionals
   ,not'
   ,eq
+  ,lt
+  ,lte
+  ,gt
+  ,gte
   ,ifThenElse
-  ,int
+  
+  -- arithmetic operations
   ,add
   ,at
 
@@ -41,10 +54,14 @@ module QSym.Logic.SMT
   ,setInfo
 
   ,checkSAT
+  -- remove
+  ,test_smt
   )
   where
 
 import QSym.Logic.Syntax
+
+import QSym.Utils (toLowerString)
 
 import Prettyprinter hiding (sep)
 
@@ -60,15 +77,15 @@ data SExpr a
   | IntLit Int
   deriving (Show, Functor, Foldable)
 
+-- |SMT
 data SMT a b
   = Decl (SExpr a)
   | Assert (SExpr a)
   | SExpr (SExpr a)
+  deriving (Show)
 
 data Symbol
 data Decl
-
-data Array a
 
 data SomeSMT a = forall b. SomeSMT (SMT a b)
 
@@ -158,6 +175,22 @@ not' = SExpr . apply "not" . (:[]) . toSExpr
 eq :: IsString a => SMT a b -> SMT a b -> SMT a Bool
 eq x y = SExpr (apply "=" [toSExpr x, toSExpr y])
 
+-- |lt (less than) corresponds to the SMT expression (< <lh> <rh>)
+lt :: IsString a => SMT a b -> SMT a b -> SMT a Bool
+lt x y = SExpr (apply "<" [toSExpr x, toSExpr y])
+
+-- |lte (less than equal to) corresponds to the SMT expression (<= <lh> <rh>)
+lte :: IsString a => SMT a b -> SMT a b -> SMT a Bool
+lte x y = SExpr (apply "<=" [toSExpr x, toSExpr y])
+
+-- |gt (greater than) corresponds to the SMT expression (> <lh> <rh>)
+gt :: IsString a => SMT a b -> SMT a b -> SMT a Bool
+gt x y = SExpr (apply ">" [toSExpr x, toSExpr y])
+
+-- |gte (greater than equal) corresponds to the SMT expression (>= <lh> <rh>)
+gte :: IsString a => SMT a b -> SMT a b -> SMT a Bool
+gte x y = SExpr (apply ">=" [toSExpr x, toSExpr y])
+
 ifThenElse :: IsString a => SMT a Bool -> SMT a b -> SMT a b -> SMT a b
 ifThenElse c t f = SExpr (apply "ite" [toSExpr c, toSExpr t, toSExpr f])
 
@@ -203,6 +236,11 @@ setInfo = Decl . apply "set-info" . map Atom . flatten
     flatten :: [(a, a)] -> [a]
     flatten = concat . map (\(x, y) -> [x, y])
 
+-- |setOption corresponds to the (set-option <keyword> <attr-value>) SMTLIB command
+-- TODO: take in a list of tuples and return a Block a instead
+setOption :: IsString a => a -> a -> SMT a Decl
+setOption keyword attr_value = Decl $ apply "set-option" [Atom keyword, Atom attr_value]
+
 checkSAT :: IsString a => SMT a Decl
 checkSAT = Decl $ apply "check-sat" []
 
@@ -210,10 +248,11 @@ checkSAT = Decl $ apply "check-sat" []
 toSExpr :: SMT a b -> SExpr a
 toSExpr (SExpr e) = e
 
+
 instance Pretty a => Pretty (SExpr a) where
   pretty (Atom x) = pretty x
   pretty (List xs) = parens $ hsep $ map pretty xs
-  pretty (BoolLit b) = pretty b
+  pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i
 
 instance (IsString a, Pretty a) => Pretty (SMT a b) where
@@ -226,6 +265,20 @@ instance (IsString a, Pretty a) => Pretty (SomeSMT a) where
 
 instance (IsString a, Pretty a) => Pretty (Block a) where
   pretty (Block xs) = vcat $ map pretty xs
+
+test_smt :: IsString a => Block a
+test_smt = smtBlock [setLogic "ALL"
+  ,setOption ":produce-models" "true"
+  ,setOption ":incremental" "true"
+  ,setOption ":produce-unsat-cores" "true"
+  ,setOption ":print-cores-full" "true"
+  ,declareConst "x" "Int"
+  ,declareConst "y" "Int"
+  ,assert $ lt (int 0) (symbol "x")
+  ,assert $ lt (int 0) (symbol "y")
+  ,assert $ lt ((add (symbol "x") (symbol "y"))) (int 1)
+  ,assert $ lte (symbol "x") (symbol "y")
+  ,checkSAT]
 
 -- convertProp :: LExprProp -> SBool
 -- convertProp (Prop xs) = foldr (.&&) sTrue (map convertConjunct xs)
