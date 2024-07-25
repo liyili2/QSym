@@ -1,7 +1,42 @@
 -- a small wrapper over SMTLIB.Backends
 {-# LANGUAGE OverloadedStrings #-} -- necessary for pretty printing SMT symbols
+{-# OPTIONS_HADDOCK show-extensions #-}
+{-|
+Module      : QSym.Logic.SMTBackend
+Description : Runs SMT Block statments
+Portability : POSIX
+
+= SMTBackend
+
+This module is reponsible for managing the backend SMT Solver process. 
+Whether this be cvc5, z3, or a different, external, solver.
+
+== Getting Started
+
+An example of using this backend to solve the first part of [this](https://cvc5.github.io/docs/cvc5-1.1.2/examples/quickstart.html) problem is below:
+
+@
+  import QSym.Logic.SMT
+  import QSym.Logic.SMTBackend
+
+  smt_block = smtBlock [setLogic "ALL"
+  ,setOption ":produce-models" "true"
+  ,setOption ":incremental" "true"
+  ,setOption ":produce-unsat-cores" "true"
+  ,setOption ":print-cores-full" "true"
+  ,declareConst "x" "Real"
+  ,declareConst "y" "Real"
+  ,assert $ lt (int 0) (symbol "x")
+  ,assert $ lt (int 0) (symbol "y")
+  ,assert $ lt ((add (symbol "x") (symbol "y"))) (int 1)
+  ,assert $ lte (symbol "x") (symbol "y")
+  ,checkSAT]
+  
+  main = fmap print (executeSMT smt_block)
+@
+-}
 module QSym.Logic.SMTBackend
-  {-(
+  (
   -- helper data structures
    SATResult (..)
   ,getFirstResult
@@ -14,8 +49,9 @@ module QSym.Logic.SMTBackend
 
   ,SMTResult -- you should not need to construct this type
   -- execution functions
-  ,executeSMT)-}
-	where
+  ,executeSMT
+  ,executeSMTLoudly)
+  where
 
 -- modules necessary for interacting with QSym.Logic.SMT
 import QSym.Logic.SMT (Block)
@@ -31,6 +67,7 @@ import qualified SMTLIB.Backends.Process as SMTProcess -- we will be using the p
 import Control.Monad (forM)
 
 import Data.ByteString.Lazy.Char8 (unpack)
+import qualified Data.ByteString.Lazy.Char8 as ByteString
 import Data.ByteString.Builder (stringUtf8)
 
 -- modules necessary for the implementation
@@ -41,7 +78,7 @@ import QSym.Utils (indexed)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-{- ## Design:
+{- Design:
    What might one want from an API?
     => submit all commands at once
       => swallow output, return results: `executeSMT`
@@ -71,16 +108,14 @@ import qualified Data.Map as Map
 -- Public API
 -----------------------------------------------------
 
--- |SATResult corresponds to the three results that the SMTLIB v2 command "(check-sat)" can return:
---		sat     maps to `Satisfiable`
---		unsat   maps to `Unsatisfiable`
---		unknown maps to `Unknown`
---  and serves as a return type for executeSMT
+-- |SATResult corresponds to the three results that the SMTLIB v2 command "(check-sat)" can return
+--  and serves as a return type for `executeSMT`
 data SATResult = Satisfiable | Unsatisfiable | Unknown
     deriving (Read, Show, Enum, Eq, Ord)
 
 -- |SMTResult represents the results of executing a block smt statement
 -- Information includes:
+--
 --   * if any of the commands errored
 --   * the results of check-sat, echo, get-value, get-assignment, get-proof, get-unsat-cores, get-assertions, get-option and get-info commands
 data SMTResult = SMTResult { errors :: Map Int String -- ^ errors represents the errors returned from executing a block of smt statments as a map of the command's number (starting at 0) mapped to its error (as a string)
@@ -88,59 +123,49 @@ data SMTResult = SMTResult { errors :: Map Int String -- ^ errors represents the
                            }
     deriving (Read, Show, Eq)
 
--- |getFirstResult returns the first SATResult in the satResults array of an SMTResult
--- mostly used for executions where only one check-sat command was run
+-- |getFirstResult returns the first `SATResult` in the satResults array of an `SMTResult`.
+-- Typically used for executions where only one check-sat command was run.
 getFirstResult :: SMTResult -> SATResult
 getFirstResult smt_result = (satResults smt_result)!!0
 
--- |isSatisfiable returns true if the first SATResult in the satResults array of an SMTResult is Satisfiable
--- ths use case for this function is if you only have one check-sat command in your SMT block
+-- |isSatisfiable returns True if the first `SATResult` in the satResults array of an `SMTResult` is `Satisfiable`.
+-- Typically used for executions where only one check-sat command was run.
 isSatisfiable :: SMTResult -> Bool
 isSatisfiable smt_result = (getFirstResult smt_result) == Satisfiable
 
--- |isUnsatisfiable returns true if the first SATResult in the satResults array of an SMTResult is Unsatisfiable
--- ths use case for this function is if you only have one check-sat command in your SMT block
+-- |isUnsatisfiable returns True if the first `SATResult` in the satResults array of an `SMTResult` is `Unsatisfiable`.
+-- Typically used for executions where only one check-sat command was run.
 isUnsatisfiable :: SMTResult -> Bool
 isUnsatisfiable smt_result = (getFirstResult smt_result) == Unsatisfiable
 
--- |isUnknown returns true if the first SATResult in the satResults array of an SMTResult is Unknown
--- ths use case for this function is if you only have one check-sat command in your SMT block
+-- |isUnknown returns true if the first `SATResult` in the satResults array of an `SMTResult` is `Unknown`.
+-- Typically used for executions where only one check-sat command was run.
 isUnknown :: SMTResult -> Bool
 isUnknown smt_result = (getFirstResult smt_result) == Unknown
 
--- |didError returns true if an error occured whilst executing the smt commands
+-- |didError returns True if an error occured whilst executing the SMT commands.
 didError :: SMTResult -> Bool
 didError smt_result = Map.size (errors smt_result) > 0
 
--- |didErrorAt returns true if an error occured at the specified command number
+-- |didErrorAt returns True if an error occured at the specified command number.
 didErrorAt :: SMTResult -> Int -> Bool
 didErrorAt smt_result index = Map.member index (errors smt_result)
 
--- |getError returns a `Maybe String` value given a command index that an error may have occured at 
+-- |getError returns a `Maybe String` value given a command index that an error may have occured at.
 getErrorAt :: SMTResult -> Int -> Maybe String
 getErrorAt smt_result index = Map.lookup index (errors smt_result)
 
 -- |executeSMT executes a block of SMT statments and returns information about its results. 
 -- It will silently swallow any output from the SMT solver process. see its sibling: `executeSMTLoudly` if 
 -- you want the output from the SMT solver to be printed to the command line.
--- It takes one argument, of type `Block a` (see: `QSym.Logic.SMT`)
+-- It takes one argument, of type `Block`
 -- It returns a value of type `SMTResult` 
 executeSMT :: (IsString a, Pretty a) => Block a -> IO SMTResult
-executeSMT smt_code =
-  let
-    -- split the block statement into its lines (to be used by the solver one at a time)
-    statements = lines $ renderString $ layoutCompact $ pretty smt_code
-  in
-  -- runs a new computation using the 'Process' backend and returns an IO monad
-  SMTProcess.with
-    cvc5Config
-    $ \handle -> do
-      -- convert the process handle to an actual backend
-      let backend = SMTProcess.toBackend handle
-      -- create a solver (w/o queuing because it doesn't work with commands that have no output) from the backend
-      solver <- Solver.initSolver Solver.NoQueuing backend
-      -- iterate through all the statements and collect their results into one big SMTResult
-      fmap fromCommandResults (forM statements (executeSMTStatement solver))
+executeSMT smt_code = executeSMTWithHandler smt_code executeSMTStatement
+
+-- |executeSMTLoudly performs exactly the same as `executeSMT` but it also outputs any response from the solver to standard out.
+executeSMTLoudly :: (IsString a, Pretty a) => Block a -> IO SMTResult
+executeSMTLoudly smt_code = executeSMTWithHandler smt_code executeSMTStatementLoudly
 
 -----------------------------------------------------
 -- Private Details
@@ -205,3 +230,28 @@ fromCommandResults results = SMTResult (getErrors results) (sats results)
 -- |executeSMTStatement executes a single statement (as a `String`) on an SMT solver and returns it's result of type `CommandResult`
 executeSMTStatement :: Solver.Solver -> String -> IO CommandResult
 executeSMTStatement solver statement = fmap (resultFromString . unpack) (Solver.command solver (stringUtf8 statement))
+
+-- |executeSMTStatementLoudly performs the same as `executeSMTStatement` but also outputs the solver's stdout to the command line.
+executeSMTStatementLoudly :: Solver.Solver -> String -> IO CommandResult
+executeSMTStatementLoudly solver statement = do
+  response <- Solver.command solver (stringUtf8 statement)
+  ByteString.putStrLn response
+  return $ resultFromString $ unpack response
+
+-- |executeSMTWithHandler pulls the main grunt work of executeSMT and executeSMTLoudly, allowing them to pass in the specific method that either prints the smt results or doens't
+executeSMTWithHandler :: (IsString a, Pretty a) => Block a -> (Solver.Solver -> String -> IO CommandResult) -> IO SMTResult
+executeSMTWithHandler smt_code smt_handler =
+  let
+    -- split the block statement into its lines (to be used by the solver one at a time)
+    statements = lines $ renderString $ layoutCompact $ pretty smt_code
+  in
+  -- runs a new computation using the 'Process' backend and returns an IO monad
+  SMTProcess.with
+    cvc5Config
+    $ \handle -> do
+      -- convert the process handle to an actual backend
+      let backend = SMTProcess.toBackend handle
+      -- create a solver (w/o queuing because it doesn't work with commands that have no output) from the backend
+      solver <- Solver.initSolver Solver.NoQueuing backend
+      -- iterate through all the statements and collect their results into one big SMTResult
+      fmap fromCommandResults (forM statements (smt_handler solver))
