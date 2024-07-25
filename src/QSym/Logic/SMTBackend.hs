@@ -180,6 +180,7 @@ data CommandResult
   = Success 
   | SAT SATResult 
   | Error String
+  | Other String
   deriving (Read, Show, Eq)
 
 -- |resultFromString converts from program output to `CommandResult`
@@ -193,7 +194,10 @@ resultFromString str
       errorRegex = "\\(error \"([^\"]+)\"\\)" :: String
       (_, _, _, matches) = str =~ errorRegex :: (String, String, String, [String])
     in
-      Error (matches!!0) -- TODO: add checks for no match
+      if (length matches) > 0 then
+        Error (matches!!0)
+      else
+        Other str
 
 -- |returns true if this command result is an error
 isError :: CommandResult -> Bool

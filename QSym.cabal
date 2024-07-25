@@ -131,7 +131,6 @@ executable QSym
                    QSym.Logic.SMT
                    QSym.Logic.ToSMT
                    QSym.Tests.Arithmetic
-                   -- QSym.ASTLogic
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils
