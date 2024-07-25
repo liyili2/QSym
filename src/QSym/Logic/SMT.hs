@@ -54,8 +54,6 @@ module QSym.Logic.SMT
   ,setInfo
 
   ,checkSAT
-  -- remove
-  ,test_smt
   )
   where
 
@@ -265,7 +263,7 @@ instance (IsString a, Pretty a) => Pretty (SomeSMT a) where
 
 instance (IsString a, Pretty a) => Pretty (Block a) where
   pretty (Block xs) = vcat $ map pretty xs
-  
+
 -- convertProp :: LExprProp -> SBool
 -- convertProp (Prop xs) = foldr (.&&) sTrue (map convertConjunct xs)
 --
