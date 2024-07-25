@@ -67,6 +67,7 @@ library
                      QSym.Interpret
                      QSym.Monad
                      QSym.Utils
+                     QSym.ASTLogic
                      QSym.Logic.Syntax
                      QSym.Logic.GenConstraint
                      -- TODO: Move to an internal library to avoid exposing this code on the public interface
@@ -115,6 +116,7 @@ executable QSym
                    QSym.Interpret
                    QSym.Monad
                    QSym.Utils
+                   QSym.ASTLogic
                    QSym.Logic.Syntax
                    QSym.Logic.GenConstraint
                    QSym.Logic.SMT
