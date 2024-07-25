@@ -54,6 +54,13 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+
+library tests-helper
+    exposed-modules: QSym.Tests.Arithmetic
+    -- NOTE: no explicit constraints on base needed
+    --       as they're inherited from the 'library' stanza
+    build-depends: base
+
 library
     -- Import common warning flags.
     import:           warnings
@@ -82,8 +89,6 @@ library
                      Qafny.Syntax.Token
                      Qafny.TTG
                      Qafny.Utils.Common
-                     -- TODO: Move to an internal library to avoid exposing this code on the public interface
-                     QSym.Tests.Arithmetic 
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -163,7 +168,6 @@ executable QSym
                          text >= 2.1,
                          recursion-schemes,
                          lens,
-                         -- sbv,
                          QSym
 
 
@@ -180,7 +184,9 @@ test-suite QSym-tests
                          tasty-golden,
                          tasty-quickcheck,
                          QuickCheck,
-                         QSym
+                         QSym,
+                         QSym:tests-helper
+
 
 
     -- Base language which the package is written in.
