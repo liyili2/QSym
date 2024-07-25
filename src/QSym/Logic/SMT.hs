@@ -265,21 +265,7 @@ instance (IsString a, Pretty a) => Pretty (SomeSMT a) where
 
 instance (IsString a, Pretty a) => Pretty (Block a) where
   pretty (Block xs) = vcat $ map pretty xs
-
-test_smt :: IsString a => Block a
-test_smt = smtBlock [setLogic "ALL"
-  ,setOption ":produce-models" "true"
-  ,setOption ":incremental" "true"
-  ,setOption ":produce-unsat-cores" "true"
-  ,setOption ":print-cores-full" "true"
-  ,declareConst "x" "Int"
-  ,declareConst "y" "Int"
-  ,assert $ lt (int 0) (symbol "x")
-  ,assert $ lt (int 0) (symbol "y")
-  ,assert $ lt ((add (symbol "x") (symbol "y"))) (int 1)
-  ,assert $ lte (symbol "x") (symbol "y")
-  ,checkSAT]
-
+  
 -- convertProp :: LExprProp -> SBool
 -- convertProp (Prop xs) = foldr (.&&) sTrue (map convertConjunct xs)
 --
