@@ -46,6 +46,7 @@ data Env =
   , envBitSize :: Int
   }
 
+-- |allBindings returns a list of both the inputs and the outputs from the environment
 allBindings :: Env -> Bindings ()
 allBindings env = envInputs env ++ envOutputs env
 
