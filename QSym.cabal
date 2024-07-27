@@ -172,7 +172,14 @@ library tests-helper
     exposed-modules: QSym.Tests.Arithmetic
     -- NOTE: no explicit constraints on base needed
     --       as they're inherited from the 'library' stanza
-    build-depends: base
+    build-depends: base,
+                   prettyprinter,
+                   integer-logarithms,
+                   QuickCheck,
+                   mtl,
+                   containers
+    hs-source-dirs: src
+    default-language: GHC2021
 
 test-suite QSym-tests
     type:                exitcode-stdio-1.0
