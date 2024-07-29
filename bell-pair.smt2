@@ -55,6 +55,14 @@
   (= (select (select mem2 q) 1)
      (hadamard-snd mem q)))
 
+(assert
+  (= (select (select mem2 q2) 0)
+     (select (select mem q2) 0)))
+
+(assert
+  (= (select (select mem2 q2) 1)
+     (select (select mem q2) 1)))
+
 (assert (= mem2-vecs mem-vecs))
 
 ; CNOT
@@ -69,12 +77,12 @@
 
 ;; Second qubit
 (assert
-  (= (select (select mem3 q) 0)
-     (select (select mem2 q) 1)))
+  (= (select (select mem3 q2) 0)
+     (select (select mem2 q2) 1)))
 
 (assert
-  (= (select (select mem3 q) 1)
-     (select (select mem2 q) 0)))
+  (= (select (select mem3 q2) 1)
+     (select (select mem2 q2) 0)))
 
 (assert
   (= (select mem3-vecs 0) (_ bv00 2)))
