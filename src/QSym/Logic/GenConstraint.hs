@@ -54,9 +54,10 @@ smtPreamble =
     [setLogic "ALL"
     ,setOption ":produce-models" "true"
     ,setOption ":pp.decimal" "true"
+    ,setOption ":produce-unsat-cores" "true"
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
-    ,assert $ gt "sqrt2" (int 2)
+    ,assert $ gt "sqrt2" (int 0)
     ]
 
 newtype Gen a = Gen { getGen :: Reader Env a }
@@ -125,6 +126,7 @@ astSMT initialState bitSize ast =
       smtBlock
         [checkSAT
         ,getModel
+        -- ,symbol "(get-unsat-core)"
         ]
 
     initialStateEqs :: Block Name
