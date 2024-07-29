@@ -1,12 +1,17 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module QSym.Logic.GenConstraint
-  (astConstraints
+  (smtPreamble
+  ,astConstraints
   )
   where
+
+import Prelude hiding (div)
 
 import QSym.Logic.Syntax
 import QSym.Logic.SMT
 
-import Qafny.Syntax.AST hiding (Range (..))
+import Qafny.Syntax.AST hiding (Range (..), Block)
 import qualified Qafny.Syntax.AST as Qafny
 import Qafny.Syntax.Subst
 
@@ -18,6 +23,41 @@ import Data.String
 import Prettyprinter
 
 import Debug.Trace
+
+heapType :: String
+heapType = "(Array Int (Array Int Real))"
+
+bitVecSize :: Int
+bitVecSize = 4
+
+bitVecType :: String
+bitVecType = "(_ BitVec " ++ show bitVecSize ++ ")"
+
+bitVecArrayType :: String
+bitVecArrayType = "(Array Int " ++ bitVecType ++ ")"
+
+bitVecLit :: Int -> String
+bitVecLit i = "(_ bv" ++ show i ++ " " ++ show bitVecSize ++ ")"
+
+getHeapName :: Int -> Name
+getHeapName i = fromString $ "mem" ++ show i
+
+getVecsName :: Int -> Name
+getVecsName i = fromString $ "mem" ++ show i ++ "-vecs"
+
+smtPreamble :: Block Name
+smtPreamble =
+  smtBlock
+    [setLogic "ALL"
+    ,setOption ":produce-models" "true"
+    ,setOption ":pp.decimal" "true"
+    ,declareConst "sqrt2" "Real"
+    ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
+    ,assert $ gt "sqrt2" (int 2)
+
+    ,declareConst "mem0" (fromString heapType)
+    ,declareConst "mem0-vecs" (fromString bitVecArrayType)
+    ]
 
 newtype Gen a = Gen { getGen :: Reader Env a }
   deriving (Functor, Applicative, Monad, MonadReader Env)
@@ -112,7 +152,7 @@ blockConstraints (SIf cond part body) = do
 
   pure $ ifThenElse cond'
             bodyConstraints
-            (and' (map unchanged (getNames bodyConstraints)))
+            undefined --(and' (map unchanged (getNames bodyConstraints)))
 
   -- pure undefined -- $ Prop [If (LSimpleExpr (fromGuard cond)) undefined]
   where
@@ -121,8 +161,8 @@ blockConstraints (SIf cond part body) = do
     fromGuard (GEPartition _ (Just e)) = convertExpr e Nothing
 blockConstraints s = error $ "unimplemented: " ++ show s
 
-unchanged :: Name -> HighLevelSMT Bool
-unchanged x = eq (symbol x) (symbol (step x))
+-- unchanged :: Name -> HighLevelSMT Bool
+-- unchanged x = eq (symbol x) (symbol (step x))
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
 applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
@@ -139,7 +179,7 @@ convertRange (Qafny.Range x start end) = Range x (convertSimpleExpr start) (conv
 
 convertLambda :: LambdaF (Exp ()) -> SteppedLocus -> Int -> HighLevelSMT Int
 convertLambda (LambdaF { bBases = [paramVar], eBases = [body] }) locus ix =
-  convertExpr body (Just (paramVar, at (LocusName locus) ix))
+  convertExpr body (Just (paramVar, select (symbol (LocusName locus)) (int ix)))
 
 convertSimpleExpr :: Exp () -> SimpleExpr
 convertSimpleExpr (ENum i) = Lit i
@@ -170,6 +210,31 @@ convertGuardExp (GEPartition p eMaybe) =
       case eMaybe of
         Just e -> convertBoolExpr e
         Nothing -> true
+
+hadamardFirst :: Name -> Int -> SMT Name Int
+hadamardFirst mem loc =
+  div
+    (add (select (select (symbol mem) (int loc)) (int 0))
+         (select (select (symbol mem) (int loc)) (int 1)))
+    "sqrt2"
+
+hadamardSecond :: Name -> Int -> SMT Name Int
+hadamardSecond mem loc =
+  div
+    (sub (select (select (symbol mem) (int loc)) (int 0))
+         (select (select (symbol mem) (int loc)) (int 1)))
+    "sqrt2"
+
+nameWithStep :: Name -> Int -> Name
+nameWithStep name step = name <> fromString (show step)
+
+unchanged :: Name -> Int -> SMT Name Decl
+unchanged name i =
+  update name i id
+
+update :: Name -> Int -> (SMT Name a -> SMT Name a) -> SMT Name Decl
+update name i f =
+  assert $ eq (symbol (nameWithStep name (i+1))) (f (symbol (nameWithStep name i)))
 
 -- convertExpr env (ENum i) = int i
 -- convertExpr env (EVar x) = symbol (VarName (Current x))

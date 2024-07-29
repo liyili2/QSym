@@ -9,8 +9,10 @@ module QSym.Logic.SMT
   ,bool
   ,getNames
   ,assert
+  ,setOption
 
   ,varMap
+  ,Decl
 
   ,Block
   -- block constructors
@@ -42,7 +44,11 @@ module QSym.Logic.SMT
   
   -- arithmetic operations
   ,add
-  ,at
+  ,sub
+  ,mul
+  ,div
+  ,store
+  ,select
 
   ,smtMap
   ,smtMapList
@@ -56,6 +62,8 @@ module QSym.Logic.SMT
   ,checkSAT
   )
   where
+
+import Prelude hiding (div)
 
 import QSym.Logic.Syntax
 
@@ -84,6 +92,7 @@ data SMT a b
 
 data Symbol
 data Decl
+data Array i a
 
 data SomeSMT a = forall b. SomeSMT (SMT a b)
 
@@ -195,6 +204,15 @@ ifThenElse c t f = SExpr (apply "ite" [toSExpr c, toSExpr t, toSExpr f])
 add :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
 add x y = SExpr $ apply "+" [toSExpr x, toSExpr y]
 
+sub :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+sub x y = SExpr $ apply "-" [toSExpr x, toSExpr y]
+
+mul :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+mul x y = SExpr $ apply "*" [toSExpr x, toSExpr y]
+
+div :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+div x y = SExpr $ apply "/" [toSExpr x, toSExpr y]
+
 true :: SMT a Bool
 true = SExpr (BoolLit True)
 
@@ -203,18 +221,18 @@ false = SExpr (BoolLit False)
 
 updateIx :: IsString a => Int -> a -> a -> (SMT a b -> SMT a b) -> SMT a Bool
 updateIx i oldName newName f =
-  setIx i newName (f (symbol newName))
+  store i newName (f (symbol newName))
   -- SExpr $ apply "store" [Atom newName, IntLit i, at oldName i]
 
-setIx :: IsString a => Int -> a -> SMT a b -> SMT a Bool
-setIx i name v =
+store :: IsString a => Int -> a -> SMT a b -> SMT a Bool
+store i name v =
   SExpr $ apply "store" [Atom name, IntLit i, toSExpr v]
 
-at' :: IsString a => a -> Int -> SExpr a
-at' name i = apply "select" [Atom name, IntLit i]
+at' :: IsString a => SExpr a -> SExpr a -> SExpr a
+at' arr i = apply "select" [arr, i]
 
-at :: IsString a => a -> Int -> SMT a b
-at name i = SExpr (at' name i)
+select :: IsString a => SMT a (Array i b) -> SMT a i -> SMT a b
+select arr i = SExpr (at' (toSExpr arr) (toSExpr i))
 
 smtMap :: IsString a => Int -> (Int -> SMT a b -> SMT a b) -> a -> a -> SMT a Bool
 smtMap size f oldName newName =
@@ -226,7 +244,7 @@ smtMapList :: IsString a => (SMT a b -> SMT a b) -> a -> a -> [SMT a b] -> SMT a
 smtMapList f oldName newName list =
   and' (zipWith go [0..] list)
   where
-    go i v = setIx i newName (f v)
+    go i v = store i newName (f v)
 
 setInfo :: IsString a => [(a, a)] -> SMT a Decl
 setInfo = Decl . apply "set-info" . map Atom . flatten
