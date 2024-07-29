@@ -288,6 +288,10 @@ hadamard i mem =
   smtBlock
     [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
     ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
+
+    -- TODO: For now, hardcode unused parts
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0)) (select (select (symbol mem) (mkLoc (i+1))) (int 0))
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1)) (select (select (symbol mem) (mkLoc (i+1))) (int 1))
     ]
 
 hadamardFirst :: Int -> Name -> SMT Name Int
