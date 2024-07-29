@@ -36,8 +36,8 @@ bitVecType = "(_ BitVec " ++ show bitVecSize ++ ")"
 bitVecArrayType :: String
 bitVecArrayType = "(Array Int " ++ bitVecType ++ ")"
 
-bitVecLit :: Int -> String
-bitVecLit i = "(_ bv" ++ show i ++ " " ++ show bitVecSize ++ ")"
+bitVecLit :: String -> SMT Name Int
+bitVecLit i = fromString $ "(_ bv" ++ i ++ " " ++ show bitVecSize ++ ")"
 
 mkLoc :: Int -> SMT Name a
 mkLoc i = fromString $ "q" ++ show i
@@ -217,11 +217,30 @@ convertGuardExp (GEPartition p eMaybe) =
         Just e -> convertBoolExpr e
         Nothing -> true
 
+cnot :: Int -> Int -> Name -> Name -> Block Name
+cnot i j mem memVecs =
+  smtBlock
+    [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
+                 (select (select (symbol mem) (mkLoc i)) (int 0))
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
+                 (select (select (symbol mem) (mkLoc i)) (int 1))
+
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
+                 (select (select (symbol mem) (mkLoc (i+1))) (int 0))
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
+                 (select (select (symbol mem) (mkLoc (i+1))) (int 1))
+
+    -- entangle
+    -- TODO: Hardcoded right now
+    ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
+    ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
+    ]
+
 hadamard :: Int -> Name -> Block Name
 hadamard i mem =
   smtBlock
-    [assert $ eq (select (select (symbol mem) (mkLoc i)) (int 0)) (hadamardFirst 0 (step mem))
-    ,assert $ eq (select (select (symbol mem) (mkLoc i)) (int 1)) (hadamardSecond 1 (step mem))
+    [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
+    ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
     ]
 
 hadamardFirst :: Int -> Name -> SMT Name Int
