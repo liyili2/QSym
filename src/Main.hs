@@ -64,6 +64,7 @@ main = do
   let smt = either error (astConstraints 3) qafny_ast
   -- either error (print . pretty) smt
 
+  print $ pretty smt
   executeSMTLoudly smt
   pure ()
 

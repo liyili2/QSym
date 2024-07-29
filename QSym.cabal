@@ -130,6 +130,7 @@ executable QSym
                    QSym.Logic.SMT
                    QSym.Logic.ToSMT
                    QSym.Tests.Arithmetic
+                   QSym.Logic.SMTBackend
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTFactory
                    Qafny.Syntax.ASTUtils
@@ -175,6 +176,7 @@ executable QSym
 -- tests library
 library tests-helper
     exposed-modules: QSym.Tests.Arithmetic
+    other-modules: QSym.Interpret QSym.Monad QSym.QState QSym.Syntax QSym.Utils
     -- NOTE: no explicit constraints on base needed
     --       as they're inherited from the 'library' stanza
     build-depends: base,
