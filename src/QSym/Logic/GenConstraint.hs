@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module QSym.Logic.GenConstraint
-  (smtPreamble
-  ,astConstraints
+  (astSMT
   )
   where
 
@@ -19,6 +18,7 @@ import Data.Sum
 
 import Control.Monad.Reader
 import Data.String
+import Data.List
 
 import Prettyprinter
 
@@ -40,7 +40,7 @@ bitVecLit :: String -> SMT Name Int
 bitVecLit i = fromString $ "(_ bv" ++ i ++ " " ++ show bitVecSize ++ ")"
 
 mkLoc :: Int -> SMT Name a
-mkLoc i = fromString $ "q" ++ show i
+mkLoc i = fromString (show i) --fromString $ "q" ++ show i
 
 -- getHeapName :: Int -> Name
 -- getHeapName i = fromString $ "mem" ++ show i
@@ -57,9 +57,6 @@ smtPreamble =
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
     ,assert $ gt "sqrt2" (int 2)
-
-    ,declareConst (currentVar "mem") (fromString heapType)
-    ,declareConst (currentVar "mem-vecs") (fromString bitVecArrayType)
     ]
 
 newtype Gen a = Gen { getGen :: Reader Env a }
@@ -101,6 +98,34 @@ buildEnv bitSize qm = Env (qmInputs qm) (qmOutputs qm) bitSize
 
 runGen :: Gen a -> Env -> a
 runGen (Gen g) = runReader g
+
+getSteppedVar :: Var -> [Name] -> [Stepped Var]
+getSteppedVar x [] = []
+getSteppedVar x (VarName y:ys)
+  | getSteppedName y == x = y : getSteppedVar x ys
+getSteppedVar x (_:ys) = getSteppedVar x ys
+
+mkDeclarations :: Block Name -> Block Name
+mkDeclarations block =
+  let blockNames = getBlockNames block
+      memNames = map VarName . nub $ getSteppedVar "mem" blockNames
+      memVecNames = map VarName . nub $ getSteppedVar "mem-vecs" blockNames
+  in
+  declareConstList (zip memNames (repeat (fromString heapType)))
+    <>
+  declareConstList (zip memVecNames (repeat (fromString (fromString bitVecArrayType))))
+
+astSMT :: Int -> AST -> Block Name
+astSMT bitSize ast =
+  let block = astConstraints bitSize ast
+  in
+  smtPreamble <> mkDeclarations block <> block <> smtCheck
+  where
+    smtCheck =
+      smtBlock
+        [checkSAT
+        ,getModel
+        ]
 
 astConstraints :: Int -> AST -> Block Name
 astConstraints bitSize =

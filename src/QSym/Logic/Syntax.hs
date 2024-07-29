@@ -4,6 +4,8 @@ module QSym.Logic.Syntax
 import Prettyprinter
 
 import Data.Coerce
+import Data.Ord
+import Data.List
 
 data Range =
   Range
@@ -57,6 +59,26 @@ data LExpr
 
 data Lambda a = String :=> a
   deriving (Show)
+
+getMaxStepped :: Eq a => [Stepped a] -> a -> Maybe (Stepped a)
+getMaxStepped [] _ = Nothing
+getMaxStepped (x:xs) y
+  | getSteppedName x == y =
+      case  (getMaxStepped xs y) of
+        Nothing -> Just x
+        Just r -> Just $ maxBy (comparing steppedToInt) x r
+  | otherwise = getMaxStepped xs y
+  where
+    maxBy :: (a -> a -> Ordering) -> a -> a -> a
+    maxBy f x y = maximumBy f [x, y]
+
+getSteppedName :: Stepped a -> a
+getSteppedName (Current n) = n
+getSteppedName (Step x) = getSteppedName x
+
+steppedToInt :: Stepped a -> Int
+steppedToInt (Current {}) = 0
+steppedToInt (Step x) = 1 + steppedToInt x
 
 lambdaApply :: Lambda SimpleExpr -> SimpleExpr -> SimpleExpr
 lambdaApply (x :=> body) e = go body

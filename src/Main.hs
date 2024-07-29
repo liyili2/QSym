@@ -9,7 +9,7 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
-import QSym.Logic.GenConstraint (astConstraints)
+import QSym.Logic.GenConstraint (astSMT)
 import QSym.Logic.SMTBackend
 
 import Qafny.Syntax.Parser
@@ -61,10 +61,10 @@ main = do
   print qafny_ast
 
   -- TODO: potentially add more context to this error message such as filename
-  let smt = either error (astConstraints 3) qafny_ast
+  let smt = either error (astSMT 3) qafny_ast
   -- either error (print . pretty) smt
 
   print $ pretty smt
-  executeSMTLoudly cvc5Config smt
+  executeSMTLoudly z3Config smt
   pure ()
 

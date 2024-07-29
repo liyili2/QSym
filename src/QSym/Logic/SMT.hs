@@ -8,6 +8,7 @@ module QSym.Logic.SMT
   ,int
   ,bool
   ,getNames
+  ,getBlockNames
   ,assert
   ,setOption
 
@@ -58,9 +59,11 @@ module QSym.Logic.SMT
 
   ,declareHeap
   ,declareConst
+  ,declareConstList
   ,setInfo
 
   ,checkSAT
+  ,getModel
   )
   where
 
@@ -101,6 +104,11 @@ getNames :: SMT a b -> [a]
 getNames (Decl x) = toList x
 getNames (Assert x) = toList x
 getNames (SExpr x) = toList x
+
+getBlockNames :: Block a -> [a]
+getBlockNames (Block xs) = concatMap go xs
+  where
+    go (SomeSMT x) = getNames x
 
 instance IsString a => IsString (SExpr a) where
   fromString = Atom . fromString
@@ -181,6 +189,9 @@ declareHeap lhs rhs = Decl $ apply "declare-heap" [Atom lhs, Atom rhs]
 
 declareConst :: IsString a => a -> a -> SMT a Decl
 declareConst name ty = Decl $ apply "declare-const" [Atom name, Atom ty]
+
+declareConstList :: IsString a => [(a, a)] -> Block a
+declareConstList = smtBlock . map (uncurry declareConst)
 
 not' :: IsString a => SMT a Bool -> SMT a Bool
 not' = SExpr . apply "not" . (:[]) . toSExpr
@@ -265,6 +276,9 @@ setOption keyword attr_value = Decl $ apply "set-option" [Atom keyword, Atom att
 
 checkSAT :: IsString a => SMT a Decl
 checkSAT = Decl $ apply "check-sat" []
+
+getModel :: IsString a => SMT a Decl
+getModel = Decl $ apply "get-model" []
 
 -- NOTE: Do not export
 toSExpr :: SMT a b -> SExpr a

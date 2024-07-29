@@ -179,7 +179,7 @@ cvc5Config :: SMTProcess.Config
 cvc5Config = SMTProcess.defaultConfig { SMTProcess.exe = "cvc5", SMTProcess.args = [] } -- defaultConfig for now, consider handling log messages in the future
 
 z3Config :: SMTProcess.Config
-z3Config = SMTProcess.defaultConfig { SMTProcess.exe = "z3", SMTProcess.args = [] } -- defaultConfig for now, consider handling log messages in the future
+z3Config = SMTProcess.defaultConfig
 
 -- |CommandResult is an internal data type representing the value that a Solver.command can return
 data CommandResult 
