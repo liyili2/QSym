@@ -162,6 +162,10 @@ executable QSym
                          text >= 2.1,
                          recursion-schemes,
                          lens,
+                         bytestring,
+                         smtlib-backends-process,
+                         smtlib-backends,
+                         regex-tdfa,
                          QSym
 
 

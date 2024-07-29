@@ -10,6 +10,7 @@ import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
 import QSym.Logic.GenConstraint (astConstraints)
+import QSym.Logic.SMTBackend
 
 import Qafny.Syntax.Parser
 import Qafny.Syntax.AST
@@ -60,4 +61,9 @@ main = do
   print qafny_ast
 
   -- TODO: potentially add more context to this error message such as filename
-  either error (print . pretty . astConstraints 3) qafny_ast
+  let smt = either error (astConstraints 3) qafny_ast
+  -- either error (print . pretty) smt
+
+  executeSMTLoudly smt
+  pure ()
+
