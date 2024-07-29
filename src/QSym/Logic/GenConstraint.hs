@@ -115,17 +115,29 @@ mkDeclarations block =
     <>
   declareConstList (zip memVecNames (repeat (fromString (fromString bitVecArrayType))))
 
-astSMT :: Int -> AST -> Block Name
-astSMT bitSize ast =
+astSMT :: [[SMT Name Int]] -> Int -> AST -> Block Name
+astSMT initialState bitSize ast =
   let block = astConstraints bitSize ast
   in
-  smtPreamble <> mkDeclarations block <> block <> smtCheck
+  smtPreamble <> mkDeclarations block <> initialStateEqs <> block <> smtCheck
   where
     smtCheck =
       smtBlock
         [checkSAT
         ,getModel
         ]
+
+    initialStateEqs :: Block Name
+    initialStateEqs =
+      mconcat $ zipWith toMemEq [0..] initialState
+
+    toMemEq :: Int -> [SMT Name Int] -> Block Name
+    toMemEq i vs =
+      smtBlock $ zipWith (toMemEq' i) [0..] vs
+
+    toMemEq' :: Int -> Int -> SMT Name Int -> SMT Name Decl
+    toMemEq' i j v =
+      assert $ eq (select (select (symbol (currentVar "mem")) (mkLoc i)) (mkLoc j)) v
 
 astConstraints :: Int -> AST -> Block Name
 astConstraints bitSize =

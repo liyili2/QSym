@@ -80,6 +80,10 @@ steppedToInt :: Stepped a -> Int
 steppedToInt (Current {}) = 0
 steppedToInt (Step x) = 1 + steppedToInt x
 
+toStepped :: Int -> a -> Stepped a
+toStepped 0 x = Current x
+toStepped n x = Step (toStepped (n-1) x)
+
 lambdaApply :: Lambda SimpleExpr -> SimpleExpr -> SimpleExpr
 lambdaApply (x :=> body) e = go body
   where
