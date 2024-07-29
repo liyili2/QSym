@@ -266,34 +266,53 @@ convertGuardExp (GEPartition p eMaybe) =
         Just e -> convertBoolExpr e
         Nothing -> true
 
+lookupCell :: Name -> Int -> Int -> SMT Name Int
+lookupCell name i j =
+  select (select (symbol name) (int i)) (mkLoc j)
+
 cnot :: Int -> Int -> Name -> Name -> Block Name
 cnot i j mem memVecs =
   smtBlock
-    [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
-                 (select (select (symbol mem) (mkLoc i)) (int 0))
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
-                 (select (select (symbol mem) (mkLoc i)) (int 1))
+    [assert $ eq (lookupCell (step mem) i 0)
+                 (lookupCell mem i 0)
+    ,assert $ eq (lookupCell (step mem) i 1)
+                 (lookupCell mem i 1)
 
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
-                 (select (select (symbol mem) (mkLoc (i+1))) (int 0))
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
-                 (select (select (symbol mem) (mkLoc (i+1))) (int 1))
-
+    ,assert $ eq (lookupCell (step mem) (i+1) 0)
+                 (lookupCell mem (i+1) 1)
+    ,assert $ eq (lookupCell (step mem) (i+1) 1)
+                 (lookupCell mem (i+1) 0)
+    -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
+    --              (select (select (symbol mem) (mkLoc i)) (int 0))
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
+    --              (select (select (symbol mem) (mkLoc i)) (int 1))
+    --
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
+    --              (select (select (symbol mem) (mkLoc (i+1))) (int 0))
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
+    --              (select (select (symbol mem) (mkLoc (i+1))) (int 1))
+    --
     -- entangle
     -- TODO: Hardcoded right now
-    ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
-    ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
+    -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
+    -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
     ]
 
 hadamard :: Int -> Name -> Block Name
 hadamard i mem =
   smtBlock
-    [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
+    [assert $ eq (lookupCell (step mem) i 0) (hadamardFirst 0 mem)
+    ,assert $ eq (lookupCell (step mem) i 1) (hadamardSecond 0 mem)
+    -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
 
     -- TODO: For now, hardcode unused parts
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0)) (select (select (symbol mem) (mkLoc (i+1))) (int 0))
-    ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1)) (select (select (symbol mem) (mkLoc (i+1))) (int 1))
+    ,assert $ eq (lookupCell (step mem) (i+1) 0)
+                 (lookupCell mem (i+1) 0)
+    ,assert $ eq (lookupCell (step mem) (i+1) 1)
+                 (lookupCell mem (i+1) 1)
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0)) (select (select (symbol mem) (mkLoc (i+1))) (int 0))
+    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1)) (select (select (symbol mem) (mkLoc (i+1))) (int 1))
     ]
 
 hadamardFirst :: Int -> Name -> SMT Name Int
