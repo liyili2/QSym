@@ -39,11 +39,14 @@ bitVecArrayType = "(Array Int " ++ bitVecType ++ ")"
 bitVecLit :: Int -> String
 bitVecLit i = "(_ bv" ++ show i ++ " " ++ show bitVecSize ++ ")"
 
-getHeapName :: Int -> Name
-getHeapName i = fromString $ "mem" ++ show i
+mkLoc :: Int -> SMT Name a
+mkLoc i = fromString $ "q" ++ show i
 
-getVecsName :: Int -> Name
-getVecsName i = fromString $ "mem" ++ show i ++ "-vecs"
+-- getHeapName :: Int -> Name
+-- getHeapName i = fromString $ "mem" ++ show i
+--
+-- getVecsName :: Int -> Name
+-- getVecsName i = fromString $ "mem" ++ show i ++ "-vecs"
 
 smtPreamble :: Block Name
 smtPreamble =
@@ -55,12 +58,15 @@ smtPreamble =
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
     ,assert $ gt "sqrt2" (int 2)
 
-    ,declareConst "mem0" (fromString heapType)
-    ,declareConst "mem0-vecs" (fromString bitVecArrayType)
+    ,declareConst (currentVar "mem") (fromString heapType)
+    ,declareConst (currentVar "mem-vecs") (fromString bitVecArrayType)
     ]
 
 newtype Gen a = Gen { getGen :: Reader Env a }
   deriving (Functor, Applicative, Monad, MonadReader Env)
+
+currentVar :: Var -> Name
+currentVar x = VarName (Current x)
 
 type HighLevelSMT = SMT Name
 
@@ -211,30 +217,34 @@ convertGuardExp (GEPartition p eMaybe) =
         Just e -> convertBoolExpr e
         Nothing -> true
 
-hadamardFirst :: Name -> Int -> SMT Name Int
-hadamardFirst mem loc =
+hadamard :: Int -> Name -> Block Name
+hadamard i mem =
+  smtBlock
+    [assert $ eq (select (select (symbol mem) (mkLoc i)) (int 0)) (hadamardFirst 0 (step mem))
+    ,assert $ eq (select (select (symbol mem) (mkLoc i)) (int 1)) (hadamardSecond 1 (step mem))
+    ]
+
+hadamardFirst :: Int -> Name -> SMT Name Int
+hadamardFirst loc mem =
   div
     (add (select (select (symbol mem) (int loc)) (int 0))
          (select (select (symbol mem) (int loc)) (int 1)))
     "sqrt2"
 
-hadamardSecond :: Name -> Int -> SMT Name Int
-hadamardSecond mem loc =
+hadamardSecond :: Int -> Name -> SMT Name Int
+hadamardSecond loc mem =
   div
     (sub (select (select (symbol mem) (int loc)) (int 0))
          (select (select (symbol mem) (int loc)) (int 1)))
     "sqrt2"
 
-nameWithStep :: Name -> Int -> Name
-nameWithStep name step = name <> fromString (show step)
+unchanged :: Name -> SMT Name Decl
+unchanged name =
+  update name id
 
-unchanged :: Name -> Int -> SMT Name Decl
-unchanged name i =
-  update name i id
-
-update :: Name -> Int -> (SMT Name a -> SMT Name a) -> SMT Name Decl
-update name i f =
-  assert $ eq (symbol (nameWithStep name (i+1))) (f (symbol (nameWithStep name i)))
+update :: Name -> (SMT Name a -> SMT Name a) -> SMT Name Decl
+update name f =
+  assert $ eq (symbol (step name)) (f (symbol name))
 
 -- convertExpr env (ENum i) = int i
 -- convertExpr env (EVar x) = symbol (VarName (Current x))
