@@ -47,6 +47,9 @@ module QSym.Logic.SMTBackend
   ,didErrorAt
   ,getErrorAt
 
+  ,cvc5Config
+  ,z3Config
+
   ,SMTResult -- you should not need to construct this type
   -- execution functions
   ,executeSMT
@@ -160,12 +163,12 @@ getErrorAt smt_result index = Map.lookup index (errors smt_result)
 -- you want the output from the SMT solver to be printed to the command line.
 -- It takes one argument, of type `Block`
 -- It returns a value of type `SMTResult` 
-executeSMT :: (IsString a, Pretty a) => Block a -> IO SMTResult
-executeSMT smt_code = executeSMTWithHandler smt_code executeSMTStatement
+executeSMT :: (IsString a, Pretty a) => SMTProcess.Config -> Block a -> IO SMTResult
+executeSMT config smt_code = executeSMTWithHandler config smt_code executeSMTStatement
 
 -- |executeSMTLoudly performs exactly the same as `executeSMT` but it also outputs any response from the solver to standard out.
-executeSMTLoudly :: (IsString a, Pretty a) => Block a -> IO SMTResult
-executeSMTLoudly smt_code = executeSMTWithHandler smt_code executeSMTStatementLoudly
+executeSMTLoudly :: (IsString a, Pretty a) => SMTProcess.Config -> Block a -> IO SMTResult
+executeSMTLoudly config smt_code = executeSMTWithHandler config smt_code executeSMTStatementLoudly
 
 -----------------------------------------------------
 -- Private Details
@@ -174,6 +177,9 @@ executeSMTLoudly smt_code = executeSMTWithHandler smt_code executeSMTStatementLo
 -- |cvc5Config returns an `SMTLIB.Backends.Process.Config` that represents the settings for the cvc5 SMT solver. 
 cvc5Config :: SMTProcess.Config
 cvc5Config = SMTProcess.defaultConfig { SMTProcess.exe = "cvc5", SMTProcess.args = [] } -- defaultConfig for now, consider handling log messages in the future
+
+z3Config :: SMTProcess.Config
+z3Config = SMTProcess.defaultConfig { SMTProcess.exe = "z3", SMTProcess.args = [] } -- defaultConfig for now, consider handling log messages in the future
 
 -- |CommandResult is an internal data type representing the value that a Solver.command can return
 data CommandResult 
@@ -243,15 +249,15 @@ executeSMTStatementLoudly solver statement = do
   return $ resultFromString $ unpack response
 
 -- |executeSMTWithHandler pulls the main grunt work of executeSMT and executeSMTLoudly, allowing them to pass in the specific method that either prints the smt results or doens't
-executeSMTWithHandler :: (IsString a, Pretty a) => Block a -> (Solver.Solver -> String -> IO CommandResult) -> IO SMTResult
-executeSMTWithHandler smt_code smt_handler =
+executeSMTWithHandler :: (IsString a, Pretty a) => SMTProcess.Config -> Block a -> (Solver.Solver -> String -> IO CommandResult) -> IO SMTResult
+executeSMTWithHandler config smt_code smt_handler =
   let
     -- split the block statement into its lines (to be used by the solver one at a time)
     statements = lines $ renderString $ layoutCompact $ pretty smt_code
   in
   -- runs a new computation using the 'Process' backend and returns an IO monad
   SMTProcess.with
-    cvc5Config
+    config
     $ \handle -> do
       -- convert the process handle to an actual backend
       let backend = SMTProcess.toBackend handle

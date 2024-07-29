@@ -65,6 +65,6 @@ main = do
   -- either error (print . pretty) smt
 
   print $ pretty smt
-  executeSMTLoudly smt
+  executeSMTLoudly cvc5Config smt
   pure ()
 
