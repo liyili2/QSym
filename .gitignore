@@ -7,5 +7,5 @@ dist-newstyle
 .DS_Store
 docs/semantics.synctex.gz
 
-# generated smt2 files
-*.smt2
+# # generated smt2 files
+# *.smt2

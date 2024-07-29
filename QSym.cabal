@@ -69,6 +69,7 @@ library
                      QSym.Utils
                      QSym.ASTLogic
                      QSym.Logic.Syntax
+                     QSym.Logic.Heap
                      QSym.Logic.GenConstraint
                      Data.Sum
                      QSym.Logic.SMT
