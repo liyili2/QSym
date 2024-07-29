@@ -102,69 +102,72 @@ buildEnv bitSize qm = Env (qmInputs qm) (qmOutputs qm) bitSize
 runGen :: Gen a -> Env -> a
 runGen (Gen g) = runReader g
 
-astConstraints :: Int -> AST -> HighLevelSMT Bool
+astConstraints :: Int -> AST -> Block Name
 astConstraints bitSize =
-  and' . map (toplevelConstraints bitSize)
+  mconcat . map (toplevelConstraints bitSize)
 
-toplevelConstraints :: Int -> Toplevel () -> HighLevelSMT Bool
+toplevelConstraints :: Int -> Toplevel () -> Block Name
 toplevelConstraints bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
-    Nothing -> true
+    Nothing -> mempty
     Just block -> runGen (blockListConstraints (inBlock block)) (buildEnv bitSize qm)
 
-blockListConstraints :: [Stmt ()] -> Gen (HighLevelSMT Bool)
-blockListConstraints [] = pure true
+blockListConstraints :: [Stmt ()] -> Gen (Block Name)
+blockListConstraints [] = pure mempty
 blockListConstraints (x:xs) = do
   prop <- blockConstraints x
-  rest <- traverse (fmap (varMap step) . blockConstraints) xs
-  pure (prop ^&&^ and' rest)
+  rest <- mconcat <$> traverse (fmap (varMapBlock step) . blockConstraints) xs
+  pure (prop <> rest)
 
-blockConstraints :: Stmt () -> Gen (HighLevelSMT Bool)
-blockConstraints (SAssert {}) = pure true -- TODO: Should we handle this?
+blockConstraints :: Stmt () -> Gen (Block Name)
+blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
 blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
-blockConstraints (lhs :*=: rhs@(ELambda lam)) = do
-  -- Add an apply constraint to the locus that was modified
-  -- and unchanged constraints to the others
-
-  -- create the apply expression
-  let locus = toLocus lhs
-  -- let apply_expr = undefined --LApply (Current locus) ("x" :=> (convertApplyExpr "x" rhs))
-  -- For BellPair, all we have to do is inverse the locus TODO: actually get all the variables in the environment
-  -- read the env (contains the function inputs and outputs, needed for the unchanged prop)
-  env <- ask
-  let bitSize = envBitSize env
-
-  pure $ smtMap bitSize (\i v -> convertLambda lam (Current locus) i)
-           (LocusName (Step (Current locus))) (LocusName (Current locus))
-
-  -- pure $ smtMap bitSize (\i v -> convertExpr [(locus, i)] v)
+blockConstraints (lhs :*=: EHad) = do
+  pure $ hadamard (partitionToName lhs) (currentVar "mem")
+-- blockConstraints (lhs :*=: rhs@(ELambda lam)) = do
+  -- -- Add an apply constraint to the locus that was modified
+  -- -- and unchanged constraints to the others
+  --
+  -- -- create the apply expression
+  -- let locus = toLocus lhs
+  -- -- let apply_expr = undefined --LApply (Current locus) ("x" :=> (convertApplyExpr "x" rhs))
+  -- -- For BellPair, all we have to do is inverse the locus TODO: actually get all the variables in the environment
+  -- -- read the env (contains the function inputs and outputs, needed for the unchanged prop)
+  -- env <- ask
+  -- let bitSize = envBitSize env
+  --
+  -- pure $ smtMap bitSize (\i v -> convertLambda lam (Current locus) i)
   --          (LocusName (Step (Current locus))) (LocusName (Current locus))
+  --
+  -- -- pure $ smtMap bitSize (\i v -> convertExpr [(locus, i)] v)
+  -- --          (LocusName (Step (Current locus))) (LocusName (Current locus))
+  --
+  -- -- pure $ smtMapList (\i -> undefined)
+  -- --          (LocusName (Step (Current locus))) (LocusName (Current locus))
+  -- --          (map int [0..bitSize-1])
+  --
+  -- -- add the unchanged properties
+  -- -- let unchanged = enumerateUnchanged (allBindings env) locus
+  -- -- pure undefined -- $ Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
+blockConstraints (SDafny _) = pure mempty
+blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
+    pure $ cnot (partitionToName part) (partitionToName x) (currentVar "mem") (currentVar "mem-vecs")
 
-  -- pure $ smtMapList (\i -> undefined)
-  --          (LocusName (Step (Current locus))) (LocusName (Current locus))
-  --          (map int [0..bitSize-1])
-
-  -- add the unchanged properties
-  -- let unchanged = enumerateUnchanged (allBindings env) locus
-  -- pure undefined -- $ Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
-blockConstraints (SDafny _) = pure true
-blockConstraints (SIf cond part body) = do
-
-  bodyConstraints <- blockListConstraints (inBlock body)
-
-  let cond' = convertGuardExp cond
-
-  pure $ ifThenElse cond'
-            bodyConstraints
-            undefined --(and' (map unchanged (getNames bodyConstraints)))
-
-  -- pure undefined -- $ Prop [If (LSimpleExpr (fromGuard cond)) undefined]
-  where
-    fromGuard (GEPartition p Nothing) = toLocusExpr p
-    -- TODO: Is this right?
-    fromGuard (GEPartition _ (Just e)) = convertExpr e Nothing
+  -- bodyConstraints <- blockListConstraints (inBlock body)
+  --
+  -- let cond' = convertGuardExp cond
+  --
+  -- pure $ ifThenElse cond'
+  --           bodyConstraints
+  --           undefined --(and' (map unchanged (getNames bodyConstraints)))
+  --
+  -- -- pure undefined -- $ Prop [If (LSimpleExpr (fromGuard cond)) undefined]
+  -- where
+  --   fromGuard (GEPartition p Nothing) = toLocusExpr p
+  --   -- TODO: Is this right?
+  --   fromGuard (GEPartition _ (Just e)) = convertExpr e Nothing
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 -- unchanged :: Name -> HighLevelSMT Bool
@@ -176,6 +179,13 @@ applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
 
 toLocus :: Partition -> Locus
 toLocus (Partition xs) = Locus $ map convertRange xs
+
+-- TODO: Partially hardcoded for now
+partitionToName :: Partition -> Int
+partitionToName (Partition [Qafny.Range x start end]) = evalToInt start
+
+evalToInt :: Exp () -> Int
+evalToInt (ENum i) = i
 
 toLocusExpr :: Partition -> HighLevelSMT Int
 toLocusExpr = symbol . LocusName . Current . toLocus

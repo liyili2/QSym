@@ -12,6 +12,7 @@ module QSym.Logic.SMT
   ,setOption
 
   ,varMap
+  ,varMapBlock
   ,Decl
 
   ,Block
@@ -129,6 +130,11 @@ varMap :: (a -> a') -> SMT a b -> SMT a' b
 varMap f (Decl x) = Decl $ fmap f x
 varMap f (Assert x) = Assert $ fmap f x
 varMap f (SExpr x) = SExpr $ fmap f x
+
+varMapBlock :: (a -> a') -> Block a -> Block a'
+varMapBlock f (Block xs) = Block $ map go xs
+  where
+    go (SomeSMT x) = SomeSMT (varMap f x)
 
 one :: SMT a b -> Block a
 one x = Block [SomeSMT x]

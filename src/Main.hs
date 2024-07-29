@@ -57,7 +57,7 @@ main = do
   -- unpack converts Data.Text.Text (from Utf8.readFile) to a String
   let qafny_ast = (scanAndParse . Text.unpack) file_text 
 
-  -- print qafny_ast
+  print qafny_ast
 
   -- TODO: potentially add more context to this error message such as filename
   either error (print . pretty . astConstraints 3) qafny_ast

@@ -105,8 +105,12 @@ instance Pretty LExpr where
   pretty (LSimpleExpr e) = pretty e
 
 instance Pretty a => Pretty (Stepped a) where
-  pretty (Current x) = pretty x
-  pretty (Step x) = pretty x <> pretty "'"
+  pretty = go 0
+    where
+      go (i :: Int) (Current x) = pretty x <> pretty i
+      go i (Step x) = go (i + 1) x
+  -- pretty (Current x) = pretty x
+  -- pretty (Step x) = pretty x <> pretty "'"
 
 instance Pretty SimpleExpr where
   pretty (LocusVar x) = pretty x
