@@ -62,7 +62,10 @@ main = do
   print qafny_ast
 
   -- TODO: potentially add more context to this error message such as filename
-  let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
+
+  -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
+  let smt = either error (astSMT [] 3) qafny_ast
+
   -- either error (print . pretty) smt
 
   print $ pretty smt
