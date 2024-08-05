@@ -61,7 +61,7 @@ newVar lm _ x = (lm, x)
 -- Finds the current (first index) variable for a given Locus
 lookup :: LMap -> Locus -> Maybe Var
 lookup [] _ = Nothing
-lockup (x:xs) loc = if fst x == loc then Just (head (snd x)) else lookup xs loc
+lookup (x:xs) loc = if fst x == loc then Just (head (snd x)) else lookup xs loc
 
 -- Inserts the new var at the front of the list in the target locus's tuple
 -- If the target locus can't be found, creates a new entry tuple at the end of the LMap
