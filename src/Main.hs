@@ -9,9 +9,9 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
-import QSym.Logic.GenConstraint (astSMT)
+import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
 import QSym.Logic.SMTBackend
-import QSym.Logic.SMT (int)
+import QSym.Logic.SMT (int, SMT, Decl)
 
 import Qafny.Syntax.Parser
 import Qafny.Syntax.AST
@@ -64,11 +64,14 @@ main = do
   -- TODO: potentially add more context to this error message such as filename
 
   -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
-  let smt = either error (astSMT [] 3) qafny_ast
+  let smt = either error (astSMT (ExactValues []) 3) qafny_ast
 
   -- either error (print . pretty) smt
 
   print $ pretty smt
   executeSMTLoudly z3Config smt
   pure ()
+
+verify :: Name -> SMT Name Decl
+verify mem = undefined
 

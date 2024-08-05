@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module QSym.Logic.GenConstraint
-  (astSMT
+  (Name
+  ,Verify (..)
+  ,astSMT
   )
   where
 
@@ -15,6 +17,8 @@ import qualified Qafny.Syntax.AST as Qafny
 import Qafny.Syntax.Subst
 
 import Data.Sum
+
+import Data.Ord
 
 import Control.Monad.Reader
 import Data.String
@@ -53,7 +57,7 @@ smtPreamble =
   smtBlock
     [setLogic "ALL"
     ,setOption ":produce-models" "true"
-    ,setOption ":pp.decimal" "true"
+    -- ,setOption ":pp.decimal" "true"
     ,setOption ":produce-unsat-cores" "true"
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
@@ -69,6 +73,7 @@ currentVar x = VarName (Current x)
 type HighLevelSMT = SMT Name
 
 data Name = LocusName SteppedLocus | VarName (Stepped Var) | BuiltinName String
+  deriving (Show)
 
 instance Pretty Name where
   pretty (LocusName x) = pretty x
@@ -90,6 +95,14 @@ data Env =
   , envBitSize :: Int
   }
 
+getOtherInputs :: [Int] -> Gen [Int]
+getOtherInputs usedInputs = do
+  env <- ask
+
+  let allInputs = zipWith const [0..] $ envInputs env
+
+  pure $ filter (`notElem` usedInputs) allInputs
+
 -- |allBindings returns a list of both the inputs and the outputs from the environment
 allBindings :: Env -> Bindings ()
 allBindings env = envInputs env ++ envOutputs env
@@ -106,6 +119,11 @@ getSteppedVar x (VarName y:ys)
   | getSteppedName y == x = y : getSteppedVar x ys
 getSteppedVar x (_:ys) = getSteppedVar x ys
 
+getLastMem :: Block Name -> Name
+getLastMem block =
+  let blockNames = getBlockNames block
+  in VarName . maximumBy (comparing steppedToInt) . nub $ getSteppedVar "mem" blockNames
+
 mkDeclarations :: Block Name -> Block Name
 mkDeclarations block =
   let blockNames = getBlockNames block
@@ -116,12 +134,16 @@ mkDeclarations block =
     <>
   declareConstList (zip memVecNames (repeat (fromString (fromString bitVecArrayType))))
 
-astSMT :: [[SMT Name Int]] -> Int -> AST -> Block Name
-astSMT initialState bitSize ast =
-  let block = astConstraints bitSize ast
-  in
-  smtPreamble <> mkDeclarations block <> initialStateEqs <> block <> smtCheck
+data Verify
+  = ExactValues [[SMT Name Int]]
+  | Satisfies (Name -> SMT Name Decl)
+
+astSMT :: Verify -> Int -> AST -> Block Name
+astSMT verify bitSize ast =
+  smtPreamble <> mkDeclarations block <> verifyEqs <> block <> smtCheck
   where
+    block = astConstraints bitSize ast
+
     smtCheck =
       smtBlock
         [checkSAT
@@ -129,9 +151,13 @@ astSMT initialState bitSize ast =
         -- ,symbol "(get-unsat-core)"
         ]
 
-    initialStateEqs :: Block Name
-    initialStateEqs =
-      mconcat $ zipWith toMemEq [0..] initialState
+    verifyEqs :: Block Name
+    verifyEqs =
+      case verify of
+        ExactValues initialState -> mconcat $ zipWith toMemEq [0..] initialState
+        Satisfies props -> one $ props $ getLastMem block 
+
+    -- mems :: [SMT 
 
     toMemEq :: Int -> [SMT Name Int] -> Block Name
     toMemEq i vs =
@@ -164,7 +190,9 @@ blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 blockConstraints (lhs :*=: EHad) = do
-  pure $ hadamard (partitionToName lhs) (currentVar "mem")
+  let usedInput = partitionToName lhs
+  otherInputs <- getOtherInputs [usedInput]
+  pure $ hadamard usedInput otherInputs (currentVar "mem")
 -- blockConstraints (lhs :*=: rhs@(ELambda lam)) = do
   -- -- Add an apply constraint to the locus that was modified
   -- -- and unchanged constraints to the others
@@ -298,22 +326,21 @@ cnot i j mem memVecs =
     -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
     ]
 
-hadamard :: Int -> Name -> Block Name
-hadamard i mem =
-  smtBlock
+hadamard :: Int -> [Int] -> Name -> Block Name
+hadamard i otherInputs mem =
+  smtBlock $
     [assert $ eq (lookupCell (step mem) i 0) (hadamardFirst 0 mem)
     ,assert $ eq (lookupCell (step mem) i 1) (hadamardSecond 0 mem)
     -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
-
-    -- TODO: For now, hardcode unused parts
-    ,assert $ eq (lookupCell (step mem) (i+1) 0)
-                 (lookupCell mem (i+1) 0)
-    ,assert $ eq (lookupCell (step mem) (i+1) 1)
-                 (lookupCell mem (i+1) 1)
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0)) (select (select (symbol mem) (mkLoc (i+1))) (int 0))
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1)) (select (select (symbol mem) (mkLoc (i+1))) (int 1))
-    ]
+    ] ++ concatMap handleOtherInput otherInputs
+    where
+      handleOtherInput j =
+        [assert $ eq (lookupCell (step mem) j 0)
+                     (lookupCell mem j 0)
+        ,assert $ eq (lookupCell (step mem) j 1)
+                     (lookupCell mem j 1)
+        ]
 
 hadamardFirst :: Int -> Name -> SMT Name Int
 hadamardFirst loc mem =
