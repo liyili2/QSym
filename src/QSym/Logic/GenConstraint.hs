@@ -42,6 +42,7 @@ data Gate =
 
 resizeGate :: Int -> Int -> Gate -> SMTMatrix
 resizeGate totalQubits inputIndex gate =
+    trace ("totalQubits = " ++ show totalQubits) $
     tensor' (identity inputIndex)
             (tensor' (gateMap gate)
                      (identity (totalQubits - gateNumOutputs gate)))
@@ -110,7 +111,9 @@ mkDeclarations block =
 
 data Verify
   = ExactValues [SMT Name Int]
-  | Satisfies (Name -> SMT Name Decl)
+  | Satisfies (Name -> -- Input
+               Name -> -- Output
+               Block Name)
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
@@ -129,7 +132,7 @@ astSMT verify bitSize ast =
     verifyEqs =
       case verify of
         ExactValues initialState -> mconcat $ zipWith toMemEq [0..] initialState
-        Satisfies props -> one $ props $ getLastMem block 
+        Satisfies prop -> prop (currentVar "mem") $ getLastMem block 
 
     toMemEq :: Int -> SMT Name Int -> Block Name
     toMemEq i v =
@@ -164,13 +167,16 @@ blockConstraints (lhs :*=: EHad) = do
 
   totalQubits <- envBitSize <$> ask
 
-    -- TODO: Change hardcoded 0 to proper input index
-  pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits hadamard)
+  let resized = resizeGate totalQubits usedInput hadamard
+  let applied = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
+
+  traceShow (pretty resized) $ pure $ applied
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
   totalQubits <- envBitSize <$> ask
     -- TODO: Change hardcoded 0 to proper input index
-  pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits cnot)
+  let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate totalQubits 0 cnot)
+  traceShow ("totalQubits", totalQubits) $ traceShow (pretty block) $ pure block
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()

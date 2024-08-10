@@ -100,6 +100,8 @@ data Array i a
 
 data SomeSMT a = forall b. SomeSMT (SMT a b)
 
+deriving instance Show a => Show (SomeSMT a)
+
 getNames :: SMT a b -> [a]
 getNames (Decl x) = toList x
 getNames (Assert x) = toList x
@@ -139,7 +141,7 @@ nil :: SMT a Symbol
 nil = SExpr (IntLit 0)
 
 newtype Block a = Block [SomeSMT a]
-  deriving (Semigroup, Monoid)
+  deriving (Semigroup, Monoid, Show)
 
 varMap :: (a -> a') -> SMT a b -> SMT a' b
 varMap f (Decl x) = Decl $ fmap f x

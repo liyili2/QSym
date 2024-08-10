@@ -11,17 +11,22 @@ import QSym.Interpret
 import QSym.Syntax
 import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
 import QSym.Logic.SMTBackend
-import QSym.Logic.SMT (int, SMT, Decl)
+import QSym.Logic.SMT as SMT --(int, SMT, Decl)
 
 import Qafny.Syntax.Parser
-import Qafny.Syntax.AST
+import Qafny.Syntax.AST hiding (Block)
+import qualified Qafny.Syntax.AST as AST
 import Qafny.TTG
+
+import Data.String
 
 import Data.Sum
 
 import Prettyprinter
 
 import qualified QSym.Syntax as QSym
+
+import Debug.Trace
 
 -- Bell pair example:
 --
@@ -40,8 +45,8 @@ interpretQafny [Toplevel (Inl x)] =
   in
   interpretBlock body
 
-interpretBlock :: Block () -> QSym.Expr
-interpretBlock (Block xs) = foldr1 QSym.Seq (map interpretStmt xs)
+interpretBlock :: AST.Block () -> QSym.Expr
+interpretBlock (AST.Block xs) = foldr1 QSym.Seq (map interpretStmt xs)
 
 interpretStmt :: Stmt () -> QSym.Expr
 interpretStmt (x :*=: y) = undefined
@@ -67,7 +72,8 @@ main = do
   -- TODO: potentially add more context to this error message such as filename
 
   -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
-  let smt = either error (astSMT (ExactValues [int 1, int 0, int 1, int 0]) 3) qafny_ast
+  -- let smt = either error (astSMT (ExactValues [int 1, int 0, int 1, int 0]) 3) qafny_ast
+  let smt = either error (astSMT (Satisfies verify) 4) qafny_ast
 
   -- either error (print . pretty) smt
 
@@ -75,6 +81,43 @@ main = do
   executeSMTLoudly z3Config smt
   pure ()
 
-verify :: Name -> SMT Name Decl
-verify mem = undefined
+verify :: Name -> Name -> Block Name
+verify input output =
+  traceShow input $
+  smtBlock $
+    [assert $ eq (select (symbol input) (int 0)) (int 1)
+    ,assert $ eq (select (symbol input) (int 1)) (int 0)
+    ,assert $ eq (select (symbol input) (int 2)) (int 1)
+    ,assert $ eq (select (symbol input) (int 3)) (int 0)
+    ]
+    ++
+    (go <$> [0,1] <*> [0,1])
+  where
+    go :: Int -> Int -> SMT Name Decl
+    go x y =
+      assert $ eq (getOutputValue x y) (expected x y)
+
+    expected :: Int -> Int -> SMT Name Int
+    expected x y =
+      (getInputValue 0 y
+        + (toSign x * getInputValue 1 (invert y)))
+        `SMT.div`
+      (fromString "sqrt2") -- TODO: Find a better way
+
+    toSign 0 = 1
+    toSign 1 = -1
+    toSign n = error $ "verify.toSign: " ++ show n
+
+    invert 0 = 1
+    invert 1 = 0
+    invert n = error $ "verify.invert: " ++ show n
+
+    getInputValue x y =
+      select (symbol input) (getIndex x y)
+
+    getOutputValue x y =
+      select (symbol output) (getIndex x y)
+
+    getIndex x y =
+      int (x + 2^y)
 

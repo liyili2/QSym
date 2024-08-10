@@ -52,6 +52,7 @@ tensor m n = flattenMatrix r
     r = map (map (`scalarMult` n)) m
 
 identity :: Num a => Int -> Matrix a
+identity size | size < 0 = error $ "identity: negative size " ++ show size
 identity size = go size
   where
     go 0 = []
@@ -64,5 +65,6 @@ identity size = go size
       else 0 : mkRow (n-1) i
 
 zeroes :: Num a => Int -> Matrix a
+zeroes size | size < 0 = error $ "zeroes: negative size " ++ show size
 zeroes size = replicate size (replicate size 0)
 
