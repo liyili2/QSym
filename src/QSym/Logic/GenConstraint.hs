@@ -40,9 +40,9 @@ data Gate =
     }
   deriving (Show)
 
-resizeGate :: Int -> Gate -> SMTMatrix
-resizeGate totalQubits gate =
-    tensor' (identity (totalQubits - gateNumOutputs gate))
+resizeGate :: Int -> Int -> Gate -> SMTMatrix
+resizeGate totalQubits inputIndex gate =
+    tensor' (identity inputIndex)
             (tensor' (gateMap gate)
                      (identity (totalQubits - gateNumOutputs gate)))
   where
