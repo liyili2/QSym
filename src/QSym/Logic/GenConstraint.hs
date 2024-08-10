@@ -30,23 +30,37 @@ import Prettyprinter
 
 import Debug.Trace
 
+type SMTMatrix = Matrix (SMT Name Int)
+
 data Gate =
   Gate
     { gateNumInputs :: Int
     , gateNumOutputs :: Int
-    , gateMap :: Matrix Int -- TODO: Generalize from Int to something more appropriate
+    , gateMap :: SMTMatrix -- TODO: Use a better representation?
     }
   deriving (Show)
 
-resizeGate :: Int -> Gate -> Matrix Int
+resizeGate :: Int -> Gate -> SMTMatrix
 resizeGate totalQubits gate =
-    resizeUsing (identity (totalQubits - gateNumOutputs gate))
-                (resizeUsing (gateMap gate)
-                             (identity (totalQubits - gateNumOutputs gate)))
+    tensor' (identity (totalQubits - gateNumOutputs gate))
+            (tensor' (gateMap gate)
+                     (identity (totalQubits - gateNumOutputs gate)))
   where
-    resizeUsing [] x = x
-    resizeUsing x [] = x
-    resizeUsing x y = tensor x y
+    tensor' [] x = x
+    tensor' x [] = x
+    tensor' x y = tensor x y
+
+applySMTMatrix :: Int -> Name -> Name -> SMTMatrix -> Block Name
+applySMTMatrix totalQubits oldName newName mat =
+  let newMem = multColumn mat (getMemoryVector totalQubits oldName)
+  in
+  smtBlock $ zipWith go [0..totalQubits-1] newMem
+  where
+    go i v =
+      assert $ eq (select (symbol newName) (int i)) v
+
+getMemoryVector :: Int -> Name -> [SMT Name Int]
+getMemoryVector totalQubits mem = map (select (symbol mem) . int) [0..totalQubits-1]
 
 heapType :: String
 heapType = "(Array Int (Array Int Real))"
