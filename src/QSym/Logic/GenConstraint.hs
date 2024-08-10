@@ -148,7 +148,7 @@ toplevelConstraints :: Int -> Toplevel () -> Block Name
 toplevelConstraints bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
     Nothing -> mempty
-    Just block -> runGen (blockListConstraints (inBlock block)) (buildEnv bitSize qm)
+    Just block -> traceShow block $ runGen (blockListConstraints (reverse (inBlock block))) (buildEnv bitSize qm) -- TODO: Find a better way than reversing here
 
 blockListConstraints :: [Stmt ()] -> Gen (Block Name)
 blockListConstraints [] = pure mempty
@@ -171,7 +171,7 @@ blockConstraints (lhs :*=: EHad) = do
   let resized = resizeGate totalQubits usedInput hadamard
   let applied = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
 
-  pure $ applied
+  traceShow resized $ pure $ applied
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
   totalQubits <- envBitSize <$> ask
@@ -180,7 +180,7 @@ blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELam
   let resized = resizeGate totalQubits 0 cnot
   let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
 
-  traceShow resized $ pure block
+  pure block
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
@@ -259,7 +259,7 @@ hadamard =
     { gateNumInputs = 1
     , gateNumOutputs = 1
     , gateMap =
-        scalarMult "sqrt2"
+        scalarMult (1 `div` "sqrt2")
           [[1, 1]
           ,[1, -1]]
     }

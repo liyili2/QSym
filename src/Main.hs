@@ -86,7 +86,7 @@ verify input output =
   smtBlock $
     [assert $ eq (select (symbol input) (int 0)) (int 1)
     ,assert $ eq (select (symbol input) (int 1)) (int 0)
-    ,assert $ eq (select (symbol input) (int 2)) (int 1)
+    ,assert $ eq (select (symbol input) (int 2)) (int 0)
     ,assert $ eq (select (symbol input) (int 3)) (int 0)
     ]
     ++
@@ -119,5 +119,5 @@ verify input output =
 
     getIndex :: Int -> Int -> SMT Name Int
     getIndex x y =
-      int (x + 2*y)
+      int (y + 2*x)
 

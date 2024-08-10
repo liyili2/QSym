@@ -29,6 +29,9 @@ multColumn m v =
           v
           (columns m)
 
+multRow :: Num a => Vector a -> Matrix a -> Vector a
+multRow v m = multColumn (transpose m) v
+
 matMult :: Num a => Matrix a -> Matrix a -> Matrix a
 matMult m n =
   columns $
