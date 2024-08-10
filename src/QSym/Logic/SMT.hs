@@ -122,8 +122,14 @@ instance IsString a => IsString (SomeSMT a) where
   fromString = SomeSMT . fromString
 
 instance IsString a => Num (SMT a Int) where
-  (+) = add
-  (*) = mul
+  SExpr (IntLit 0) + y = y
+  x + SExpr (IntLit 0) = x
+  x + y = add x y
+
+  SExpr (IntLit 0) * _ = 0
+  SExpr (IntLit 1) * y = y
+  x * y = mul x y
+
   (-) = sub
   fromInteger = int . fromInteger
   signum = error "SMT.signum"
