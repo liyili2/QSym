@@ -118,7 +118,7 @@ data Verify
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> verifyEqs <> block <> smtCheck
+  smtPreamble <> mkDeclarations block <> block <> smtCheck <> verifyEqs <> one checkSAT
   where
     block = astConstraints bitSize ast
 

@@ -84,17 +84,17 @@ main = do
 verify :: Name -> Name -> Block Name
 verify input output =
   smtBlock $
-    [assert $ eq (select (symbol input) (int 0)) (int 1)
-    ,assert $ eq (select (symbol input) (int 1)) (int 0)
-    ,assert $ eq (select (symbol input) (int 2)) (int 0)
-    ,assert $ eq (select (symbol input) (int 3)) (int 0)
-    ]
-    ++
-    (go <$> [0,1] <*> [0,1])
+    -- [assert $ eq (select (symbol input) (int 0)) (int 1)
+    -- ,assert $ eq (select (symbol input) (int 1)) (int 0)
+    -- ,assert $ eq (select (symbol input) (int 2)) (int 0)
+    -- ,assert $ eq (select (symbol input) (int 3)) (int 0)
+    -- ]
+    -- ++
+    [assert $ not' $ and' (go <$> [0,1] <*> [0,1])]
   where
-    go :: Int -> Int -> SMT Name Decl
+    go :: Int -> Int -> SMT Name Bool
     go x y =
-      assert $ eq (getOutputValue x y) (expected x y)
+      eq (getOutputValue x y) (expected x y)
 
     expected :: Int -> Int -> SMT Name Int
     expected x y =
