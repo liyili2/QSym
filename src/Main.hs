@@ -73,7 +73,7 @@ main = do
 
   -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
   -- let smt = either error (astSMT (ExactValues [int 1, int 0, int 1, int 0]) 3) qafny_ast
-  let smt = either error (astSMT (Satisfies verify) 4) qafny_ast
+  let smt = either error (astSMT (Satisfies verify) 2) qafny_ast
 
   -- either error (print . pretty) smt
 

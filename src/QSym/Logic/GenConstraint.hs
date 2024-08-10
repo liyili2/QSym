@@ -45,7 +45,7 @@ resizeGate totalQubits inputIndex gate =
     trace ("totalQubits = " ++ show totalQubits) $
     tensor' (identity inputIndex)
             (tensor' (gateMap gate)
-                     (identity (totalQubits - gateNumOutputs gate)))
+                     (identity (2 * (totalQubits - gateNumOutputs gate))))
   where
     tensor' [] x = x
     tensor' x [] = x
@@ -53,10 +53,11 @@ resizeGate totalQubits inputIndex gate =
 
 applySMTMatrix :: Int -> Name -> Name -> SMTMatrix -> Block Name
 applySMTMatrix totalQubits oldName newName mat =
-  let newMem = multColumn mat (getMemoryVector totalQubits oldName)
+  let newMem = multColumn mat (getMemoryVector size oldName)
   in
-  smtBlock $ zipWith go [0..totalQubits-1] newMem
+  smtBlock $ zipWith go [0..size] newMem
   where
+    size = totalQubits*2
     go i v =
       assert $ eq (select (symbol newName) (int i)) v
 
@@ -174,9 +175,12 @@ blockConstraints (lhs :*=: EHad) = do
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
   totalQubits <- envBitSize <$> ask
+
     -- TODO: Change hardcoded 0 to proper input index
-  let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate totalQubits 0 cnot)
-  pure block
+  let resized = resizeGate totalQubits 0 cnot
+  let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
+
+  traceShow resized $ pure block
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
