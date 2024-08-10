@@ -54,7 +54,10 @@ interpretExpr (EOp2 OAdd x y) = undefined
 main :: IO ()
 main = do
   -- TODO: read filename in from the command line
+
   file_text <- Utf8.readFile "tests/BellPair.qfy"
+  -- file_text <- Utf8.readFile "tests/Teleportation.qfy"
+
   -- read in the qafny code and convert into an AST
   -- unpack converts Data.Text.Text (from Utf8.readFile) to a String
   let qafny_ast = (scanAndParse . Text.unpack) file_text 

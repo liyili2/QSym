@@ -63,3 +63,6 @@ identity size = go size
       then 1 : mkRow (n-1) i
       else 0 : mkRow (n-1) i
 
+zeroes :: Num a => Int -> Matrix a
+zeroes size = replicate size (replicate size 0)
+

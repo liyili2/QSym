@@ -81,12 +81,6 @@ bitVecLit i = fromString $ "(_ bv" ++ i ++ " " ++ show bitVecSize ++ ")"
 mkLoc :: Int -> SMT Name a
 mkLoc i = fromString (show i) --fromString $ "q" ++ show i
 
--- getHeapName :: Int -> Name
--- getHeapName i = fromString $ "mem" ++ show i
---
--- getVecsName :: Int -> Name
--- getVecsName i = fromString $ "mem" ++ show i ++ "-vecs"
-
 smtPreamble :: Block Name
 smtPreamble =
   smtBlock
@@ -137,17 +131,10 @@ astSMT verify bitSize ast =
         ExactValues initialState -> mconcat $ zipWith toMemEq [0..] initialState
         Satisfies props -> one $ props $ getLastMem block 
 
-    -- mems :: [SMT 
-
     toMemEq :: Int -> SMT Name Int -> Block Name
     toMemEq i v =
       smtBlock
         [assert $ eq (select (symbol (currentVar "mem")) (mkLoc i)) v]
-      -- smtBlock $ zipWith (toMemEq' i) [0..] vs
-
-    -- toMemEq' :: Int -> Int -> SMT Name Int -> SMT Name Decl
-    -- toMemEq' i j v =
-    --   assert $ eq (select (select (symbol (currentVar "mem")) (mkLoc i)) (mkLoc j)) v
 
 astConstraints :: Int -> AST -> Block Name
 astConstraints bitSize =
@@ -179,59 +166,12 @@ blockConstraints (lhs :*=: EHad) = do
 
     -- TODO: Change hardcoded 0 to proper input index
   pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits hadamard)
-
-
-  -- pure $ hadamard usedInput otherInputs (currentVar "mem")
-
--- blockConstraints (lhs :*=: rhs@(ELambda lam)) = do
-  -- -- Add an apply constraint to the locus that was modified
-  -- -- and unchanged constraints to the others
-  --
-  -- -- create the apply expression
-  -- let locus = toLocus lhs
-  -- -- let apply_expr = undefined --LApply (Current locus) ("x" :=> (convertApplyExpr "x" rhs))
-  -- -- For BellPair, all we have to do is inverse the locus TODO: actually get all the variables in the environment
-  -- -- read the env (contains the function inputs and outputs, needed for the unchanged prop)
-  -- env <- ask
-  -- let bitSize = envBitSize env
-  --
-  -- pure $ smtMap bitSize (\i v -> convertLambda lam (Current locus) i)
-  --          (LocusName (Step (Current locus))) (LocusName (Current locus))
-  --
-  -- -- pure $ smtMap bitSize (\i v -> convertExpr [(locus, i)] v)
-  -- --          (LocusName (Step (Current locus))) (LocusName (Current locus))
-  --
-  -- -- pure $ smtMapList (\i -> undefined)
-  -- --          (LocusName (Step (Current locus))) (LocusName (Current locus))
-  -- --          (map int [0..bitSize-1])
-  --
-  -- -- add the unchanged properties
-  -- -- let unchanged = enumerateUnchanged (allBindings env) locus
-  -- -- pure undefined -- $ Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
   totalQubits <- envBitSize <$> ask
     -- TODO: Change hardcoded 0 to proper input index
   pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits cnot)
-    -- pure $ cnot (partitionToName part) (partitionToName x) (currentVar "mem") (currentVar "mem-vecs")
-
-  -- bodyConstraints <- blockListConstraints (inBlock body)
-  --
-  -- let cond' = convertGuardExp cond
-  --
-  -- pure $ ifThenElse cond'
-  --           bodyConstraints
-  --           undefined --(and' (map unchanged (getNames bodyConstraints)))
-  --
-  -- -- pure undefined -- $ Prop [If (LSimpleExpr (fromGuard cond)) undefined]
-  -- where
-  --   fromGuard (GEPartition p Nothing) = toLocusExpr p
-  --   -- TODO: Is this right?
-  --   fromGuard (GEPartition _ (Just e)) = convertExpr e Nothing
 blockConstraints s = error $ "unimplemented: " ++ show s
-
--- unchanged :: Name -> HighLevelSMT Bool
--- unchanged x = eq (symbol x) (symbol (step x))
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
 applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
@@ -292,16 +232,16 @@ lookupCell name i j =
   select (select (symbol name) (int i)) (mkLoc j)
 
 cnot :: Gate
-cnot =
-  Gate
-    { gateNumInputs = 2
-    , gateNumOutputs = 2
-    , gateMap =
-        [[1, 0, 0, 0]
-        ,[0, 1, 0, 0]
-        ,[0, 0, 0, 1]
-        ,[0, 0, 1, 0]]
-    }
+cnot = controlled notGate
+  -- Gate
+  --   { gateNumInputs = 2
+  --   , gateNumOutputs = 2
+  --   , gateMap =
+  --       [[1, 0, 0, 0]
+  --       ,[0, 1, 0, 0]
+  --       ,[0, 0, 0, 1]
+  --       ,[0, 0, 1, 0]]
+  --   }
 
 hadamard :: Gate
 hadamard =
@@ -312,6 +252,29 @@ hadamard =
         scalarMult "sqrt2"
           [[1, 1]
           ,[1, -1]]
+    }
+
+notGate :: Gate
+notGate =
+  Gate
+    { gateNumInputs = 1
+    , gateNumOutputs = 1
+    , gateMap =
+        [[0, 1]
+        ,[1, 0]]
+    }
+
+-- Controlled version of a 1-qubit gate
+controlled :: Gate -> Gate
+controlled g =
+  Gate
+    { gateNumInputs = 1 + gateNumInputs g
+    , gateNumOutputs = 1 + gateNumOutputs g
+    , gateMap =
+        flattenMatrix
+          [ [identity 2, zeroes 2]
+          , [zeroes 2,   gateMap g]
+          ]
     }
 
 unchanged :: Name -> SMT Name Decl
