@@ -170,13 +170,13 @@ blockConstraints (lhs :*=: EHad) = do
   let resized = resizeGate totalQubits usedInput hadamard
   let applied = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
 
-  traceShow (pretty resized) $ pure $ applied
+  pure $ applied
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
   totalQubits <- envBitSize <$> ask
     -- TODO: Change hardcoded 0 to proper input index
   let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate totalQubits 0 cnot)
-  traceShow ("totalQubits", totalQubits) $ traceShow (pretty block) $ pure block
+  pure block
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()

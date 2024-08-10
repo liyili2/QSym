@@ -83,7 +83,6 @@ main = do
 
 verify :: Name -> Name -> Block Name
 verify input output =
-  traceShow input $
   smtBlock $
     [assert $ eq (select (symbol input) (int 0)) (int 1)
     ,assert $ eq (select (symbol input) (int 1)) (int 0)
