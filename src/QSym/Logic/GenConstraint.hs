@@ -303,34 +303,6 @@ cnot =
         ,[0, 0, 1, 0]]
     }
 
--- cnot :: Int -> Int -> Name -> Name -> Block Name
--- cnot i j mem memVecs =
---   smtBlock
---     [assert $ eq (lookupCell (step mem) i 0)
---                  (lookupCell mem i 0)
---     ,assert $ eq (lookupCell (step mem) i 1)
---                  (lookupCell mem i 1)
---
---     ,assert $ eq (lookupCell (step mem) (i+1) 0)
---                  (lookupCell mem (i+1) 1)
---     ,assert $ eq (lookupCell (step mem) (i+1) 1)
---                  (lookupCell mem (i+1) 0)
---     -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
---     --              (select (select (symbol mem) (mkLoc i)) (int 0))
---     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
---     --              (select (select (symbol mem) (mkLoc i)) (int 1))
---     --
---     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
---     --              (select (select (symbol mem) (mkLoc (i+1))) (int 0))
---     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
---     --              (select (select (symbol mem) (mkLoc (i+1))) (int 1))
---     --
---     -- entangle
---     -- TODO: Hardcoded right now
---     -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
---     -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
---     ]
-
 hadamard :: Gate
 hadamard =
   Gate
@@ -341,36 +313,6 @@ hadamard =
           [[1, 1]
           ,[1, -1]]
     }
-
--- hadamard :: Int -> [Int] -> Name -> Block Name
--- hadamard i otherInputs mem =
---   smtBlock $
---     [assert $ eq (lookupCell (step mem) i 0) (hadamardFirst 0 mem)
---     ,assert $ eq (lookupCell (step mem) i 1) (hadamardSecond 0 mem)
---     -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
---     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
---     ] ++ concatMap handleOtherInput otherInputs
---     where
---       handleOtherInput j =
---         [assert $ eq (lookupCell (step mem) j 0)
---                      (lookupCell mem j 0)
---         ,assert $ eq (lookupCell (step mem) j 1)
---                      (lookupCell mem j 1)
---         ]
-
-hadamardFirst :: Int -> Name -> SMT Name Int
-hadamardFirst loc mem =
-  div
-    (add (select (select (symbol mem) (int loc)) (int 0))
-         (select (select (symbol mem) (int loc)) (int 1)))
-    "sqrt2"
-
-hadamardSecond :: Int -> Name -> SMT Name Int
-hadamardSecond loc mem =
-  div
-    (sub (select (select (symbol mem) (int loc)) (int 0))
-         (select (select (symbol mem) (int loc)) (int 1)))
-    "sqrt2"
 
 unchanged :: Name -> SMT Name Decl
 unchanged name =
