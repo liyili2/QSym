@@ -63,7 +63,8 @@ getMemoryVector :: Int -> Name -> [SMT Name Int]
 getMemoryVector totalQubits mem = map (select (symbol mem) . int) [0..totalQubits-1]
 
 heapType :: String
-heapType = "(Array Int (Array Int Real))"
+heapType = "(Array Int Real)"
+-- heapType = "(Array Int (Array Int Real))"
 
 bitVecSize :: Int
 bitVecSize = 4
@@ -91,7 +92,7 @@ smtPreamble =
   smtBlock
     [setLogic "ALL"
     ,setOption ":produce-models" "true"
-    -- ,setOption ":pp.decimal" "true"
+    ,setOption ":pp.decimal" "true"
     ,setOption ":produce-unsat-cores" "true"
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
@@ -114,7 +115,7 @@ mkDeclarations block =
   declareConstList (zip memVecNames (repeat (fromString (fromString bitVecArrayType))))
 
 data Verify
-  = ExactValues [[SMT Name Int]]
+  = ExactValues [SMT Name Int]
   | Satisfies (Name -> SMT Name Decl)
 
 astSMT :: Verify -> Int -> AST -> Block Name
@@ -138,13 +139,15 @@ astSMT verify bitSize ast =
 
     -- mems :: [SMT 
 
-    toMemEq :: Int -> [SMT Name Int] -> Block Name
-    toMemEq i vs =
-      smtBlock $ zipWith (toMemEq' i) [0..] vs
+    toMemEq :: Int -> SMT Name Int -> Block Name
+    toMemEq i v =
+      smtBlock
+        [assert $ eq (select (symbol (currentVar "mem")) (mkLoc i)) v]
+      -- smtBlock $ zipWith (toMemEq' i) [0..] vs
 
-    toMemEq' :: Int -> Int -> SMT Name Int -> SMT Name Decl
-    toMemEq' i j v =
-      assert $ eq (select (select (symbol (currentVar "mem")) (mkLoc i)) (mkLoc j)) v
+    -- toMemEq' :: Int -> Int -> SMT Name Int -> SMT Name Decl
+    -- toMemEq' i j v =
+    --   assert $ eq (select (select (symbol (currentVar "mem")) (mkLoc i)) (mkLoc j)) v
 
 astConstraints :: Int -> AST -> Block Name
 astConstraints bitSize =
@@ -171,7 +174,15 @@ blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 blockConstraints (lhs :*=: EHad) = do
   let usedInput = partitionToName lhs
   otherInputs <- getOtherInputs [usedInput]
-  pure $ hadamard usedInput otherInputs (currentVar "mem")
+
+  totalQubits <- envBitSize <$> ask
+
+    -- TODO: Change hardcoded 0 to proper input index
+  pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits hadamard)
+
+
+  -- pure $ hadamard usedInput otherInputs (currentVar "mem")
+
 -- blockConstraints (lhs :*=: rhs@(ELambda lam)) = do
   -- -- Add an apply constraint to the locus that was modified
   -- -- and unchanged constraints to the others
@@ -199,7 +210,10 @@ blockConstraints (lhs :*=: EHad) = do
   -- -- pure undefined -- $ Prop ([Unchanged (Step (Current (invLocus locus)))] ++ [PointsTo (Step (Current locus)) apply_expr])
 blockConstraints (SDafny _) = pure mempty
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
-    pure $ cnot (partitionToName part) (partitionToName x) (currentVar "mem") (currentVar "mem-vecs")
+  totalQubits <- envBitSize <$> ask
+    -- TODO: Change hardcoded 0 to proper input index
+  pure $ applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) (resizeGate 0 totalQubits cnot)
+    -- pure $ cnot (partitionToName part) (partitionToName x) (currentVar "mem") (currentVar "mem-vecs")
 
   -- bodyConstraints <- blockListConstraints (inBlock body)
   --
@@ -277,49 +291,72 @@ lookupCell :: Name -> Int -> Int -> SMT Name Int
 lookupCell name i j =
   select (select (symbol name) (int i)) (mkLoc j)
 
-cnot :: Int -> Int -> Name -> Name -> Block Name
-cnot i j mem memVecs =
-  smtBlock
-    [assert $ eq (lookupCell (step mem) i 0)
-                 (lookupCell mem i 0)
-    ,assert $ eq (lookupCell (step mem) i 1)
-                 (lookupCell mem i 1)
+cnot :: Gate
+cnot =
+  Gate
+    { gateNumInputs = 2
+    , gateNumOutputs = 2
+    , gateMap =
+        [[1, 0, 0, 0]
+        ,[0, 1, 0, 0]
+        ,[0, 0, 0, 1]
+        ,[0, 0, 1, 0]]
+    }
 
-    ,assert $ eq (lookupCell (step mem) (i+1) 0)
-                 (lookupCell mem (i+1) 1)
-    ,assert $ eq (lookupCell (step mem) (i+1) 1)
-                 (lookupCell mem (i+1) 0)
-    -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
-    --              (select (select (symbol mem) (mkLoc i)) (int 0))
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
-    --              (select (select (symbol mem) (mkLoc i)) (int 1))
-    --
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
-    --              (select (select (symbol mem) (mkLoc (i+1))) (int 0))
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
-    --              (select (select (symbol mem) (mkLoc (i+1))) (int 1))
-    --
-    -- entangle
-    -- TODO: Hardcoded right now
-    -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
-    -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
-    ]
+-- cnot :: Int -> Int -> Name -> Name -> Block Name
+-- cnot i j mem memVecs =
+--   smtBlock
+--     [assert $ eq (lookupCell (step mem) i 0)
+--                  (lookupCell mem i 0)
+--     ,assert $ eq (lookupCell (step mem) i 1)
+--                  (lookupCell mem i 1)
+--
+--     ,assert $ eq (lookupCell (step mem) (i+1) 0)
+--                  (lookupCell mem (i+1) 1)
+--     ,assert $ eq (lookupCell (step mem) (i+1) 1)
+--                  (lookupCell mem (i+1) 0)
+--     -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0))
+--     --              (select (select (symbol mem) (mkLoc i)) (int 0))
+--     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1))
+--     --              (select (select (symbol mem) (mkLoc i)) (int 1))
+--     --
+--     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 0))
+--     --              (select (select (symbol mem) (mkLoc (i+1))) (int 0))
+--     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc (i+1))) (int 1))
+--     --              (select (select (symbol mem) (mkLoc (i+1))) (int 1))
+--     --
+--     -- entangle
+--     -- TODO: Hardcoded right now
+--     -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "00"
+--     -- ,assert $ eq (select (symbol memVecs) (int 0)) $ bitVecLit "11"
+--     ]
 
-hadamard :: Int -> [Int] -> Name -> Block Name
-hadamard i otherInputs mem =
-  smtBlock $
-    [assert $ eq (lookupCell (step mem) i 0) (hadamardFirst 0 mem)
-    ,assert $ eq (lookupCell (step mem) i 1) (hadamardSecond 0 mem)
-    -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
-    -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
-    ] ++ concatMap handleOtherInput otherInputs
-    where
-      handleOtherInput j =
-        [assert $ eq (lookupCell (step mem) j 0)
-                     (lookupCell mem j 0)
-        ,assert $ eq (lookupCell (step mem) j 1)
-                     (lookupCell mem j 1)
-        ]
+hadamard :: Gate
+hadamard =
+  Gate
+    { gateNumInputs = 1
+    , gateNumOutputs = 1
+    , gateMap =
+        scalarMult "sqrt2"
+          [[1, 1]
+          ,[1, -1]]
+    }
+
+-- hadamard :: Int -> [Int] -> Name -> Block Name
+-- hadamard i otherInputs mem =
+--   smtBlock $
+--     [assert $ eq (lookupCell (step mem) i 0) (hadamardFirst 0 mem)
+--     ,assert $ eq (lookupCell (step mem) i 1) (hadamardSecond 0 mem)
+--     -- [assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 0)) (hadamardFirst 0 mem)
+--     -- ,assert $ eq (select (select (symbol (step mem)) (mkLoc i)) (int 1)) (hadamardSecond 1 mem)
+--     ] ++ concatMap handleOtherInput otherInputs
+--     where
+--       handleOtherInput j =
+--         [assert $ eq (lookupCell (step mem) j 0)
+--                      (lookupCell mem j 0)
+--         ,assert $ eq (lookupCell (step mem) j 1)
+--                      (lookupCell mem j 1)
+--         ]
 
 hadamardFirst :: Int -> Name -> SMT Name Int
 hadamardFirst loc mem =

@@ -119,6 +119,13 @@ instance IsString a => IsString (SMT a b) where
 instance IsString a => IsString (SomeSMT a) where
   fromString = SomeSMT . fromString
 
+instance IsString a => Num (SMT a Int) where
+  (+) = add
+  (*) = mul
+  (-) = sub
+  fromInteger = int . fromInteger
+  signum = error "SMT.signum"
+
 symbol :: a -> SMT a b --Symbol
 symbol = SExpr . Atom
 
