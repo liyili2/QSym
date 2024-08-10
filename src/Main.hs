@@ -117,6 +117,7 @@ verify input output =
     getOutputValue x y =
       select (symbol output) (getIndex x y)
 
+    getIndex :: Int -> Int -> SMT Name Int
     getIndex x y =
-      int (x + 2^y)
+      int (x + 2*y)
 
