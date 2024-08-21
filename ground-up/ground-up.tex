@@ -277,10 +277,11 @@ deterministic operator which takes in one bit and produces two outputs by duplic
 
 Say we provide an input that has an even chance of being either a 0 or a 1. What is the probability of a 1 appearing at each of the two outputs?
 We run into a problem trying to talk about the probabilities in isolation like this. If we say that output $q_1$ has a 1 with probability
-$a$ and output $q_2$ has a 1 with probability $b$, we would expect that the output $10$ would have probability $q_1 \cdot (1 - q_2)$. But an
-output of $10$ isn't even possible! The operator only duplicates the input.
+$a$ and output $q_2$ has a 1 with probability $b$, we would expect that the output $10$ would have probability $q_1 \cdot (1 - q_2)$. When
+we provide an input of $1$ with probability $1/2$, we find the probability of $10$ is $0.5 \cdot (1 - 0.5) = 0.25$. But an
+output of $10$ isn't even possible! The operator only duplicates the input. What went wrong?
 
-The two outputs are correlated with each other. Instead of trying to look at the probabilities of the two outputs in isolation, we can
+The two outputs are \textit{correlated} with each other. Instead of trying to look at the probabilities of the two outputs in isolation, we can
 instead say that the output $00$ as a probability of $1/2$ and the output $11$ has a probability of $1/2$ (recall that we are providing it an input of $1$ with probability $1/2$).
 
 This is analogous to how entanglement works in the case of a quantum circuit.
