@@ -12,6 +12,7 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{empheq}
+\usepackage{float}
 \usepackage[most]{tcolorbox}
 % \usepackage{syntax}
 % \usepackage{simplebnf}
@@ -76,7 +77,7 @@
 A quantum operator is drawn in the following way in a quantum circuit. We have the convention that information flows from left-to-right. In this
 case, $q$ is the name of the input and $q'$ is the name of the output. $F$ is the name of the linear transformation.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
 \begin{minipage}{.5\textwidth}
   \centering
@@ -110,7 +111,7 @@ case, $q$ is the name of the input and $q'$ is the name of the output. $F$ is th
 
 Serial composition is given by composition of operators. In the matrix representation, this is matrix multiplication. $G \circ F$ is also often written $GF$.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
 \begin{minipage}{.5\textwidth}
   \centering
@@ -141,12 +142,79 @@ Serial composition is given by composition of operators. In the matrix represent
   \caption{$G \circ F$}
 \end{figure}
 
+\subsection{Identity transformation}
+
+The identity transformation, often written $I$, which leaves its input unchanged, corresponds to a wire.
+\\
+
+\begin{figure}[H]
+  \centering
+\begin{minipage}{.5\textwidth}
+  \centering
+% Based on https://tex.stackexchange.com/a/44270/186240
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {$q\phantom{'}$}; &[-0.5cm] 
+      \node (q1) {$q'$}; &[-0.5cm] 
+    \coordinate (end0); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (q1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (q1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+\end{figure}
+
+If we want to be very explicit, we can write this out in our circuit diagram. However, this is not usually necessary when writing a circuit diagram (but it can be necessary more often to write the $I$ in symbolic notation).
+\\
+
+\begin{figure}[H]
+  \centering
+\begin{minipage}{.5\textwidth}
+  \centering
+% Based on https://tex.stackexchange.com/a/44270/186240
+\begin{tikzpicture}[thick]
+    % `operator' will only be used by Hadamard (H) gates here.
+    % `phase' is used for controlled phase gates (dots).
+    % `surround' is used for the background box.
+    \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+    \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+    \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+    %
+    \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+      \node (q0) {$q\phantom{'}$}; &[-0.5cm] 
+      \node[operator] (op) {I}; &[-0.5cm] 
+      \node (q1) {$q'$}; &[-0.5cm] 
+    \coordinate (end0); \\
+    %
+  };
+  \begin{pgfonlayer}{background}
+        % Draw background box.
+    \node[surround] (background) [fit = (q0) (op) (q1) ] {};
+        % Draw lines.
+        \draw[thick] (q0) -- (op)  (op) -- (q1);
+    \end{pgfonlayer}
+\end{tikzpicture}
+\end{minipage}
+\end{figure}
+
 \subsection{Parallel composition}
 
 Putting two components side-by-side in the circuit corresponds to the tensor product of the operators that the components represent. In
 the matrix representation, the tensor product is given by the Kronecker product of the two matrices.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
 \begin{minipage}{.5\textwidth}
     \centering
@@ -195,7 +263,7 @@ write it in two different ways symbolically, and we say that the following equat
 The circuit notation has the advantage that this equality always holds implicitly. We never need to actually use it, if we are
 drawing circuits (unlike the symbolic notation).
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
 \begin{minipage}{.5\textwidth}
     \centering
