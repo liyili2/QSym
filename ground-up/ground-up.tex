@@ -108,7 +108,7 @@ case, $q$ is the name of the input and $q'$ is the name of the output. $F$ is th
 
 \subsection{Serial composition}
 
-Serial composition is given by composition of operators. In the matrix representation, this is matrix multiplication.
+Serial composition is given by composition of operators. In the matrix representation, this is matrix multiplication. $G \circ F$ is also often written $GF$.
 
 \begin{figure}[h]
   \centering
@@ -189,7 +189,7 @@ hook them up each other, or if we hook them up to each other first. This results
 write it in two different ways symbolically, and we say that the following equation holds. This is the interchange law.
 
 \[
-  (F \otimes G) \circ (S \otimes T) = (F \circ S) \otimes (G \circ T)
+  (S \otimes T) \circ (F \otimes G) = (S \circ F) \otimes (T \circ G)
 \]
 
 The circuit notation has the advantage that this equality always holds implicitly. We never need to actually use it, if we are
@@ -231,7 +231,7 @@ drawing circuits (unlike the symbolic notation).
     \end{pgfonlayer}
 \end{tikzpicture}
 \end{minipage}
-  \caption{This is both $(F \otimes G) \circ (S \otimes T)$ and also $(F \circ S) \otimes (G \circ T)$}
+  \caption{This is both $(S \otimes T) \circ (F \otimes G)$ and also $(S \circ F) \otimes (T \circ G)$}
 \end{figure}
 
 \section{Quantum states}
