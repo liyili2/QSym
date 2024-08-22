@@ -302,11 +302,15 @@ drawing circuits (unlike the symbolic notation).
   \caption{This is both $(S \otimes T) \circ (F \otimes G)$ and also $(S \circ F) \otimes (T \circ G)$}
 \end{figure}
 
-\section{Quantum states}
-
-\subsection{Entanglement: A fictional simplification}
+\section{Quantum states: Simplified}
 
 Imagine that we are using classical probability, and that the circuit describes a probabilistic machine.
+
+\subsection{Probabilities as vectors}
+
+We will talk about the probabilities of all of the inputs to a circuit together as a kind of vector. %First
+
+\subsection{Entanglement: A fictional simplification}
 
 We can talk about how the probabilities are transformed by the operators in the circuit. Now imagine that we have a
 deterministic operator which takes in one bit and produces two outputs by duplicating the input bit. This does not correspond to an operator in a quantum circuit and is just for illustration purposes.
@@ -353,7 +357,7 @@ output of $10$ isn't even possible! The operator only duplicates the input. What
 The two outputs are \textit{correlated} with each other. Instead of trying to look at the probabilities of the two outputs in isolation, we can
 instead say that the output $00$ as a probability of $1/2$ and the output $11$ has a probability of $1/2$ (recall that we are providing it an input of $1$ with probability $1/2$).
 
-This is analogous to how entanglement works in the case of a quantum circuit.
+This is analogous to how entanglement works in the case of a quantum circuit. In quantum terminology, we would say that the result is a \textit{mixed state} or that the state is \textit{not separable}. This is in contrast to \textit{pure states} (aka \textit{separable states}).
 
 
 \end{document}
