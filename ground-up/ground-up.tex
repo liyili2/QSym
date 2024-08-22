@@ -13,6 +13,7 @@
 \usepackage{subcaption}
 \usepackage{empheq}
 \usepackage{float}
+\usepackage{braket}
 \usepackage[most]{tcolorbox}
 % \usepackage{syntax}
 % \usepackage{simplebnf}
@@ -62,8 +63,6 @@
 \newcommand {\loceq} {\approx}
 \newcommand {\sep} {\ast}
 \newcommand {\pointsto} {\mapsto}
-
-\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
 
 \begin{document}
 
@@ -368,12 +367,13 @@ $a$ and output $q_2$ has a 1 with probability $b$, we would expect that the outp
 we provide an input of $1$ with probability $1/2$, we find the probability of $10$ is $0.5 \cdot (1 - 0.5) = 0.25$. But an
 output of $10$ isn't even possible! The operator only duplicates the input. What went wrong?
 
-The two outputs are \textit{correlated} with each other. Instead of trying to look at the probabilities of the two outputs in isolation, we can
+The \textbf{cause of the mistake} is that the two outputs are \textit{correlated} with each other. Instead of trying to look at the probabilities of the two outputs in isolation, we can
 instead say that the output $00$ as a probability of $1/2$ and the output $11$ has a probability of $1/2$ (recall that we are providing it an input of $1$ with probability $1/2$).
 
-This is analogous to how entanglement works in the case of a quantum circuit. In quantum terminology, we would say that the result is that the state is \textit{entangled} or \textit{not separable}. This is in contrast to \textit{separable states}.
+This is analogous to how entanglement works in the case of a quantum circuit. In \textbf{quantum terminology}, we would say that the result is that the state is \textit{entangled} or \textit{not separable}. This is in contrast to \textit{separable states}.
 
-% or \textit{entangled} Recall that the tensor product
+Recall that the tensor product. We can write the output probability as $0.5(\ket{0} \otimes \ket{0}) + 0.5(\ket{1} \otimes \ket{1})$. Note that we cannot rewrite this as
+$((0.5 \ket{0}) \otimes (0.5 \ket{0})) + ((0.5 \ket{1}) \otimes (0.5 \ket{1}))$. This is one of the crucial differences from the direct product space mentioned previously. If we could do this, it would lead to the exact mistake we made at the start.
 
 
 \end{document}
