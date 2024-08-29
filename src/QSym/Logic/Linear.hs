@@ -10,64 +10,67 @@ module QSym.Logic.Linear
 import Data.List
 
 type Vector a = [a]
-type Matrix a = [Vector a]
+newtype Matrix f a = Matrix (f (Vector a))
 
 dot :: Num a => Vector a -> Vector a -> a
 dot u = sum . zipWith (*) u
 
-columns :: Matrix a -> Matrix a
-columns = transpose
+class Equate m a where
+  equate :: a -> a -> m
 
-rows :: Matrix a -> Matrix a
-rows = id
+-- columns :: Matrix f a -> Matrix f a
+-- columns = transpose
 
-multColumn :: Num a => Matrix a -> Vector a -> Vector a
+columns :: Matrix f a -> Matrix f a
+columns = id
+
+multColumn :: Num a => Matrix f a -> Vector a -> Vector a
 multColumn m v =
-  map sum $
+  fmap sum $
   columns $
   zipWith (\x -> map (*x))
           v
           (columns m)
 
-multRow :: Num a => Vector a -> Matrix a -> Vector a
-multRow v m = multColumn (transpose m) v
+-- multRow :: Num a => Vector a -> Matrix f a -> Vector a
+-- multRow v m = multColumn (transpose m) v
 
-matMult :: Num a => Matrix a -> Matrix a -> Matrix a
+matMult :: Num a => Matrix f a -> Matrix f a -> Matrix f a
 matMult m n =
   columns $
   [ multColumn m u
   | u <- columns n
   ]
 
-scalarMult :: Num a => a -> Matrix a -> Matrix a
-scalarMult a = map (map (*a))
-
---     [[ [a, b, c], [d, e, f] ], [ [1,2,3], [4,5,6] ]]
--- --> [[a, b, c, 1, 2, 3], [d, e, f, 4, 5, 6]]
-flattenMatrix :: Matrix (Matrix a) -> Matrix a
-flattenMatrix = map concat . transpose . (map concat) . transpose
-
--- Kronecker product of two matrices
-tensor :: forall a. Num a => Matrix a -> Matrix a -> Matrix a
-tensor m n = flattenMatrix r
-  where
-    r :: Matrix (Matrix a)
-    r = map (map (`scalarMult` n)) m
-
-identity :: Num a => Int -> Matrix a
-identity size | size < 0 = error $ "identity: negative size " ++ show size
-identity size = go size
-  where
-    go 0 = []
-    go i = mkRow size i : go (i-1)
-
-    mkRow 0 _ = []
-    mkRow n i =
-      if n == i
-      then 1 : mkRow (n-1) i
-      else 0 : mkRow (n-1) i
-
-zeroes :: Num a => Int -> Matrix a
-zeroes size | size < 0 = error $ "zeroes: negative size " ++ show size
-zeroes size = replicate size (replicate size 0)
-
+-- scalarMult :: Num a => a -> Matrix a -> Matrix a
+-- scalarMult a = map (map (*a))
+--
+-- --     [[ [a, b, c], [d, e, f] ], [ [1,2,3], [4,5,6] ]]
+-- -- --> [[a, b, c, 1, 2, 3], [d, e, f, 4, 5, 6]]
+-- flattenMatrix :: Matrix (Matrix a) -> Matrix a
+-- flattenMatrix = map concat . transpose . (map concat) . transpose
+--
+-- -- Kronecker product of two matrices
+-- tensor :: forall a. Num a => Matrix a -> Matrix a -> Matrix a
+-- tensor m n = flattenMatrix r
+--   where
+--     r :: Matrix (Matrix a)
+--     r = map (map (`scalarMult` n)) m
+--
+-- identity :: Num a => Int -> Matrix a
+-- identity size | size < 0 = error $ "identity: negative size " ++ show size
+-- identity size = go size
+--   where
+--     go 0 = []
+--     go i = mkRow size i : go (i-1)
+--
+--     mkRow 0 _ = []
+--     mkRow n i =
+--       if n == i
+--       then 1 : mkRow (n-1) i
+--       else 0 : mkRow (n-1) i
+--
+-- zeroes :: Num a => Int -> Matrix a
+-- zeroes size | size < 0 = error $ "zeroes: negative size " ++ show size
+-- zeroes size = replicate size (replicate size 0)
+--

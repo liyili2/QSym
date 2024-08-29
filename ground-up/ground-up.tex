@@ -317,7 +317,7 @@ The basis of the tensor product space $U \otimes V$ consists of vectors of the f
 
 \textit{Note}: If the following seems confusing, skim through it and then read the next section. The next section will provide an example.
 
-Consider this function $(u, v) \mapsto u \otimes v$ which sends pairs of vectors $u,v$ from $U$ and $V$ (respectively) to the vector in the tensor product space corresponding to that pair of vectors. The \textbf{key idea} is that we want that function to be \textit{linear} in both its arguments. This means, among other things that, given a scalar $k$, we always have $(k u) \otimes v = u \otimes (k v) = k (u \otimes v)$. We require all of the vector space laws hold by fiat.
+Consider the function $(u, v) \mapsto u \otimes v$ which sends pairs of vectors $u,v$ from $U$ and $V$ (respectively) to the vector in the tensor product space corresponding to that pair of vectors. The \textbf{key idea} is that we want that function to be \textit{linear} in both its arguments. This means, among other things that, given a scalar $k$, we always have $(k u) \otimes v = u \otimes (k v) = k (u \otimes v)$. We require all of the vector space laws hold by fiat.
 
 Note that this is different from the direct product space, where $k\; (u, v) = (ku, kv)$.
 
@@ -374,6 +374,104 @@ This is analogous to how entanglement works in the case of a quantum circuit. In
 
 Recall that the tensor product. We can write the output probability as $0.5(\ket{0} \otimes \ket{0}) + 0.5(\ket{1} \otimes \ket{1})$. Note that we cannot rewrite this as
 $((0.5 \ket{0}) \otimes (0.5 \ket{0})) + ((0.5 \ket{1}) \otimes (0.5 \ket{1}))$. This is one of the crucial differences from the direct product space mentioned previously. If we could do this, it would lead to the exact mistake we made at the start.
+
+% \subsection{Separability in diagrams}
+%
+% We can think of a particular quantum state as being produced by an operator with no inputs.
+% \\
+%
+% \begin{minipage}{.5\textwidth}
+%     \centering
+% \begin{tikzpicture}[thick]
+%     % `operator' will only be used by Hadamard (H) gates here.
+%     % `phase' is used for controlled phase gates (dots).
+%     % `surround' is used for the background box.
+%     \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+%     \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+%     \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+%     %
+%     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+%       \node[operator] (op0) {}; &[-0.5cm] 
+%       \node (p0) {$p$}; &[-0.5cm] 
+%     \coordinate(end0); \\
+%     %
+%   };
+%   \begin{pgfonlayer}{background}
+%         % Draw background box.
+%     \node[surround] (background) [fit = (op0) (p0) (end0) ] {};
+%         % Draw lines.
+%         \draw[thick] (op0) -- (p0);
+%     \end{pgfonlayer}
+% \end{tikzpicture}
+% \end{minipage}
+% \\
+%
+% You might think of a particular quantum state for a pair of qubits as an operator with no inputs and two outputs.
+% \\
+%
+% \begin{minipage}{.5\textwidth}
+%     \centering
+% \begin{tikzpicture}[thick]
+%     % `operator' will only be used by Hadamard (H) gates here.
+%     % `phase' is used for controlled phase gates (dots).
+%     % `surround' is used for the background box.
+%     \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+%     \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+%     \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+%     %
+%     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+%       &\node (p0) {$p$}; &[-0.5cm] 
+%     \coordinate(end0);\\
+%
+%       \node[operator] (op0) {}; &[-0.5cm] 
+%     \coordinate(end1);\\
+%
+%       &\node (q0) {$q$}; &[-0.5cm] 
+%     \coordinate(end2); \\
+%     %
+%   };
+%   \begin{pgfonlayer}{background}
+%         % Draw background box.
+%     \node[surround] (background) [fit = (op0) (p0) (q0) (end0) (end1) (end2) ] {};
+%         % Draw lines.
+%         \draw[thick] (op0) -- (p0) (op0) -- (q0);
+%     \end{pgfonlayer}
+% \end{tikzpicture}
+% \end{minipage}
+% \\
+%
+% A quantum state like that is separable if and only if the circuit can be equivalently rewritten as two separate states:
+% \\
+%
+% \begin{minipage}{.5\textwidth}
+%     \centering
+% \begin{tikzpicture}[thick]
+%     % `operator' will only be used by Hadamard (H) gates here.
+%     % `phase' is used for controlled phase gates (dots).
+%     % `surround' is used for the background box.
+%     \tikzstyle{operator} = [draw,fill=white,minimum size=1.5em] 
+%     \tikzstyle{phase} = [draw,fill,shape=circle,minimum size=5pt,inner sep=0pt]
+%     \tikzstyle{surround} = [fill=blue!10,thick,draw=black,rounded corners=2mm]
+%     %
+%     \matrix[row sep=0.4cm, column sep=0.8cm] (circuit) {
+%       \node[operator] (op0) {}; &[-0.5cm] 
+%       \node (p0) {$p$}; &[-0.5cm] 
+%     \coordinate(end0); \\
+%
+%       \node[operator] (op1) {}; &[-0.5cm] 
+%       \node (p1) {$q$}; &[-0.5cm] 
+%     \coordinate(end1); \\
+%     %
+%   };
+%   \begin{pgfonlayer}{background}
+%         % Draw background box.
+%     \node[surround] (background) [fit = (op0) (p0) (p1) (op1) (end1) (end0) ] {};
+%         % Draw lines.
+%         \draw[thick] (op0) -- (p0)  (op1) -- (p1);
+%     \end{pgfonlayer}
+% \end{tikzpicture}
+% \end{minipage}
+
 
 
 \end{document}

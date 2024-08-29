@@ -51,6 +51,8 @@ module QSym.Logic.SMT
   ,div
   ,store
   ,select
+  ,double
+  ,sqrt2
 
   ,smtMap
   ,smtMapList
@@ -61,6 +63,8 @@ module QSym.Logic.SMT
   ,declareConst
   ,declareConstList
   ,setInfo
+
+  ,smtPreamble
 
   ,checkSAT
   ,getModel
@@ -85,6 +89,7 @@ data SExpr a
   -- | StringLit String
   | BoolLit Bool
   | IntLit Int
+  | DoubleLit Double
   deriving (Show, Functor, Foldable)
 
 -- |SMT
@@ -289,6 +294,25 @@ setInfo = Decl . apply "set-info" . map Atom . flatten
 setOption :: IsString a => a -> a -> SMT a Decl
 setOption keyword attr_value = Decl $ apply "set-option" [Atom keyword, Atom attr_value]
 
+smtPreamble :: IsString a => Block a
+smtPreamble =
+  smtBlock
+    [setLogic "ALL"
+    ,setOption ":produce-models" "true"
+    ,setOption ":pp.decimal" "true"
+    ,setOption ":produce-unsat-cores" "true"
+    ,declareConst "sqrt2" "Real"
+    ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
+    ,assert $ gt "sqrt2" (int 0)
+    ]
+
+-- TODO: Improve type safety
+double :: Double -> SMT a Int
+double = SExpr . DoubleLit
+
+sqrt2 :: IsString a => SMT a Int
+sqrt2 = SExpr $ Atom "sqrt2"
+
 checkSAT :: IsString a => SMT a Decl
 checkSAT = Decl $ apply "check-sat" []
 
@@ -305,6 +329,7 @@ instance Pretty a => Pretty (SExpr a) where
   pretty (List xs) = parens $ hsep $ map pretty xs
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i
+  pretty (DoubleLit x) = pretty x
 
 instance (IsString a, Pretty a) => Pretty (SMT a b) where
   pretty (Decl x) = pretty x

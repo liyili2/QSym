@@ -83,18 +83,6 @@ bitVecLit i = fromString $ "(_ bv" ++ i ++ " " ++ show bitVecSize ++ ")"
 mkLoc :: Int -> SMT Name a
 mkLoc i = fromString (show i) --fromString $ "q" ++ show i
 
-smtPreamble :: Block Name
-smtPreamble =
-  smtBlock
-    [setLogic "ALL"
-    ,setOption ":produce-models" "true"
-    ,setOption ":pp.decimal" "true"
-    ,setOption ":produce-unsat-cores" "true"
-    ,declareConst "sqrt2" "Real"
-    ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
-    ,assert $ gt "sqrt2" (int 0)
-    ]
-
 getLastMem :: Block Name -> Name
 getLastMem block =
   let blockNames = getBlockNames block
@@ -118,7 +106,7 @@ data Verify
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> block <> smtCheck <> verifyEqs <> one checkSAT
+  smtPreamble <> mkDeclarations block <> block <> smtCheck <> verifyEqs <> smtBlock [checkSAT, symbol "(get-unsat-core)"]
   where
     block = astConstraints bitSize ast
 
