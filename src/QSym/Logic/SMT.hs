@@ -27,6 +27,8 @@ module QSym.Logic.SMT
   ,(^&&^)
   ,(^||^)
 
+  ,forAll
+
   ,pointsTo
   ,emp
   ,sep
@@ -54,6 +56,21 @@ module QSym.Logic.SMT
   ,double
   ,sqrt2
 
+  ,BitVector
+  ,BitVecPosition
+  ,bvSMT
+  ,bvPosition
+  ,mkBitVectorOfSize
+  ,bvLit
+  ,int2bv
+  ,bv2nat
+  ,bvOr
+  ,bvAnd
+  ,bvShiftL
+  ,bvGetRange
+  ,getBit
+  ,overwriteBits
+
   ,smtMap
   ,smtMapList
 
@@ -79,16 +96,21 @@ import QSym.Utils (toLowerString)
 
 import Prettyprinter hiding (sep)
 
+import Data.Bits
+
 import Data.Foldable
 import Data.Coerce
 import Data.String
 
 data SExpr a
   = Atom a
+  | Ix Int -- | de Bruijn index (for variables bound by forall)
+  | ForAll (SExpr a)
   | List [SExpr a]
   -- | StringLit String
   | BoolLit Bool
   | IntLit Int
+  | BvLit Int
   | DoubleLit Double
   deriving (Show, Functor, Foldable)
 
@@ -98,6 +120,22 @@ data SMT a b
   | Assert (SExpr a)
   | SExpr (SExpr a)
   deriving (Show)
+
+-- NOTE: Only for internal use
+shiftSExpr :: SExpr a -> SExpr a
+shiftSExpr (Ix i) = Ix (i + 1)
+shiftSExpr (Atom x) = Atom x
+shiftSExpr (ForAll e) = ForAll e
+shiftSExpr (List xs) = List $ map shiftSExpr xs
+shiftSExpr (BoolLit b) = BoolLit b
+shiftSExpr (IntLit i) = IntLit i
+shiftSExpr (DoubleLit d) = DoubleLit d
+
+-- NOTE: Only for internal use
+shiftSMT :: SMT a b -> SMT a b
+shiftSMT (Decl e) = Decl $ shiftSExpr e
+shiftSMT (Assert e) = Assert $ shiftSExpr e
+shiftSMT (SExpr e) = SExpr $ shiftSExpr e
 
 data Symbol
 data Decl
@@ -170,9 +208,12 @@ one x = Block [SomeSMT x]
 smtBlock :: forall a b. [SMT a b] -> Block a
 smtBlock = Block . map SomeSMT
 
+apply' :: SExpr a -> [SExpr a] -> SExpr a
+apply' f xs = List (f : xs)
+
 -- NOTE: Do not export
 apply :: a -> [SExpr a] -> SExpr a
-apply f xs = List (Atom f : xs)
+apply f = apply' (Atom f)
 
 assert :: SMT a Bool -> SMT a Decl
 assert (SExpr e) = Assert e
@@ -256,6 +297,22 @@ true = SExpr (BoolLit True)
 false :: SMT a Bool
 false = SExpr (BoolLit False)
 
+overSExpr :: (SExpr a -> SExpr a) -> (SMT a b -> SMT a b)
+overSExpr f (SExpr e) = SExpr (f e)
+
+forAll :: (SMT a b -> SMT a Bool) -> SMT a Bool
+forAll f = overSExpr shiftBinders $ f (SExpr (Ix 0))
+
+-- NOTE: For internal use only
+shiftBinders :: SExpr a -> SExpr a
+shiftBinders (ForAll e) = ForAll $ shiftSExpr e
+shiftBinders (Ix i) = Ix i
+shiftBinders (Atom x) = Atom x
+shiftBinders (List xs) = List $ map shiftBinders xs
+shiftBinders (BoolLit b) = BoolLit b
+shiftBinders (IntLit i) = IntLit i
+shiftBinders (DoubleLit d) = DoubleLit d
+
 updateIx :: IsString a => Int -> a -> a -> (SMT a b -> SMT a b) -> SMT a Bool
 updateIx i oldName newName f =
   store i newName (f (symbol newName))
@@ -323,9 +380,86 @@ getModel = Decl $ apply "get-model" []
 toSExpr :: SMT a b -> SExpr a
 toSExpr (SExpr e) = e
 
+-- | Operations on bit vectors where the size is known "statically" (before
+-- the SMT solver runs).
+data BitVector a = BitVector Int                     -- Length of the bit vector
+                           (SMT a (Array Int Int))
+  deriving (Show)
+
+newtype BitVecPosition = BitVecPosition Int
+  deriving (Show)
+
+mkBitVectorOfSize :: Int -> SMT a (Array Int Int) -> BitVector a
+mkBitVectorOfSize = BitVector
+
+bvPosition :: Int -> BitVecPosition
+bvPosition = BitVecPosition
+
+bvSMT :: BitVector a -> SMT a (Array Int Int)
+bvSMT (BitVector _ e) = e
+
+getBit :: IsString a => BitVector a -> BitVecPosition -> SMT a Int
+getBit (BitVector _ e) (BitVecPosition pos) =
+  SExpr $ apply' (apply "_" ["extract", IntLit pos, IntLit pos]) [toSExpr e]
+
+toInt :: IsString a => BitVector a -> SMT a Int
+toInt (BitVector _ e) = SExpr $ apply "bv2nat" [toSExpr e]
+
+int2bv :: IsString a => Int -> SMT a Int -> BitVector a
+int2bv size e = BitVector size (SExpr (apply' (apply "_" ["int2bv", IntLit size]) [toSExpr e]))
+
+bv2nat :: IsString a => BitVector a -> SMT a Int
+bv2nat (BitVector _ e) = SExpr $ apply "bv2nat" [toSExpr e]
+
+bvLit :: Int -> Int -> BitVector a
+bvLit size bits = BitVector size (SExpr (BvLit bits))
+
+-- | Assumes that each item of the list is either 0 or 1.
+-- The least-significant bit should be first in the list.
+listToBits :: IsString a => [SMT a Int] -> BitVector a
+listToBits xs = int2bv (length xs) . go $ reverse xs
+  where
+    go [] = 0
+    go (b:bs) = b + (2 * go bs)
+
+bvShiftL :: IsString a => BitVector a -> Int -> BitVector a
+bvShiftL (BitVector n x) amount =
+  BitVector (n + amount) $ SExpr $ apply "bvshl" [toSExpr x, IntLit amount]
+
+bvOr :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvOr (BitVector n x) (BitVector m y) =
+  BitVector (max n m) $ SExpr $ apply "bvor" [toSExpr x, toSExpr y]
+
+bvAnd :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvAnd (BitVector n x) (BitVector m y) =
+  BitVector (max n m) $ SExpr $ apply "bvand" [toSExpr x, toSExpr y]
+
+bvGetRange :: IsString a => BitVector a -> BitVecPosition -> BitVecPosition -> BitVector a
+bvGetRange (BitVector n x) (BitVecPosition start) (BitVecPosition end) =
+  BitVector (end - start) $ SExpr $ apply' (apply "_" ["extract", IntLit end, IntLit start]) [toSExpr x]
+
+-- | Overwrite the bits starting at the given position
+overwriteBits :: IsString a => BitVector a -> BitVecPosition -> [SMT a Int] -> BitVector a
+overwriteBits bv@(BitVector n _) (BitVecPosition pos) newMiddlePart =
+  let
+      -- Example: 00011000
+      mask :: Int
+      mask = (2 ^ (length newMiddlePart - 1)) `shiftL` pos
+
+      -- Example: 11100111
+      invertedMask = bvLit n $ (2 ^ (n - 1)) `xor` mask
+
+      -- Example: bb  -->  bbb00
+      newBits = listToBits newMiddlePart `bvShiftL` pos
+  in
+  bvOr (bvAnd bv invertedMask) newBits
+
+freshBase :: String
+freshBase = "rr"
 
 instance Pretty a => Pretty (SExpr a) where
   pretty (Atom x) = pretty x
+  pretty (Ix i) = pretty freshBase <> pretty i
   pretty (List xs) = parens $ hsep $ map pretty xs
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i

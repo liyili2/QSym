@@ -24,59 +24,59 @@ import Data.List
 
 import Prettyprinter
 
-data SMTVar = IxVar Var | NameVar String
-
-instance IsString SMTVar where
-  fromString = NameVar
-
-astSMT :: Int -> AST -> Block SMTVar
-astSMT bitSize = predToSMT . toPred . astToQafnyExpr
-
-predToSMT :: Pred -> Block SMTVar
-predToSMT = undefined
-
-arithToSMT :: ArithExpr -> SMT SMTVar Int
-arithToSMT (AddrVar x) = symbol (IxVar x)
-arithToSMT (HeapVar x) = symbol (IxVar x)
-arithToSMT (StateVal st) = error "arithToSMT: StateVal"
-arithToSMT (Scal x) = double x
-arithToSMT (Add x y) = add (arithToSMT x) (arithToSMT y)
-arithToSMT (Sub x y) = sub (arithToSMT x) (arithToSMT y)
-arithToSMT (Mult x y) = mul (arithToSMT x) (arithToSMT y)
-arithToSMT (Div x y) = div (arithToSMT x) (arithToSMT y)
-
-toPred :: [QafnyExpr] -> Pred
-toPred = go mempty true
-  where
-    true = Equal (Scal 0) (Scal 0) -- TODO: Get rid of this
-
-    go lmap p [] = p
-    go lmap p (e:es) =
-      let (p', lmap') = interpret lmap p e
-      in
-      go lmap' p' es
-
-astToQafnyExpr :: AST -> [QafnyExpr]
-astToQafnyExpr (Toplevel (Inl qm)) =
-  case qmBody qm of
-    Nothing -> mempty
-    Just block ->
-      map blockListConstraints (inBlock block)
-
-blockConstraints :: Stmt () -> [QafnyExpr]
-blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
-blockConstraints (SCall f xs) = error "SCall"
-blockConstraints (SVar {}) = error "SVar" -- TODO: Implement
-blockConstraints (_ ::=: _) = error "::=:" -- TODO: Implement
-blockConstraints (lhs :*=: EHad) = error "EHad" -- TODO: Implement
-blockConstraints (SDafny _) = pure mempty
-blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) =
-      [Apply (toLocus x) (Add ]
-
-blockConstraints s = error $ "unimplemented: " ++ show s
-
-toLocus :: Partition -> Locus
-toLocus (Partition xs) = Locus $ map convertRange xs
+-- data SMTVar = IxVar Var | NameVar String
+--
+-- instance IsString SMTVar where
+--   fromString = NameVar
+--
+-- astSMT :: Int -> AST -> Block SMTVar
+-- astSMT bitSize = predToSMT . toPred . astToQafnyExpr
+--
+-- predToSMT :: Pred -> Block SMTVar
+-- predToSMT = undefined
+--
+-- arithToSMT :: ArithExpr -> SMT SMTVar Int
+-- arithToSMT (AddrVar x) = symbol (IxVar x)
+-- arithToSMT (HeapVar x) = symbol (IxVar x)
+-- arithToSMT (StateVal st) = error "arithToSMT: StateVal"
+-- arithToSMT (Scal x) = double x
+-- arithToSMT (Add x y) = add (arithToSMT x) (arithToSMT y)
+-- arithToSMT (Sub x y) = sub (arithToSMT x) (arithToSMT y)
+-- arithToSMT (Mult x y) = mul (arithToSMT x) (arithToSMT y)
+-- arithToSMT (Div x y) = div (arithToSMT x) (arithToSMT y)
+--
+-- toPred :: [QafnyExpr] -> Pred
+-- toPred = go mempty true
+--   where
+--     true = Equal (Scal 0) (Scal 0) -- TODO: Get rid of this
+--
+--     go lmap p [] = p
+--     go lmap p (e:es) =
+--       let (p', lmap') = interpret lmap p e
+--       in
+--       go lmap' p' es
+--
+-- astToQafnyExpr :: AST -> [QafnyExpr]
+-- astToQafnyExpr (Toplevel (Inl qm)) =
+--   case qmBody qm of
+--     Nothing -> mempty
+--     Just block ->
+--       map blockListConstraints (inBlock block)
+--
+-- blockConstraints :: Stmt () -> [QafnyExpr]
+-- blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
+-- blockConstraints (SCall f xs) = error "SCall"
+-- blockConstraints (SVar {}) = error "SVar" -- TODO: Implement
+-- blockConstraints (_ ::=: _) = error "::=:" -- TODO: Implement
+-- blockConstraints (lhs :*=: EHad) = error "EHad" -- TODO: Implement
+-- blockConstraints (SDafny _) = pure mempty
+-- blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) =
+--       [Apply (toLocus x) (Add ]
+--
+-- blockConstraints s = error $ "unimplemented: " ++ show s
+--
+-- toLocus :: Partition -> Locus
+-- toLocus (Partition xs) = Locus $ map convertRange xs
 
 -- genLogic :: Int -> AST -> [Pred]
 -- genLogic bitSize ast = undefined

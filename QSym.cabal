@@ -73,7 +73,8 @@ library
                      QSym.Logic.GenLogic
                      QSym.Logic.Heap
                      QSym.Logic.GenConstraint
-                     QSym.Logic.Linear
+                     QSym.Logic.BitVector
+                     -- QSym.Logic.Linear
                      Data.Sum
                      QSym.Logic.SMT
                      QSym.Logic.SMTBackend
