@@ -110,6 +110,8 @@ import Prettyprinter hiding (sep)
 
 import Data.Bits
 
+import Numeric (showHex)
+
 import Data.Foldable
 import Data.Coerce
 import Data.String
@@ -548,6 +550,7 @@ instance (IsString a, Pretty a) => Pretty (SExpr a) where
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i
   pretty (DoubleLit x) = pretty x
+  pretty (BvLit x) = "#x" <> pretty (showHex x "")
 
 instance (IsString a, Pretty a) => Pretty (SMT a b) where
   pretty (Decl x) = pretty x

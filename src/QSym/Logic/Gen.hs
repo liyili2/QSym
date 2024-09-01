@@ -15,6 +15,8 @@ import Data.List
 import Data.Function
 import Data.Foldable (fold)
 
+import GHC.Stack
+
 import Prettyprinter
 
 newtype Gen a = Gen { getGen :: Reader Env a }
@@ -56,7 +58,10 @@ getVarBaseIndex v = do
   pure i
 
 rangeToPhysicalIndices :: Qafny.Range -> Gen (Int, Int)
-rangeToPhysicalIndices (Qafny.Range x (ENum start) (ENum end)) = do
+rangeToPhysicalIndices (Qafny.Range x start0 end0) = do
+  let start = toInt start0
+      end = toInt end0
+
   base <- getVarBaseIndex x
   pure (start + base, end + base)
 
@@ -120,13 +125,15 @@ getLociSizesStmt (SIf (GEPartition part Nothing) part' (Qafny.Block xs)) =
   toLociSizes part
     <> toLociSizes part'
     <> mconcat (map getLociSizesStmt xs)
+getLociSizesStmt (lhs :*=: rhs) = toLociSizes lhs <> getLociSizesExp rhs
+getLociSizesStmt s = error $ show s
 
 toLociSizes :: Partition -> LociSizes
 toLociSizes (Partition xs) = mconcat (map rangeToLociSizes xs)
 
 rangeToLociSizes :: Qafny.Range -> LociSizes
 rangeToLociSizes (Qafny.Range x _start end) = fold $ do
-  endNum <- getNum end
+  endNum <- toInt_maybe end
   Just (oneLociSize x endNum)
 
 -- TODO: Finish
@@ -134,12 +141,27 @@ getLociSizesExp :: Exp () -> LociSizes
 getLociSizesExp (ENum _) = mempty
 getLociSizesExp (EVar x) = mempty
 getLociSizesExp (EOp2 _ x y) = getLociSizesExp x <> getLociSizesExp y
+getLociSizesExp (ELambda (LambdaF { eBases = xs })) = mconcat $ map getLociSizesExp xs
+getLociSizesExp EHad = mempty
+getLociSizesExp e = error $ show e
 
 toLocus :: Partition -> Locus
 toLocus (Partition xs) = Locus $ map convertRange xs
 
 convertRange :: Qafny.Range -> Range
 convertRange (Qafny.Range x start end) = Range x (convertSimpleExpr start) (convertSimpleExpr end)
+
+toInt :: HasCallStack => Exp () -> Int
+toInt x =
+  let Just r = toInt_maybe x
+  in
+  r
+
+toInt_maybe :: Exp () -> Maybe Int
+toInt_maybe (ENum i) = Just i
+toInt_maybe (EOp2 op x y) = liftA2 (interp op) (toInt_maybe x) (toInt_maybe y)
+  where
+    interp OAdd = (+)
 
 getNum :: Exp () -> Maybe Int
 getNum (ENum i) = Just i
