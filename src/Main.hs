@@ -2,6 +2,8 @@
 
 module Main where
 
+import Prelude hiding (div)
+
 -- required for utf-8 text file enforcement
 import qualified Data.Text.IO.Utf8 as Utf8
 import qualified Data.Text as Text
@@ -9,7 +11,7 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
-import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
+import QSym.Logic.GenConstraint (Verify (..), astSMT, Name, getTotalProbForVar)
 import QSym.Logic.Gen (Gen)
 import QSym.Logic.SMTBackend
 import QSym.Logic.SMT as SMT --(int, SMT, Decl)
@@ -83,42 +85,51 @@ main = do
   pure ()
 
 verify :: Name -> Name -> Gen (Block Name)
-verify input output =
+verify input output = do
+  inProb00 <- getTotalProbForVar "q" (bvLit 2 0x0) (symbol input)
+  inProb11 <- getTotalProbForVar "q" (bvLit 2 0x3) (symbol input)
+
+  outProb00 <- getTotalProbForVar "q" (bvLit 2 0x0) (symbol output)
+  outProb11 <- getTotalProbForVar "q" (bvLit 2 0x3) (symbol output)
+
   pure . smtBlock $
-    -- [assert $ eq (select (symbol input) (int 0)) (int 1)
-    -- ,assert $ eq (select (symbol input) (int 1)) (int 0)
-    -- ,assert $ eq (select (symbol input) (int 2)) (int 0)
-    -- ,assert $ eq (select (symbol input) (int 3)) (int 0)
-    -- ]
-    -- ++
-    [assert $ not' $ and' (go <$> [0,1] <*> [0,1])]
-  where
-    go :: Int -> Int -> SMT Name Bool
-    go x y =
-      eq (getOutputValue x y) (expected x y)
-
-    expected :: Int -> Int -> SMT Name Int
-    expected x y =
-      (getInputValue 0 y
-        + (toSign x * getInputValue 1 (invert y)))
-        `SMT.div`
-      (fromString "sqrt2") -- TODO: Find a better way
-
-    toSign 0 = 1
-    toSign 1 = -1
-    toSign n = error $ "verify.toSign: " ++ show n
-
-    invert 0 = 1
-    invert 1 = 0
-    invert n = error $ "verify.invert: " ++ show n
-
-    getInputValue x y =
-      select (symbol input) (getIndex x y)
-
-    getOutputValue x y =
-      select (symbol output) (getIndex x y)
-
-    getIndex :: Int -> Int -> SMT Name Int
-    getIndex x y =
-      int (y + 2*x)
-
+    [assert $ eq outProb00 (div inProb00 sqrt2)
+    ,assert $ eq outProb11 (div inProb11 sqrt2)
+    ]
+  --   -- [assert $ eq (select (symbol input) (int 0)) (int 1)
+  --   -- ,assert $ eq (select (symbol input) (int 1)) (int 0)
+  --   -- ,assert $ eq (select (symbol input) (int 2)) (int 0)
+  --   -- ,assert $ eq (select (symbol input) (int 3)) (int 0)
+  --   -- ]
+  --   -- ++
+  --   [assert $ not' $ and' (go <$> [0,1] <*> [0,1])]
+  -- where
+  --   go :: Int -> Int -> SMT Name Bool
+  --   go x y =
+  --     eq (getOutputValue x y) (expected x y)
+  --
+  --   expected :: Int -> Int -> SMT Name Int
+  --   expected x y =
+  --     (getInputValue 0 y
+  --       + (toSign x * getInputValue 1 (invert y)))
+  --       `SMT.div`
+  --     (fromString "sqrt2") -- TODO: Find a better way
+  --
+  --   toSign 0 = 1
+  --   toSign 1 = -1
+  --   toSign n = error $ "verify.toSign: " ++ show n
+  --
+  --   invert 0 = 1
+  --   invert 1 = 0
+  --   invert n = error $ "verify.invert: " ++ show n
+  --
+  --   getInputValue x y =
+  --     select (symbol input) (getIndex x y)
+  --
+  --   getOutputValue x y =
+  --     select (symbol output) (getIndex x y)
+  --
+  --   getIndex :: Int -> Int -> SMT Name Int
+  --   getIndex x y =
+  --     int (y + 2*x)
+  --

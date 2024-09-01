@@ -4,6 +4,7 @@ module QSym.Logic.GenConstraint
   (Name
   ,Verify (..)
   ,astSMT
+  ,getTotalProbForVar
   )
   where
 
@@ -57,8 +58,30 @@ astSMT verify bitSize ast =
       smtBlock
         [assert $ eq (select (symbol (currentVar "mem")) (mkLoc i)) v]
 
-getQubit :: String -> Int -> Gen (SMT Name Int)
-getQubit var varIx = undefined
+-- getQubit :: String -> Int -> Gen (SMT Name Int)
+-- getQubit var varIx = undefined
+
+getTotalProbForVar :: String -> BitVector Name -> SMT Name (Array Int Int) -> Gen (SMT Name Int)
+getTotalProbForVar var bitVec mem = do
+  totalBits <- fmap envBitSize ask
+
+  base <- getVarBaseIndex var
+
+  let prefixSize = base
+      postfixSize = totalBits - prefixSize - bitVectorSize bitVec
+
+      allPrefixes = allPossibleBitVectors prefixSize
+      allPostfixes = allPossibleBitVectors postfixSize
+      allCircumfixes = do
+        prefix <- allPrefixes
+        postfix <- allPostfixes
+        pure (prefix, postfix)
+
+      paste (pre, post) = bvConcat [pre, bitVec, post]
+
+      allPossibilities = map paste allCircumfixes
+
+  pure $ sum (map (selectWithBitVector mem) allPossibilities)
 
 astConstraints :: VerifySatisfies -> Int -> AST -> Block Name
 astConstraints verify bitSize =

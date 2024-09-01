@@ -12,6 +12,8 @@ module QSym.Logic.SMT
   ,assert
   ,setOption
 
+  ,Array
+
   ,varMap
   ,varMapBlock
   ,Decl
@@ -65,10 +67,12 @@ module QSym.Logic.SMT
 
   ,BitVector
   ,BitVecPosition
+  ,bitVectorSize
   ,bvSMT
   ,bvPosition
   ,mkBitVectorOfSize
   ,bvLit
+  ,bvConcat
   ,int2bv
   ,bv2nat
   ,bvOr
@@ -459,6 +463,13 @@ bv2nat (BitVector _ e) = SExpr $ apply "bv2nat" [toSExpr e]
 
 bvLit :: Int -> Int -> BitVector a
 bvLit size bits = BitVector size (SExpr (BvLit bits))
+
+bvConcat :: IsString a => [BitVector a] -> BitVector a
+bvConcat bvs = BitVector totalSize $ SExpr $ apply "concat" (map (toSExpr . get) bvs)
+  where
+    totalSize = sum $ map bitVectorSize bvs
+    get (BitVector _ e) = e
+
 
 -- | Assumes that each item of the list is either 0 or 1.
 -- The least-significant bit should be first in the list.
