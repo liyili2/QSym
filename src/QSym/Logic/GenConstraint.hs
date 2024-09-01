@@ -22,6 +22,7 @@ import Data.Sum
 
 import Data.Ord
 
+import Control.Monad
 import Control.Monad.Reader
 import Data.String
 import Data.List
@@ -76,8 +77,35 @@ blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
 blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
-blockConstraints (lhs :*=: EHad) = do
-    undefined
+
+-- TODO: Generalize to applying Hadamard to more than one location
+blockConstraints (Partition [lhs] :*=: EHad) = do
+  totalBits <- fmap envBitSize ask
+
+  (physStart0, physEnd0) <- rangeToPhysicalIndices lhs
+
+  let physStart = bvPosition physStart0
+  let physEnd = bvPosition physEnd0
+
+  let sizeAppliedTo = length [lhs]
+
+  let possibleVecs = allPossibleBitVectors sizeAppliedTo
+
+  let mkPossibility i vec = omega (bv2nat (bvGetRange i physStart physEnd) * bv2nat vec)
+                                (int sizeAppliedTo)
+                            * selectWithBitVector mem' vec
+
+      possibilities i = map (mkPossibility i) possibleVecs
+
+  pure $ smtBlock
+    [ forAll "i" "Int" $
+        eq (select (var "i") mem)
+           (mul invSqrt2 (sum (possibilities (int2bv totalBits (var "i")))))
+    ]
+  where
+    mem = symbol (currentVar "mem")
+    mem' = symbol (step (currentVar "mem"))
+
   -- let usedInput = partitionToName lhs
   -- otherInputs <- getOtherInputs [usedInput]
   --
@@ -98,6 +126,16 @@ blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELam
   --
   -- pure block
 blockConstraints s = error $ "unimplemented: " ++ show s
+
+allPossibleBitVectors :: IsString a => Int -> [BitVector a]
+allPossibleBitVectors size = map (int2bv size . int) [0 .. 2 ^ size]
+
+-- allPossibleBitSeqs :: Int -> [[Int]]
+-- allPossibleBitSeqs size = replicateM size [0, 1]
+--
+-- bitSeqToInt :: [Int] -> Int
+-- bitSeqToInt [] = 0
+-- bitSeqToInt (b:bs) = b + 2 * bitSeqToInt bs
 
 applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
 applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =

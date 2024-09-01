@@ -55,7 +55,12 @@ module QSym.Logic.SMT
   ,store
   ,select
   ,double
+  ,invSqrt2
   ,sqrt2
+
+  ,sin'
+  ,pi'
+  ,omega
 
   ,BitVector
   ,BitVecPosition
@@ -71,6 +76,7 @@ module QSym.Logic.SMT
   ,bvGetRange
   ,getBit
   ,overwriteBits
+  ,selectWithBitVector
 
   ,smtMap
   ,smtMapList
@@ -384,6 +390,19 @@ smtPreamble =
 double :: Double -> SMT a Int
 double = SExpr . DoubleLit
 
+sin' :: IsString a => SMT a Int -> SMT a Int
+sin' x = SExpr $ apply "sin" [toSExpr x]
+
+pi' :: IsString a => SMT a Int
+pi' = symbol "pi"
+
+omega :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+omega a b =
+  sin' (2 * pi' * a `div` b)
+
+invSqrt2 :: IsString a => SMT a Int
+invSqrt2 = div (int 1) sqrt2
+
 sqrt2 :: IsString a => SMT a Int
 sqrt2 = SExpr $ Atom "sqrt2"
 
@@ -470,6 +489,14 @@ overwriteBits bv@(BitVector n _) (BitVecPosition pos) newMiddlePart =
       newBits = listToBits newMiddlePart `bvShiftL` pos
   in
   bvOr (bvAnd bv invertedMask) newBits
+
+selectWithBitVector :: forall a b. IsString a => SMT a (Array Int b) -> BitVector a -> SMT a b
+selectWithBitVector arr bv =
+  let ix :: SMT a Int
+      ix = bv2nat bv
+  in
+  select arr ix
+
 
 -- freshBase :: String
 -- freshBase = "rr"

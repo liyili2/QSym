@@ -55,6 +55,11 @@ getVarBaseIndex v = do
   let Just i = lookup v asn
   pure i
 
+rangeToPhysicalIndices :: Qafny.Range -> Gen (Int, Int)
+rangeToPhysicalIndices (Qafny.Range x (ENum start) (ENum end)) = do
+  base <- getVarBaseIndex x
+  pure (start + base, end + base)
+
 -- | Maximum size associated to a variable name, given by the loci
 newtype LociSizes = LociSizes [(String, Int)]
   deriving (Show)
