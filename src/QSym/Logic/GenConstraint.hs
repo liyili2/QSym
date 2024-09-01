@@ -103,8 +103,20 @@ applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
 applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
   subst [(paramVar, arg)] body
 
-toLocus :: Partition -> Locus
-toLocus (Partition xs) = Locus $ map convertRange xs
+-- toLocus :: Partition -> Locus
+-- toLocus (Partition xs) = Locus $ map convertRange xs
+--
+-- convertRange :: Qafny.Range -> Range
+-- convertRange (Qafny.Range x start end) = Range x (convertSimpleExpr start) (convertSimpleExpr end)
+
+-- convertLambda :: LambdaF (Exp ()) -> SteppedLocus -> Int -> HighLevelSMT Int
+-- convertLambda (LambdaF { bBases = [paramVar], eBases = [body] }) locus ix =
+--   convertExpr body (Just (paramVar, select (symbol (LocusName locus)) (int ix)))
+
+-- convertSimpleExpr :: Exp () -> SimpleExpr
+-- convertSimpleExpr (ENum i) = Lit i
+-- convertSimpleExpr (EVar x) = Var x
+-- convertSimpleExpr (EOp2 OAdd x y) = Add (convertSimpleExpr x) (convertSimpleExpr y)
 
 data Verify
   = ExactValues [SMT Name Int]
@@ -264,18 +276,6 @@ mkDeclarations block =
 --
 -- toLocusExpr :: Partition -> HighLevelSMT Int
 -- toLocusExpr = symbol . LocusName . Current . toLocus
-
-convertRange :: Qafny.Range -> Range
-convertRange (Qafny.Range x start end) = Range x (convertSimpleExpr start) (convertSimpleExpr end)
-
--- convertLambda :: LambdaF (Exp ()) -> SteppedLocus -> Int -> HighLevelSMT Int
--- convertLambda (LambdaF { bBases = [paramVar], eBases = [body] }) locus ix =
---   convertExpr body (Just (paramVar, select (symbol (LocusName locus)) (int ix)))
-
-convertSimpleExpr :: Exp () -> SimpleExpr
-convertSimpleExpr (ENum i) = Lit i
-convertSimpleExpr (EVar x) = Var x
-convertSimpleExpr (EOp2 OAdd x y) = Add (convertSimpleExpr x) (convertSimpleExpr y)
 
 -- -- |convertExpr converts a Qafny AST Expression to a SimpleExpr that can be used for symbolic execution
 -- convertExpr :: Exp () -> Maybe (Var, HighLevelSMT Int) -> HighLevelSMT Int

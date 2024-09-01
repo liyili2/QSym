@@ -27,6 +27,7 @@ module QSym.Logic.SMT
   ,(^&&^)
   ,(^||^)
 
+  ,var
   ,forAll
 
   ,pointsTo
@@ -90,7 +91,7 @@ module QSym.Logic.SMT
 
 import Prelude hiding (div)
 
-import QSym.Logic.Syntax
+import QSym.Logic.Syntax hiding (Var)
 
 import QSym.Utils (toLowerString)
 
@@ -104,8 +105,8 @@ import Data.String
 
 data SExpr a
   = Atom a
-  | Ix Int -- | de Bruijn index (for variables bound by forall)
-  | ForAll (SExpr a)
+  | Var String
+  | ForAll String String (SExpr a) -- TODO: Use a better approach
   | List [SExpr a]
   -- | StringLit String
   | BoolLit Bool
@@ -121,21 +122,21 @@ data SMT a b
   | SExpr (SExpr a)
   deriving (Show)
 
--- NOTE: Only for internal use
-shiftSExpr :: SExpr a -> SExpr a
-shiftSExpr (Ix i) = Ix (i + 1)
-shiftSExpr (Atom x) = Atom x
-shiftSExpr (ForAll e) = ForAll e
-shiftSExpr (List xs) = List $ map shiftSExpr xs
-shiftSExpr (BoolLit b) = BoolLit b
-shiftSExpr (IntLit i) = IntLit i
-shiftSExpr (DoubleLit d) = DoubleLit d
+-- -- NOTE: Only for internal use
+-- shiftSExpr :: SExpr a -> SExpr a
+-- shiftSExpr (Ix i) = Ix (i + 1)
+-- shiftSExpr (Atom x) = Atom x
+-- shiftSExpr (ForAll e) = ForAll e
+-- shiftSExpr (List xs) = List $ map shiftSExpr xs
+-- shiftSExpr (BoolLit b) = BoolLit b
+-- shiftSExpr (IntLit i) = IntLit i
+-- shiftSExpr (DoubleLit d) = DoubleLit d
 
--- NOTE: Only for internal use
-shiftSMT :: SMT a b -> SMT a b
-shiftSMT (Decl e) = Decl $ shiftSExpr e
-shiftSMT (Assert e) = Assert $ shiftSExpr e
-shiftSMT (SExpr e) = SExpr $ shiftSExpr e
+-- -- NOTE: Only for internal use
+-- shiftSMT :: SMT a b -> SMT a b
+-- shiftSMT (Decl e) = Decl $ shiftSExpr e
+-- shiftSMT (Assert e) = Assert $ shiftSExpr e
+-- shiftSMT (SExpr e) = SExpr $ shiftSExpr e
 
 data Symbol
 data Decl
@@ -176,6 +177,9 @@ instance IsString a => Num (SMT a Int) where
   (-) = sub
   fromInteger = int . fromInteger
   signum = error "SMT.signum"
+
+var :: String -> SMT a b
+var = SExpr . Var
 
 symbol :: a -> SMT a b --Symbol
 symbol = SExpr . Atom
@@ -300,18 +304,31 @@ false = SExpr (BoolLit False)
 overSExpr :: (SExpr a -> SExpr a) -> (SMT a b -> SMT a b)
 overSExpr f (SExpr e) = SExpr (f e)
 
-forAll :: (SMT a b -> SMT a Bool) -> SMT a Bool
-forAll f = overSExpr shiftBinders $ f (SExpr (Ix 0))
+forAll :: String -> String -> SMT a Bool -> SMT a Bool
+forAll v type_ body = SExpr $ ForAll v type_ (toSExpr body)
 
--- NOTE: For internal use only
-shiftBinders :: SExpr a -> SExpr a
-shiftBinders (ForAll e) = ForAll $ shiftSExpr e
-shiftBinders (Ix i) = Ix i
-shiftBinders (Atom x) = Atom x
-shiftBinders (List xs) = List $ map shiftBinders xs
-shiftBinders (BoolLit b) = BoolLit b
-shiftBinders (IntLit i) = IntLit i
-shiftBinders (DoubleLit d) = DoubleLit d
+-- freshIndex :: SMT a b -> Int
+-- freshIndex x = 1 + maxVar (toSExpr x)
+
+-- maxVar :: SExpr a -> Int
+-- maxVar (Atom {}) = 0
+-- maxVar (Var (_, i)) = i
+-- maxVar (ForAll (_, i) e) = i `max` maxVar e
+-- maxVar (List xs) = maximum (map maxVar xs)
+-- maxVar (BoolLit {}) = 0
+-- maxVar (IntLit {}) = 0
+-- maxVar (DoubleLit {}) = 0
+-- maxVar (BvLit {}) = 0
+
+-- -- NOTE: For internal use only
+-- shiftBinders :: SExpr a -> SExpr a
+-- shiftBinders (ForAll e) = ForAll $ shiftSExpr e
+-- shiftBinders (Ix i) = Ix i
+-- shiftBinders (Atom x) = Atom x
+-- shiftBinders (List xs) = List $ map shiftBinders xs
+-- shiftBinders (BoolLit b) = BoolLit b
+-- shiftBinders (IntLit i) = IntLit i
+-- shiftBinders (DoubleLit d) = DoubleLit d
 
 updateIx :: IsString a => Int -> a -> a -> (SMT a b -> SMT a b) -> SMT a Bool
 updateIx i oldName newName f =
@@ -436,7 +453,7 @@ bvAnd (BitVector n x) (BitVector m y) =
 
 bvGetRange :: IsString a => BitVector a -> BitVecPosition -> BitVecPosition -> BitVector a
 bvGetRange (BitVector n x) (BitVecPosition start) (BitVecPosition end) =
-  BitVector (end - start) $ SExpr $ apply' (apply "_" ["extract", IntLit end, IntLit start]) [toSExpr x]
+  BitVector (end - start + 1) $ SExpr $ apply' (apply "_" ["extract", IntLit end, IntLit start]) [toSExpr x]
 
 -- | Overwrite the bits starting at the given position
 overwriteBits :: IsString a => BitVector a -> BitVecPosition -> [SMT a Int] -> BitVector a
@@ -454,12 +471,14 @@ overwriteBits bv@(BitVector n _) (BitVecPosition pos) newMiddlePart =
   in
   bvOr (bvAnd bv invertedMask) newBits
 
-freshBase :: String
-freshBase = "rr"
+-- freshBase :: String
+-- freshBase = "rr"
 
-instance Pretty a => Pretty (SExpr a) where
+instance (IsString a, Pretty a) => Pretty (SExpr a) where
   pretty (Atom x) = pretty x
-  pretty (Ix i) = pretty freshBase <> pretty i
+  pretty (Var v) = pretty v
+  pretty (ForAll v type_ body) =
+    pretty $ List [Atom "forall", List [List [Atom (fromString v), Atom (fromString type_)]], body]
   pretty (List xs) = parens $ hsep $ map pretty xs
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i
