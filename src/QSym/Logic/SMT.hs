@@ -76,6 +76,8 @@ module QSym.Logic.SMT
   ,bvAnd
   ,bvShiftL
   ,bvGetRange
+  ,invertBitVec
+  ,ones
   ,getBit
   -- ,overwriteIndexBits
   ,overwriteBits
@@ -503,6 +505,12 @@ bvGetRange (BitVector n x) (BitVecPosition start) (BitVecPosition end) =
 
 bitVectorSize :: BitVector a -> Int
 bitVectorSize (BitVector n _) = n
+
+ones :: IsString a => Int -> BitVector a
+ones size = BitVector size (SExpr (BvLit (2 ^ (size - 1))))
+
+invertBitVec :: IsString a => BitVector a -> BitVector a
+invertBitVec bv@(BitVector size x) = bvXor bv (ones size)
 
 -- | Overwrite the bits starting at the given position
 overwriteBits :: IsString a => BitVector a -> BitVecPosition -> BitVector a -> BitVector a

@@ -127,14 +127,18 @@ blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELam
   let physStart = bvPosition physStart0
   let physEnd = bvPosition physEnd0
 
-  -- let mkPossibility i = selectWithBitVector mem' 
+  let mkPossibility i =
+        let currBitVec = bvGetRange i physStart physEnd
+            invertedBitVec = invertBitVec currBitVec
+        in
+        selectWithBitVector mem' (overwriteBits i physStart invertedBitVec)
 
   totalBits <- fmap envBitSize ask
   pure $ smtBlock
     [ forAll "i" "Int" $
         implies ((gte (var "i") (int 0)) ^&&^ (lt (var "i") (int totalBits))) $
           eq (select mem (var "i"))
-             undefined
+             (mkPossibility (int2bv totalBits (var "i")))
     ]
   where
     mem = symbol (currentVar "mem")
