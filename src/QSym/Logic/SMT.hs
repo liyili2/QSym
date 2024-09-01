@@ -40,6 +40,7 @@ module QSym.Logic.SMT
 
   -- conditionals
   ,not'
+  ,implies
   ,eq
   ,lt
   ,lte
@@ -71,10 +72,12 @@ module QSym.Logic.SMT
   ,int2bv
   ,bv2nat
   ,bvOr
+  ,bvXor
   ,bvAnd
   ,bvShiftL
   ,bvGetRange
   ,getBit
+  -- ,overwriteIndexBits
   ,overwriteBits
   ,selectWithBitVector
 
@@ -266,6 +269,9 @@ declareConstList = smtBlock . map (uncurry declareConst)
 
 not' :: IsString a => SMT a Bool -> SMT a Bool
 not' = SExpr . apply "not" . (:[]) . toSExpr
+
+implies :: IsString a => SMT a Bool -> SMT a Bool -> SMT a Bool
+implies x y = SExpr (apply "implies" [toSExpr x, toSExpr y])
 
 eq :: IsString a => SMT a b -> SMT a b -> SMT a Bool
 eq x y = SExpr (apply "=" [toSExpr x, toSExpr y])
@@ -466,6 +472,10 @@ bvOr :: IsString a => BitVector a -> BitVector a -> BitVector a
 bvOr (BitVector n x) (BitVector m y) =
   BitVector (max n m) $ SExpr $ apply "bvor" [toSExpr x, toSExpr y]
 
+bvXor :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvXor (BitVector n x) (BitVector m y) =
+  BitVector (max n m) $ SExpr $ apply "bvxor" [toSExpr x, toSExpr y]
+
 bvAnd :: IsString a => BitVector a -> BitVector a -> BitVector a
 bvAnd (BitVector n x) (BitVector m y) =
   BitVector (max n m) $ SExpr $ apply "bvand" [toSExpr x, toSExpr y]
@@ -474,19 +484,39 @@ bvGetRange :: IsString a => BitVector a -> BitVecPosition -> BitVecPosition -> B
 bvGetRange (BitVector n x) (BitVecPosition start) (BitVecPosition end) =
   BitVector (end - start + 1) $ SExpr $ apply' (apply "_" ["extract", IntLit end, IntLit start]) [toSExpr x]
 
+-- overwriteIndexBits :: IsString a => Int -> SMT a Int -> BitVecPosition -> BitVector a -> SMT a Int
+-- overwriteIndexBits overallSize ix (BitVecPosition pos) newMiddleVec@(BitVector middleSize newMiddle) =
+--   let
+--       -- Example: 00011000
+--       mask :: Int
+--       mask = (2 ^ (middleSize - 1)) `shiftL` pos
+--
+--       -- Example: 11100111
+--       invertedMask = bvLit overallSize $ (2 ^ (overallSize - 1)) `xor` mask
+--
+--       -- Example: bb  -->  bbb00
+--       newBits = newMiddleVec `bvShiftL` pos
+--
+--       bv = int2bv overallSize ix
+--   in
+--   bv2nat $ bvOr (bvAnd bv invertedMask) newBits
+
+bitVectorSize :: BitVector a -> Int
+bitVectorSize (BitVector n _) = n
+
 -- | Overwrite the bits starting at the given position
-overwriteBits :: IsString a => BitVector a -> BitVecPosition -> [SMT a Int] -> BitVector a
+overwriteBits :: IsString a => BitVector a -> BitVecPosition -> BitVector a -> BitVector a
 overwriteBits bv@(BitVector n _) (BitVecPosition pos) newMiddlePart =
   let
       -- Example: 00011000
       mask :: Int
-      mask = (2 ^ (length newMiddlePart - 1)) `shiftL` pos
+      mask = (2 ^ (bitVectorSize newMiddlePart - 1)) `shiftL` pos
 
       -- Example: 11100111
       invertedMask = bvLit n $ (2 ^ (n - 1)) `xor` mask
 
       -- Example: bb  -->  bbb00
-      newBits = listToBits newMiddlePart `bvShiftL` pos
+      newBits = newMiddlePart `bvShiftL` pos
   in
   bvOr (bvAnd bv invertedMask) newBits
 

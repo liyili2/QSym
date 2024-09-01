@@ -93,14 +93,15 @@ blockConstraints (Partition [lhs] :*=: EHad) = do
 
   let mkPossibility i vec = omega (bv2nat (bvGetRange i physStart physEnd) * bv2nat vec)
                                 (int sizeAppliedTo)
-                            * selectWithBitVector mem' vec
+                            * selectWithBitVector mem' (overwriteBits i physStart vec)
 
       possibilities i = map (mkPossibility i) possibleVecs
 
   pure $ smtBlock
     [ forAll "i" "Int" $
-        eq (select mem (var "i"))
-           (mul invSqrt2 (sum (possibilities (int2bv totalBits (var "i")))))
+        implies ((gte (var "i") (int 0)) ^&&^ (lt (var "i") (int totalBits))) $
+          eq (select mem (var "i"))
+             (mul invSqrt2 (sum (possibilities (int2bv totalBits (var "i")))))
     ]
   where
     mem = symbol (currentVar "mem")
@@ -116,8 +117,28 @@ blockConstraints (Partition [lhs] :*=: EHad) = do
   --
   -- traceShow resized $ pure $ applied
 blockConstraints (SDafny _) = pure mempty
+
+-- TODO: Generalize this
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
-    undefined
+  let Partition [range] = part
+
+  (physStart0, physEnd0) <- rangeToPhysicalIndices range
+
+  let physStart = bvPosition physStart0
+  let physEnd = bvPosition physEnd0
+
+  -- let mkPossibility i = selectWithBitVector mem' 
+
+  totalBits <- fmap envBitSize ask
+  pure $ smtBlock
+    [ forAll "i" "Int" $
+        implies ((gte (var "i") (int 0)) ^&&^ (lt (var "i") (int totalBits))) $
+          eq (select mem (var "i"))
+             undefined
+    ]
+  where
+    mem = symbol (currentVar "mem")
+    mem' = symbol (step (currentVar "mem"))
   -- totalQubits <- envBitSize <$> ask
   --
   --   -- TODO: Change hardcoded 0 to proper input index
