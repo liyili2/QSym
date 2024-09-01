@@ -99,7 +99,7 @@ blockConstraints (Partition [lhs] :*=: EHad) = do
 
   pure $ smtBlock
     [ forAll "i" "Int" $
-        eq (select (var "i") mem)
+        eq (select mem (var "i"))
            (mul invSqrt2 (sum (possibilities (int2bv totalBits (var "i")))))
     ]
   where
