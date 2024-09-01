@@ -10,6 +10,7 @@ import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
 import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
+import QSym.Logic.Gen (Gen)
 import QSym.Logic.SMTBackend
 import QSym.Logic.SMT as SMT --(int, SMT, Decl)
 
@@ -81,9 +82,9 @@ main = do
   executeSMTLoudly z3Config smt
   pure ()
 
-verify :: Name -> Name -> Block Name
+verify :: Name -> Name -> Gen (Block Name)
 verify input output =
-  smtBlock $
+  pure . smtBlock $
     -- [assert $ eq (select (symbol input) (int 0)) (int 1)
     -- ,assert $ eq (select (symbol input) (int 1)) (int 0)
     -- ,assert $ eq (select (symbol input) (int 2)) (int 0)

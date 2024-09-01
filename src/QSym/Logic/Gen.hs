@@ -65,6 +65,23 @@ rangeToPhysicalIndices (Qafny.Range x start0 end0) = do
   base <- getVarBaseIndex x
   pure (start + base, end + base)
 
+varProbabilitiesToPhysical :: [(String, [a])] -> Gen [(Int, a)]
+varProbabilitiesToPhysical varProbs = undefined
+  where
+    go :: [(a, [b])] -> [(a, Int, b)]
+    go = map (\(x, (y, z)) -> (x, y, z)) . go2 . go1
+
+    go1 :: [(a, [b])] -> [(a, [(Int, b)])]
+    go1 = map (fmap (zip [0..]))
+
+    go2 :: [(a, [(Int, b)])] -> [(a, (Int, b))]
+    go2 = concatMap sequence
+
+varProbabilityToPhysical :: String -> Int -> a -> Gen (Int, a)
+varProbabilityToPhysical var varIx prob = do
+  base <- getVarBaseIndex var
+  pure (base + varIx, prob)
+
 -- | Maximum size associated to a variable name, given by the loci
 newtype LociSizes = LociSizes [(String, Int)]
   deriving (Show)

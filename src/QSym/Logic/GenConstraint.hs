@@ -33,9 +33,9 @@ import Debug.Trace
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> block <> smtCheck <> verifyEqs <> smtBlock [checkSAT, symbol "(get-unsat-core)"]
+  smtPreamble <> mkDeclarations block <> block <> smtCheck <> smtBlock [checkSAT, symbol "(get-unsat-core)"]
   where
-    block = astConstraints bitSize ast
+    block = astConstraints verifyEqs bitSize ast
 
     smtCheck =
       smtBlock
@@ -44,26 +44,35 @@ astSMT verify bitSize ast =
         -- ,symbol "(get-unsat-core)"
         ]
 
-    verifyEqs :: Block Name
+    verifyEqs :: VerifySatisfies
     verifyEqs =
       case verify of
-        ExactValues initialState -> mconcat $ zipWith toMemEq [0..] initialState
-        Satisfies prop -> prop (currentVar "mem") $ getLastMem block 
+            -- TODO: Implement this for testing specific values
+        -- ExactValues initialState -> mconcat $ zipWith toMemEq [0..] initialState
+        Satisfies prop -> prop --(currentVar "mem") $ getLastMem block 
+        _ -> \_ _ -> pure mempty
 
     toMemEq :: Int -> SMT Name Int -> Block Name
     toMemEq i v =
       smtBlock
         [assert $ eq (select (symbol (currentVar "mem")) (mkLoc i)) v]
 
-astConstraints :: Int -> AST -> Block Name
-astConstraints bitSize =
-  mconcat . map (toplevelConstraints bitSize)
+getQubit :: String -> Int -> Gen (SMT Name Int)
+getQubit var varIx = undefined
 
-toplevelConstraints :: Int -> Toplevel () -> Block Name
-toplevelConstraints bitSize (Toplevel (Inl qm)) =
+astConstraints :: VerifySatisfies -> Int -> AST -> Block Name
+astConstraints verify bitSize =
+  mconcat . map (toplevelConstraints verify bitSize)
+
+toplevelConstraints :: VerifySatisfies -> Int -> Toplevel () -> Block Name
+toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
     Nothing -> mempty
-    Just block -> traceShow block $ runGen (blockListConstraints (reverse (inBlock block))) (buildEnv bitSize qm) -- TODO: Find a better way than reversing here
+    Just block ->
+      let go = do mainPart <- blockListConstraints (reverse (inBlock block))
+                  fmap (mainPart <>) (verify (currentVar "mem") (getLastMem mainPart))
+      in
+      traceShow block $ runGen go (buildEnv bitSize qm) -- TODO: Find a better way than reversing here
 
 blockListConstraints :: [Stmt ()] -> Gen (Block Name)
 blockListConstraints [] = pure mempty
@@ -181,11 +190,14 @@ applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
 -- convertSimpleExpr (EVar x) = Var x
 -- convertSimpleExpr (EOp2 OAdd x y) = Add (convertSimpleExpr x) (convertSimpleExpr y)
 
+type VerifySatisfies =
+  Name -> -- Input
+  Name -> -- Output
+  Gen (Block Name)
+
 data Verify
-  = ExactValues [SMT Name Int]
-  | Satisfies (Name -> -- Input
-               Name -> -- Output
-               Block Name)
+  = ExactValues [(String, [SMT Name Int])]
+  | Satisfies VerifySatisfies
 
 -- type SMTMatrix = Matrix (SMT Name Int)
 --
