@@ -291,7 +291,7 @@ not' :: IsString a => SMT a Bool -> SMT a Bool
 not' = SExpr . apply "not" . (:[]) . toSExpr
 
 implies :: IsString a => SMT a Bool -> SMT a Bool -> SMT a Bool
-implies x y = SExpr (apply "implies" [toSExpr x, toSExpr y])
+implies x y = SExpr (apply "=>" [toSExpr x, toSExpr y])
 
 eq :: IsString a => SMT a b -> SMT a b -> SMT a Bool
 eq x y = SExpr (apply "=" [toSExpr x, toSExpr y])
