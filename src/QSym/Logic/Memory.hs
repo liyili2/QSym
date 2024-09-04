@@ -162,15 +162,15 @@ type Modifier = Memory -> [SMT Name Int] -> MemEntry -> MemEntry
 type Transform = Memory -> [SMT Name Int] -> SMT Name Bool
 
 -- | This mediates access to the previous memory state
-newtype Accessor = Accessor { runAccessor :: [SMT Name Int] -> (MemEntry -> SMT Name Bool) -> SMT Name Bool }
+newtype Accessor = Accessor { runAccessor :: Memory -> [SMT Name Int] -> [SMT Name Int] -> (MemEntry -> SMT Name Bool) -> SMT Name Bool }
 
 instance Semigroup Accessor where
   Accessor p <> Accessor q =
-    Accessor $ \ix k ->
-      p ix (\_ -> q ix k)
+    Accessor $ \mem' ix newIx k ->
+      p mem' ix newIx (\_ -> q mem' ix newIx k)
 
 mkIdentityAccessor :: Memory -> Accessor
-mkIdentityAccessor mem = Accessor $ \ix k ->
+mkIdentityAccessor mem = Accessor $ \_mem' ix _newIx k ->
   k (indexMemoryByList mem ix)
 
 -- extendAccessor :: Accessor -> (Memory -> Accessor) -> Accessor
@@ -211,7 +211,7 @@ hadamard gatePosition0 =
   Operation
     { opAddedDims = [2]
     , opTransform = \accessor mem' [j, k] ->
-        runAccessor accessor [j] $ \oldEntry ->
+        runAccessor accessor mem' [j] [j, k] $ \oldEntry ->
           let oldBvEntry = memEntryBitVec oldEntry
               bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
           in
@@ -244,12 +244,12 @@ hadamard gatePosition0 =
 
 -- TODO: Find a way to factor out the Memory parameter
 controlled :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
-controlled gatePosition p mem = Accessor $ \ix k ->
+controlled gatePosition p mem = Accessor $ \mem' ix newIx k ->
   let entry = indexMemoryByList mem ix
   in
   ifThenElse (p entry)
     (k entry)
-    true -- TODO: Is this right?
+    (setToMemEntry mem' newIx entry)
     
 
 -- controlled :: Int -> Operation -> Operation
