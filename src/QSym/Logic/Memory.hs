@@ -180,8 +180,15 @@ mkIdentityAccessor mem = Accessor $ \_mem' ix _newIx k ->
 data Operation
   = Operation
       { opAddedDims :: [Int]
-      , opTransform :: Accessor -> Transform
+      , opTransform :: Memory -> (Memory -> Accessor) -> Transform
       }
+
+mkOperation :: [Int] -> (Accessor -> Transform) -> Operation
+mkOperation addedDims transform =
+  Operation
+    { opAddedDims = addedDims
+    , opTransform = \mem f -> transform (f mem)
+    }
 
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
@@ -208,9 +215,8 @@ hadamard gatePosition0 =
   let gatePosition = bvPosition gatePosition0
       bitsAppliedTo = 1
   in
-  Operation
-    { opAddedDims = [2]
-    , opTransform = \accessor mem' [j, k] ->
+  mkOperation [2] $
+    \accessor mem' [j, k] ->
         runAccessor accessor mem' [j] [j, k] $ \oldEntry ->
           let oldBvEntry = memEntryBitVec oldEntry
               bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
@@ -222,15 +228,12 @@ hadamard gatePosition0 =
               , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
               }
 
-    }
-
 notOp :: Int -> Operation
 notOp gatePosition0 =
   let gatePosition = bvPosition gatePosition0
   in
-  Operation
-    { opAddedDims = []
-    , opTransform = \accessor mem' [j] ->
+  mkOperation [] $
+    \accessor mem' [j] ->
         runAccessor accessor mem' [j] [j] $ \oldEntry ->
           let oldBvEntry = memEntryBitVec oldEntry
               bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
@@ -241,16 +244,20 @@ notOp gatePosition0 =
             , memEntryPhase = memEntryPhase oldEntry
             , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
             }
-    }
 
--- TODO: Find a way to factor out the Memory parameter
-controlled :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
-controlled gatePosition p mem = Accessor $ \mem' ix newIx k ->
+controlledAccessor :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
+controlledAccessor gatePosition p mem = Accessor $ \mem' ix newIx k ->
   let entry = indexMemoryByList mem ix
   in
   ifThenElse (p entry)
     (k entry)
     (setToMemEntry mem' newIx entry)
+
+controlled :: Int -> (MemEntry -> SMT Name Bool) -> Operation -> Operation
+controlled gatePosition p op =
+  op
+    { opTransform = \mem f -> opTransform op mem (\mem' -> f mem <> controlledAccessor gatePosition p mem) -- INVARIANT: mem and mem' should be the same
+    }
     
 
 -- controlled :: Int -> Operation -> Operation
