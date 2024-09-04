@@ -158,11 +158,30 @@ setIndex3 mem0 = undefined
 -- type Dim3 = 'S Dim2
 -- type Dim4 = 'S Dim3
 
-data Operation =
-  Operation
-    { opAddedDims :: [Int]
-    , opTransform :: Memory -> [SMT Name Int] -> MemEntry
-    }
+type Modifier = Memory -> [SMT Name Int] -> MemEntry -> MemEntry
+type Transform = Memory -> [SMT Name Int] -> SMT Name Bool
+
+-- | This mediates access to the previous memory state
+newtype Accessor = Accessor { runAccessor :: [SMT Name Int] -> (MemEntry -> SMT Name Bool) -> SMT Name Bool }
+
+instance Semigroup Accessor where
+  Accessor p <> Accessor q =
+    Accessor $ \ix k ->
+      p ix (\_ -> q ix k)
+
+mkIdentityAccessor :: Memory -> Accessor
+mkIdentityAccessor mem = Accessor $ \ix k ->
+  k (indexMemoryByList mem ix)
+
+-- extendAccessor :: Accessor -> (Memory -> Accessor) -> Accessor
+-- extendAccessor acc f = Accessor $ \ix k ->
+--   acc ix $
+
+data Operation
+  = Operation
+      { opAddedDims :: [Int]
+      , opTransform :: Accessor -> Transform
+      }
 
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
@@ -177,12 +196,12 @@ setToMemEntry mem ixs entry =
          (bvSMT (memEntryBitVec entry))
     ]
 
-runOperation :: Memory -> (Name -> Name) -> Operation -> SMT Name Bool
-runOperation mem updateName op =
-  let mem' = extendMemory mem (opAddedDims op) updateName
-  in
-  forEach mem' $ \ixs ->
-    setToMemEntry mem' ixs (opTransform op mem ixs)
+-- runOperation :: Memory -> (Name -> Name) -> Operation -> SMT Name Bool
+-- runOperation mem updateName op =
+--   let mem' = extendMemory mem (opAddedDims op) updateName
+--   in
+--   forEach mem' $ \ixs ->
+--     setToMemEntry mem' ixs (opTransform op mem ixs)
 
 hadamard :: Int -> Operation
 hadamard gatePosition0 =
@@ -191,73 +210,96 @@ hadamard gatePosition0 =
   in
   Operation
     { opAddedDims = [2]
-    , opTransform = \mem [j, k] ->
-         let oldEntry = indexMemoryByList mem [j]
-             oldBvEntry = memEntryBitVec oldEntry
-             bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
-         in
-         MemEntry
-           { memEntryAmp = 1 -- ?
-           , memEntryPhase = omega (bit * k) (2 ^ bitsAppliedTo)
-           , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
-           }
-        
+    , opTransform = \accessor mem' [j, k] ->
+        runAccessor accessor [j] $ \oldEntry ->
+          let oldBvEntry = memEntryBitVec oldEntry
+              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+          in
+          setToMemEntry mem' [j, k] $
+            MemEntry
+              { memEntryAmp = 1 -- ?
+              , memEntryPhase = omega (bit * k) (2 ^ bitsAppliedTo)
+              , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
+              }
+
     }
 
-notOp :: Int -> Operation
-notOp gatePosition0 =
-  let gatePosition = bvPosition gatePosition0
+-- notOp :: Int -> Operation
+-- notOp gatePosition0 =
+--   let gatePosition = bvPosition gatePosition0
+--   in
+--   Operation
+--     { opAddedDims = []
+--     , opTransform = \mem [j] ->
+--          let oldEntry = indexMemoryByList mem [j]
+--              oldBvEntry = memEntryBitVec oldEntry
+--              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+--          in
+--          MemEntry
+--            { memEntryAmp = memEntryAmp oldEntry
+--            , memEntryPhase = memEntryPhase oldEntry
+--            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
+--            }
+--     }
+
+-- TODO: Find a way to factor out the Memory parameter
+controlled :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
+controlled gatePosition p mem = Accessor $ \ix k ->
+  let entry = indexMemoryByList mem ix
   in
-  Operation
-    { opAddedDims = []
-    , opTransform = \mem [j] ->
-         let oldEntry = indexMemoryByList mem [j]
-             oldBvEntry = memEntryBitVec oldEntry
-             bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
-         in
-         MemEntry
-           { memEntryAmp = memEntryAmp oldEntry
-           , memEntryPhase = memEntryPhase oldEntry
-           , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
-           }
-    }
+  ifThenElse (p entry)
+    (k entry)
+    true -- TODO: Is this right?
+    
 
--- Hadamard:
---   setIndex2 (extendMemory mem nextNames)
---      $ \j k ->
---          let oldEntry = indexMemoryByList mem [j]
---              oldBvEntry = memEntryBitVec oldEntry
---              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
---          in
---          MemEntry
---            { memEntryAmp = 1 -- ?
---            , memEntryPhase = omega (bit * k)
---            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (nat2bv k)
---            }
+-- controlled :: Int -> Operation -> Operation
+-- controlled gatePosition0 = changeModifier controlModifier
+--   where
+--     controlModifier = undefined
+--   -- let gatePosition = bvPosition gatePosition0
+--   -- in
+--   -- Operation
+--   --   { opAddedDims = opAddedDims op
+--   --   , opTransform = \mem ixs ->
+--   --       undefined
+--   --   }
 
--- NOT:
---   setIndex1 (extendMemory mem nextNames)
---      $ \j ->
---          let oldEntry = indexMemoryByList mem [j]
---              oldBvEntry = memEntryBitVec oldEntry
---              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
---          in
---          MemEntry
---            { memEntryAmp = memEntryAmp mem
---            , memEntryPhase = memEntryPhase mem
---            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec bit)
---            }
-
--- IF p, given an f:
---   setIndex1 (extendMemory mem nextNames)
---      $ \j ->
---          let oldEntry = indexMemoryByList mem [j]
---              oldBvEntry = memEntryBitVec oldEntry
---              bits = bv2nat (bvGetRange oldBvEntry gateInputStart gateInputEnd)
---          in
---          ifThenElse (p bits)
---            ()
---            (reshape mem (gateDimensions f))
+-- -- Hadamard:
+-- --   setIndex2 (extendMemory mem nextNames)
+-- --      $ \j k ->
+-- --          let oldEntry = indexMemoryByList mem [j]
+-- --              oldBvEntry = memEntryBitVec oldEntry
+-- --              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+-- --          in
+-- --          MemEntry
+-- --            { memEntryAmp = 1 -- ?
+-- --            , memEntryPhase = omega (bit * k)
+-- --            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (nat2bv k)
+-- --            }
+--
+-- -- NOT:
+-- --   setIndex1 (extendMemory mem nextNames)
+-- --      $ \j ->
+-- --          let oldEntry = indexMemoryByList mem [j]
+-- --              oldBvEntry = memEntryBitVec oldEntry
+-- --              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+-- --          in
+-- --          MemEntry
+-- --            { memEntryAmp = memEntryAmp mem
+-- --            , memEntryPhase = memEntryPhase mem
+-- --            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec bit)
+-- --            }
+--
+-- -- IF p, given an f:
+-- --   setIndex1 (extendMemory mem nextNames)
+-- --      $ \j ->
+-- --          let oldEntry = indexMemoryByList mem [j]
+-- --              oldBvEntry = memEntryBitVec oldEntry
+-- --              bits = bv2nat (bvGetRange oldBvEntry gateInputStart gateInputEnd)
+-- --          in
+-- --          ifThenElse (p bits)
+-- --            ()
+-- --            (reshape mem (gateDimensions f))
 
 ensureMemType :: HasCallStack => Memory -> Int -> Memory
 ensureMemType mem size = ensureType mem (memType mem) size
