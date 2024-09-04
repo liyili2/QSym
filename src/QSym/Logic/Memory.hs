@@ -224,23 +224,24 @@ hadamard gatePosition0 =
 
     }
 
--- notOp :: Int -> Operation
--- notOp gatePosition0 =
---   let gatePosition = bvPosition gatePosition0
---   in
---   Operation
---     { opAddedDims = []
---     , opTransform = \mem [j] ->
---          let oldEntry = indexMemoryByList mem [j]
---              oldBvEntry = memEntryBitVec oldEntry
---              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
---          in
---          MemEntry
---            { memEntryAmp = memEntryAmp oldEntry
---            , memEntryPhase = memEntryPhase oldEntry
---            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
---            }
---     }
+notOp :: Int -> Operation
+notOp gatePosition0 =
+  let gatePosition = bvPosition gatePosition0
+  in
+  Operation
+    { opAddedDims = []
+    , opTransform = \accessor mem' [j] ->
+        runAccessor accessor mem' [j] [j] $ \oldEntry ->
+          let oldBvEntry = memEntryBitVec oldEntry
+              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+          in
+          setToMemEntry mem' [j] $
+          MemEntry
+            { memEntryAmp = memEntryAmp oldEntry
+            , memEntryPhase = memEntryPhase oldEntry
+            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
+            }
+    }
 
 -- TODO: Find a way to factor out the Memory parameter
 controlled :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
