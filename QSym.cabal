@@ -68,8 +68,11 @@ library
                      QSym.Monad
                      QSym.Utils
                      QSym.ASTLogic
+                     QSym.Logic.Memory
+                     QSym.Logic.Builtins
                      QSym.Logic.Syntax
                      QSym.Logic.Gen
+                     QSym.Logic.Operation
                      QSym.Logic.GenLogic
                      QSym.Logic.Heap
                      QSym.Logic.GenConstraint
@@ -131,6 +134,7 @@ executable QSym
                    QSym.ASTLogic
                    QSym.Logic.GenLogic
                    QSym.Logic.Syntax
+                   QSym.Logic.Name
                    QSym.Logic.GenConstraint
                    QSym.Logic.SMT
                    QSym.Logic.ToSMT
