@@ -539,34 +539,36 @@ listToBits xs = int2bv (length xs) . go $ reverse xs
     go [] = 0
     go (b:bs) = b + (2 * go bs)
 
-withPadding :: IsString a => (BitVector a -> BitVector a -> r) -> BitVector a -> BitVector a -> r
-withPadding k x@(BitVector n _) y@(BitVector m _) =
-  let paddedX = pad n m x
-      paddedY = pad m n y
-  in
-  k paddedX paddedY
-  where
-    pad thisSize otherSize v
-      | otherSize > thisSize =
-          let padding = bvLit (otherSize - thisSize) 0
-          in
-          bvConcat [padding, v]
-      | otherwise = v
+-- withPadding :: IsString a => (BitVector a -> BitVector a -> r) -> BitVector a -> BitVector a -> r
+-- withPadding k x@(BitVector n _) y@(BitVector m _) =
+--   let paddedX = pad n m x
+--       paddedY = pad m n y
+--   in
+--   k paddedX paddedY
+--   where
+--     pad thisSize otherSize v
+--       | otherSize > thisSize =
+--           let padding = bvLit (otherSize - thisSize) 0
+--           in
+--           bvConcat [padding, v]
+--       | otherwise = v
 
 bvShiftL :: IsString a => BitVector a -> Int -> BitVector a
-bvShiftL (BitVector n x) amount =
-  BitVector (n + amount) $ SExpr $ apply "bvshl" [toSExpr x, BvLit n amount]
+bvShiftL v@(BitVector n x) amount =
+  bvConcat [v, bvLit amount 0]
+  -- BitVector (n + amount) $ SExpr $ apply "bvshl" [toSExpr x, BvLit n amount]
+  -- BitVector (n + amount) $ SExpr $ apply "bvlshr" [toSExpr x, BvLit n amount]
 
 bvOr :: IsString a => BitVector a -> BitVector a -> BitVector a
-bvOr = withPadding $ \(BitVector n x) (BitVector m y) ->
+bvOr = \(BitVector n x) (BitVector m y) ->
   BitVector (max n m) $ SExpr $ apply "bvor" [toSExpr x, toSExpr y]
 
 bvXor :: IsString a => BitVector a -> BitVector a -> BitVector a
-bvXor = withPadding $ \(BitVector n x) (BitVector m y) ->
+bvXor = \(BitVector n x) (BitVector m y) ->
   BitVector (max n m) $ SExpr $ apply "bvxor" [toSExpr x, toSExpr y]
 
 bvAnd :: IsString a => BitVector a -> BitVector a -> BitVector a
-bvAnd = withPadding $ \(BitVector n x) (BitVector m y) ->
+bvAnd = \(BitVector n x) (BitVector m y) ->
   BitVector (max n m) $ SExpr $ apply "bvand" [toSExpr x, toSExpr y]
 
 bvGetRange :: IsString a => BitVector a -> BitVecPosition -> BitVecPosition -> BitVector a
