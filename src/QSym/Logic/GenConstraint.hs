@@ -61,13 +61,13 @@ astSMT verify bitSize ast =
 -- getQubit :: String -> Int -> Gen (SMT Name Int)
 -- getQubit var varIx = undefined
 
-getTotalProbForVar :: String -> BitVector Name -> SMT Name (Array Int Int) -> Gen (SMT Name Int)
-getTotalProbForVar var bitVec mem = do
+getTotalProbForVar :: String -> Int -> BitVector Name -> SMT Name (Array Int Int) -> Gen (SMT Name Int)
+getTotalProbForVar var shift bitVec mem = do
   totalBits <- fmap envBitSize ask
 
   base <- getVarBaseIndex var
 
-  let prefixSize = base
+  let prefixSize = shift + base
       postfixSize = totalBits - prefixSize - bitVectorSize bitVec
 
       allPrefixes = allPossibleBitVectors prefixSize

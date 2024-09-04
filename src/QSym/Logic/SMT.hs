@@ -1,5 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-} -- needs to be set in any files that use this module for prettyprinting to work
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module QSym.Logic.SMT
   (SMT
@@ -56,7 +58,16 @@ module QSym.Logic.SMT
   ,mul
   ,div
   ,store
+  ,Ixs (..)
+  ,SomeIxs (..)
+  ,ixsToList
+  ,someIxsToList
+  ,ixsToNames_unsafe
+  ,someIxsToNames_unsafe
+  ,retagIxs_unsafe
   ,select
+  ,selects
+  ,selectWithList
   ,double
   ,invSqrt2
   ,sqrt2
@@ -123,7 +134,7 @@ import Data.String
 data SExpr a
   = Atom a
   | Var String
-  | ForAll String String (SExpr a) -- TODO: Use a better approach
+  | ForAll [(String, String)] (SExpr a) -- TODO: Use a better approach for names
   | List [SExpr a]
   -- | StringLit String
   | BoolLit Bool
@@ -324,8 +335,8 @@ false = SExpr (BoolLit False)
 overSExpr :: (SExpr a -> SExpr a) -> (SMT a b -> SMT a b)
 overSExpr f (SExpr e) = SExpr (f e)
 
-forAll :: String -> String -> SMT a Bool -> SMT a Bool
-forAll v type_ body = SExpr $ ForAll v type_ (toSExpr body)
+forAll :: [(String, String)] -> SMT a Bool -> SMT a Bool
+forAll bnds body = SExpr $ ForAll bnds (toSExpr body)
 
 -- freshIndex :: SMT a b -> Int
 -- freshIndex x = 1 + maxVar (toSExpr x)
@@ -350,6 +361,34 @@ forAll v type_ body = SExpr $ ForAll v type_ (toSExpr body)
 -- shiftBinders (IntLit i) = IntLit i
 -- shiftBinders (DoubleLit d) = DoubleLit d
 
+data Ixs a b i r where
+  OneIx :: SMT a i -> Ixs a (Array i r) i r
+  ConsIx :: SMT a i -> Ixs a b i r -> Ixs a (Array i b) i r
+
+data SomeIxs a i r = forall b. SomeIxs (Ixs a (Array i b) i r)
+
+-- TODO: Find a better way
+retagIxs_unsafe :: Ixs a b i r -> SomeIxs a i r'
+retagIxs_unsafe (OneIx x) = SomeIxs (OneIx x)
+retagIxs_unsafe (ConsIx x xs) =
+  case retagIxs_unsafe xs of
+    SomeIxs xs' -> SomeIxs (ConsIx x xs')
+
+ixsToList :: Ixs a b i r -> [SMT a i]
+ixsToList (OneIx x) = [x]
+ixsToList (ConsIx x xs) = x : ixsToList xs
+
+someIxsToList :: SomeIxs a i r -> [SMT a i]
+someIxsToList (SomeIxs i) = ixsToList i
+
+-- TODO: Find a better approach
+ixsToNames_unsafe :: Ixs a b i r -> [String]
+ixsToNames_unsafe (OneIx (SExpr (Var v))) = [v]
+ixsToNames_unsafe (ConsIx (SExpr (Var v)) rest) = v : ixsToNames_unsafe rest
+
+someIxsToNames_unsafe :: SomeIxs a i r -> [String]
+someIxsToNames_unsafe (SomeIxs i) = ixsToNames_unsafe i
+
 updateIx :: IsString a => Int -> a -> a -> (SMT a b -> SMT a b) -> SMT a Bool
 updateIx i oldName newName f =
   store i newName (f (symbol newName))
@@ -364,6 +403,25 @@ at' arr i = apply "select" [arr, i]
 
 select :: IsString a => SMT a (Array i b) -> SMT a i -> SMT a b
 select arr i = SExpr (at' (toSExpr arr) (toSExpr i))
+
+-- type family ArrayBase a :: * where
+--   ArrayBase (Array i (Array i b)) = ArrayBase (Array i b)
+--   ArrayBase (Array i b) = b
+
+-- TODO: Find a way to improve type-safety here
+selectWithList :: forall a b i r. IsString a => SMT a (Array i b) -> [SMT a i] -> SMT a r
+selectWithList arr [i] = SExpr (at' (toSExpr arr) (toSExpr i))
+selectWithList arr0 (i:is) =
+  let arr = selectWithList arr0 is
+  in
+  SExpr (at' (toSExpr arr) (toSExpr i))
+
+selects :: forall a b i r. IsString a => SMT a (Array i b) -> Ixs a (Array i b) i r -> SMT a r
+selects arr ixs0 = SExpr (go (ixsToList ixs0))
+  where
+    go :: [SMT a i] -> SExpr a
+    go [i] = at' (toSExpr arr) (toSExpr i)
+    go (i:is) = at' (go is) (toSExpr i)
 
 smtMap :: IsString a => Int -> (Int -> SMT a b -> SMT a b) -> a -> a -> SMT a Bool
 smtMap size f oldName newName =
@@ -555,8 +613,12 @@ selectWithBitVector arr bv =
 instance (IsString a, Pretty a) => Pretty (SExpr a) where
   pretty (Atom x) = pretty x
   pretty (Var v) = pretty v
-  pretty (ForAll v type_ body) =
-    pretty $ List [Atom "forall", List [List [Atom (fromString v), Atom (fromString type_)]], body]
+
+  pretty (ForAll bnds body) =
+    pretty $ List [Atom "forall", List (map pairToList bnds), body]
+    where
+      pairToList (v, type_) = List [Atom (fromString v), Atom (fromString type_)]
+
   pretty (List xs) = parens $ hsep $ map pretty xs
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i

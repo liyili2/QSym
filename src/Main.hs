@@ -86,11 +86,11 @@ main = do
 
 verify :: Name -> Name -> Gen (Block Name)
 verify input output = do
-  inProb00 <- getTotalProbForVar "q" (bvLit 2 0x0) (symbol input)
-  inProb11 <- getTotalProbForVar "q" (bvLit 2 0x3) (symbol input)
+  inProb00 <- getTotalProbForVar "q" 0 (bvLit 1 0x0) (symbol input)
+  inProb11 <- getTotalProbForVar "q" 0 (bvLit 1 0x1) (symbol input)
 
-  outProb00 <- getTotalProbForVar "q" (bvLit 2 0x0) (symbol output)
-  outProb11 <- getTotalProbForVar "q" (bvLit 2 0x3) (symbol output)
+  outProb00 <- getTotalProbForVar "q" 0 (bvLit 2 0x0) (symbol output)
+  outProb11 <- getTotalProbForVar "q" 0 (bvLit 2 0x3) (symbol output)
 
   pure . smtBlock $
     [assert $ eq outProb00 (div inProb00 sqrt2)
