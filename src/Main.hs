@@ -86,7 +86,7 @@ main = do
 
 verify :: Name -> Name -> Gen (Block Name)
 verify input output = do
-    pure $ smtBlock [true] -- TODO: Implement
+    pure $ smtBlock [assert true] -- TODO: Implement
 
 
   -- inProb00 <- getTotalProbForVar "q" 0 (bvLit 1 0x0) (symbol input)
