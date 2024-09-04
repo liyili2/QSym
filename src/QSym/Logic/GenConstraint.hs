@@ -4,7 +4,6 @@ module QSym.Logic.GenConstraint
   (Name
   ,Verify (..)
   ,astSMT
-  ,getTotalProbForVar
   )
   where
 
@@ -12,6 +11,7 @@ import Prelude hiding (div)
 
 import QSym.Logic.Syntax
 import QSym.Logic.SMT
+import QSym.Logic.Name
 import QSym.Logic.Gen
 import QSym.Logic.Memory
 import QSym.Logic.Operation
@@ -28,6 +28,7 @@ import Data.Ord
 
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.State
 import Data.String
 import Data.List
 
@@ -64,47 +65,69 @@ astSMT verify bitSize ast =
 -- getQubit :: String -> Int -> Gen (SMT Name Int)
 -- getQubit var varIx = undefined
 
-getTotalProbForVar :: String -> Int -> BitVector Name -> SMT Name (Array Int Int) -> Gen (SMT Name Int)
-getTotalProbForVar var shift bitVec mem = do
-  totalBits <- fmap envBitSize ask
-
-  base <- getVarBaseIndex var
-
-  let prefixSize = shift + base
-      postfixSize = totalBits - prefixSize - bitVectorSize bitVec
-
-      allPrefixes = allPossibleBitVectors prefixSize
-      allPostfixes = allPossibleBitVectors postfixSize
-      allCircumfixes = do
-        prefix <- allPrefixes
-        postfix <- allPostfixes
-        pure (prefix, postfix)
-
-      paste (pre, post) = bvConcat [pre, bitVec, post]
-
-      allPossibilities = map paste allCircumfixes
-
-  pure $ sum (map (selectWithBitVector mem) allPossibilities)
+-- getTotalProbForVar :: String -> Int -> BitVector Name -> SMT Name (Array Int Int) -> Gen (SMT Name Int)
+-- getTotalProbForVar var shift bitVec mem = do
+--   totalBits <- fmap envBitSize ask
+--
+--   base <- getVarBaseIndex var
+--
+--   let prefixSize = shift + base
+--       postfixSize = totalBits - prefixSize - bitVectorSize bitVec
+--
+--       allPrefixes = allPossibleBitVectors prefixSize
+--       allPostfixes = allPossibleBitVectors postfixSize
+--       allCircumfixes = do
+--         prefix <- allPrefixes
+--         postfix <- allPostfixes
+--         pure (prefix, postfix)
+--
+--       paste (pre, post) = bvConcat [pre, bitVec, post]
+--
+--       allPossibilities = map paste allCircumfixes
+--
+--   pure $ sum (map (selectWithBitVector mem) allPossibilities)
 
 astConstraints :: VerifySatisfies -> Int -> AST -> Block Name
 astConstraints verify bitSize =
   mconcat . map (toplevelConstraints verify bitSize)
+
+initialMemory :: Int -> Memory
+initialMemory bitSize =
+  mkMemory
+    (EN [0])
+    bitSize
+    (currentVar "mem-amp")
+    (currentVar "mem-phase")
+    (currentVar "mem-bit-vec")
 
 toplevelConstraints :: VerifySatisfies -> Int -> Toplevel () -> Block Name
 toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
     Nothing -> mempty
     Just block ->
-      let go = do mainPart <- blockListConstraints (reverse (inBlock block))
-                  fmap (mainPart <>) (verify (currentVar "mem") (getLastMem mainPart))
+      let initialDecls = declareMemory (initialMemory bitSize)
+
+          go = do --mainPart <- blockListConstraints (reverse (inBlock block)) -- TODO: Find a better way than reversing here
+                  mainPart <- blockListConstraints (inBlock block)
+                  fmap ((initialDecls <> mainPart) <>) (verify (currentVar "mem") (getLastMem mainPart))
       in
-      traceShow block $ runGen go (buildEnv bitSize qm) -- TODO: Find a better way than reversing here
+      traceShow block $ runGen go (buildEnv bitSize qm) (initialMemory bitSize)
+
+genOperationBlock :: Operation -> Gen (Block Name)
+genOperationBlock op = do
+  mem <- get
+
+  let (mem', smt) = runOperation mem step op
+
+  put mem'
+
+  pure $ declareMemory mem' <> one (assert smt)
 
 blockListConstraints :: [Stmt ()] -> Gen (Block Name)
 blockListConstraints [] = pure mempty
 blockListConstraints (x:xs) = do
   prop <- blockConstraints x
-  rest <- mconcat <$> traverse (fmap (varMapBlock step) . blockConstraints) xs
+  rest <- mconcat <$> traverse (fmap (id) . blockConstraints) xs
   pure (prop <> rest)
 
 blockConstraints :: Stmt () -> Gen (Block Name)
@@ -115,78 +138,20 @@ blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
-  totalBits <- fmap envBitSize ask
+  (physStart, physEnd) <- rangeToPhysicalIndices lhs
 
-  (physStart0, physEnd0) <- rangeToPhysicalIndices lhs
-
-  let physStart = bvPosition physStart0
-  let physEnd = bvPosition physEnd0
-
-  let sizeAppliedTo = length [lhs]
-
-  let possibleVecs = allPossibleBitVectors sizeAppliedTo
-
-  let mkPossibility i vec = omega (bv2nat (bvGetRange i physStart physEnd) * bv2nat vec)
-                                (int sizeAppliedTo)
-                            * selectWithBitVector mem' (overwriteBits i physStart vec)
-
-      possibilities i = map (mkPossibility i) possibleVecs
-  undefined
-
-  -- pure $ smtBlock
-  --   [ forAll "i" "Int" $
-  --       implies ((gte (var "i") (int 0)) ^&&^ (lt (var "i") (int totalBits))) $
-  --         eq (select mem (var "i"))
-  --            (mul invSqrt2 (sum (possibilities (int2bv totalBits (var "i")))))
-  --   ]
-  where
-    mem = symbol (currentVar "mem")
-    mem' = symbol (step (currentVar "mem"))
-
-  -- let usedInput = partitionToName lhs
-  -- otherInputs <- getOtherInputs [usedInput]
-  --
-  -- totalQubits <- envBitSize <$> ask
-  --
-  -- let resized = resizeGate totalQubits usedInput hadamard
-  -- let applied = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
-  --
-  -- traceShow resized $ pure $ applied
+  genOperationBlock (hadamard physStart)
 blockConstraints (SDafny _) = pure mempty
 
 -- TODO: Generalize this
 blockConstraints (SIf (GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { eBases = [EOp2 OMod (EOp2 OAdd (EVar v) (ENum 1)) (ENum 2)] })])) = do
-  let Partition [range] = part
+  let Partition [controlRange] = part
+  (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
 
-  (physStart0, physEnd0) <- rangeToPhysicalIndices range
+  let Partition [notRange] = x
+  (physStartNot, physEndNot) <- rangeToPhysicalIndices notRange
 
-  let physStart = bvPosition physStart0
-  let physEnd = bvPosition physEnd0
-
-  let mkPossibility i =
-        let currBitVec = bvGetRange i physStart physEnd
-            invertedBitVec = invertBitVec currBitVec
-        in
-        selectWithBitVector mem' (overwriteBits i physStart invertedBitVec)
-
-  totalBits <- fmap envBitSize ask
-  undefined
-  -- pure $ smtBlock
-  --   [ forAll "i" "Int" $
-  --       implies ((gte (var "i") (int 0)) ^&&^ (lt (var "i") (int totalBits))) $
-  --         eq (select mem (var "i"))
-  --            (mkPossibility (int2bv totalBits (var "i")))
-  --   ]
-  where
-    mem = symbol (currentVar "mem")
-    mem' = symbol (step (currentVar "mem"))
-  -- totalQubits <- envBitSize <$> ask
-  --
-  --   -- TODO: Change hardcoded 0 to proper input index
-  -- let resized = resizeGate totalQubits 0 cnot
-  -- let block = applySMTMatrix totalQubits (currentVar "mem") (step (currentVar "mem")) resized
-  --
-  -- pure block
+  genOperationBlock (controlledNot physStartControl physStartNot)
 blockConstraints s = error $ "unimplemented: " ++ show s
 
 allPossibleBitVectors :: IsString a => Int -> [BitVector a]

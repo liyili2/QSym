@@ -4,19 +4,29 @@
 module QSym.Logic.Memory
   (MemType (..)
   ,Memory
+  ,memType
+  ,memAmpName
+  ,memPhaseName
+  ,memBitVecName
   ,mkMemory
+  ,declareMemory
   ,MemEntry (..)
   ,forEach
   ,memTypeSize
   ,indexMemoryByList
   ,setToMemEntry
+  ,extendMemory
   )
   where
 
-import QSym.Logic.Gen
+import QSym.Logic.Name
 import QSym.Logic.SMT
 
 import GHC.Stack
+
+import Data.String
+
+import Debug.Trace
 
 newtype MemType = EN [Int] -- Contains the dimensions. If the list is size n, then it represents the type EN(n)
   deriving (Show, Eq, Ord, Semigroup)
@@ -45,14 +55,29 @@ mkMemory :: MemType -> Int -> Name -> Name -> Name -> Memory
 mkMemory = Memory
 
 -- | Extend with more dimensions of given size. We also update the names.
-extendMemory :: Memory -> [Int] -> (Name -> Name) -> Memory
+extendMemory :: Memory -> MemType -> (Name -> Name) -> Memory
 extendMemory mem newDims updateName =
   mem
-    { memType = memType mem <> EN newDims
+    { memType = memType mem <> newDims
     , memAmpName = updateName $ memAmpName mem
     , memPhaseName = updateName $ memPhaseName mem
     , memBitVecName = updateName $ memBitVecName mem
     }
+
+declareMemory :: Memory -> Block Name
+declareMemory mem =
+    traceShow (memAmpName mem) $
+    smtBlock
+      [ declare memAmpName
+      , declare memPhaseName
+      , declare memBitVecName
+      ]
+  where
+    declare f = 
+      declareConst (f mem) (fromString (buildType (memTypeSize (memType mem))))
+
+    buildType 0 = "Int"
+    buildType n = "(Array Int " ++ buildType (n-1) ++ ")"
 
 mkBounds :: MemType -> [String] -> SMT Name Bool
 mkBounds (EN uppers) vs =

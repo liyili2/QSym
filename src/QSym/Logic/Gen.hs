@@ -7,9 +7,13 @@ import Qafny.Syntax.Subst
 
 import QSym.Logic.SMT
 import QSym.Logic.Syntax
+import QSym.Logic.Name
+
+import QSym.Logic.Memory
 
 import Data.String
 import Control.Monad.Reader
+import Control.Monad.State
 
 import Data.List
 import Data.Function
@@ -19,29 +23,8 @@ import GHC.Stack
 
 import Prettyprinter
 
-newtype Gen a = Gen { getGen :: Reader Env a }
-  deriving (Functor, Applicative, Monad, MonadReader Env)
-
-currentVar :: Var -> Name
-currentVar x = VarName (Current x)
-
-type HighLevelSMT = SMT Name
-
-data Name = LocusName SteppedLocus | VarName (Stepped Var) | BuiltinName String
-  deriving (Show)
-
-instance Pretty Name where
-  pretty (LocusName x) = pretty x
-  pretty (VarName x) = pretty x
-  pretty (BuiltinName x) = pretty x
-
-instance IsString Name where
-  fromString = BuiltinName
-
-instance Steppable Name where
-  step (LocusName x) = LocusName (step x)
-  step (VarName x) = VarName (step x)
-  step (BuiltinName x) = BuiltinName x
+newtype Gen a = Gen { getGen :: ReaderT Env (State Memory) a }
+  deriving (Functor, Applicative, Monad, MonadReader Env, MonadState Memory)
 
 data Env =
   Env
@@ -184,30 +167,11 @@ getNum :: Exp () -> Maybe Int
 getNum (ENum i) = Just i
 getNum _ = Nothing
 
--- convertLambda :: LambdaF (Exp ()) -> SteppedLocus -> Int -> HighLevelSMT Int
--- convertLambda (LambdaF { bBases = [paramVar], eBases = [body] }) locus ix =
---   convertExpr body (Just (paramVar, select (symbol (LocusName locus)) (int ix)))
-
 convertSimpleExpr :: Exp () -> SimpleExpr
 convertSimpleExpr (ENum i) = Lit i
 convertSimpleExpr (EVar x) = Var x
 convertSimpleExpr (EOp2 OAdd x y) = Add (convertSimpleExpr x) (convertSimpleExpr y)
--- allocateIndicesBlock :: [(String, Int)] -> [Stmt ()] -> [(String, Int)]
--- allocateIndicesBlock soFar [] = soFar
--- allocateIndicesBlock soFar (x:xs) =
---   let newAlloc = allocateIndicesStmt soFar x
---   in
---   allocateIndicesStmt newAlloc xs
---
--- allocateIndicesStmt :: [(String, Int)] -> Stmt () -> [(String, Int)]
--- allocateIndicesStmt = undefined
 
-runGen :: Gen a -> Env -> a
-runGen (Gen g) = runReader g
-
-getSteppedVar :: Var -> [Name] -> [Stepped Var]
-getSteppedVar x [] = []
-getSteppedVar x (VarName y:ys)
-  | getSteppedName y == x = y : getSteppedVar x ys
-getSteppedVar x (_:ys) = getSteppedVar x ys
+runGen :: Gen a -> Env -> Memory -> a
+runGen (Gen g) env = evalState (runReaderT g env)
 

@@ -2,7 +2,7 @@ module QSym.Logic.Builtins
   where
 
 import QSym.Logic.SMT
-import QSym.Logic.Gen
+import QSym.Logic.Name
 import QSym.Logic.Memory
 import QSym.Logic.Operation
 
@@ -29,12 +29,12 @@ notOp gatePosition0 =
   let gatePosition = bvPosition gatePosition0
   in
   mkOperation [] $
-    \accessor mem' [j] ->
-        runAccessor accessor mem' [j] [j] $ \oldEntry ->
+    \accessor mem' ixs ->
+        runAccessor accessor mem' ixs ixs $ \oldEntry ->
           let oldBvEntry = memEntryBitVec oldEntry
               bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
           in
-          setToMemEntry mem' [j] $
+          setToMemEntry mem' ixs $
           MemEntry
             { memEntryAmp = memEntryAmp oldEntry
             , memEntryPhase = memEntryPhase oldEntry

@@ -5,12 +5,13 @@ module QSym.Logic.Operation
 
   ,Operation
   ,mkOperation
+  ,runOperation
   ,extendAccessor
   )
   where
 
 import QSym.Logic.SMT
-import QSym.Logic.Gen
+import QSym.Logic.Name
 import QSym.Logic.Memory
 
 type Transform = Memory -> [SMT Name Int] -> SMT Name Bool
@@ -30,20 +31,32 @@ mkIdentityAccessor mem = Accessor $ \_mem' ix _newIx k ->
 data Operation
   = Operation
       { opAddedDims :: [Int]
-      , opTransform :: Memory -> (Memory -> Accessor) -> Transform
+      , opTransform :: Memory -> Accessor -> Transform
       }
+
+runOperation :: Memory -> (Name -> Name) -> Operation -> (Memory, SMT Name Bool)
+runOperation mem updateName op = (mem', generatedSMT)
+  where
+    newDims = EN (opAddedDims op)
+    mem' = extendMemory mem newDims updateName
+
+    generatedSMT =
+      forEach mem' $ \ixs ->
+        let transform = opTransform op mem (mkIdentityAccessor mem)
+        in
+        transform mem' ixs
 
 mkOperation :: [Int] -> (Accessor -> Transform) -> Operation
 mkOperation addedDims transform =
   Operation
     { opAddedDims = addedDims
-    , opTransform = \mem f -> transform (f mem)
+    , opTransform = \_mem accessor -> transform accessor
     }
 
 extendAccessor :: Operation -> (Memory -> Accessor) -> Operation
 extendAccessor op newAccessorF =
   op
-    { opTransform = \mem f -> opTransform op mem (\mem' -> f mem <> newAccessorF mem) -- INVARIANT: mem and mem' should be the same
+    { opTransform = \mem origAccessor -> opTransform op mem (origAccessor <> newAccessorF mem)
     }
 
 reshape :: MemType -> [SMT Name Int] -> [SMT Name Int]

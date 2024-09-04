@@ -11,7 +11,7 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
-import QSym.Logic.GenConstraint (Verify (..), astSMT, Name, getTotalProbForVar)
+import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
 import QSym.Logic.Gen (Gen)
 import QSym.Logic.SMTBackend
 import QSym.Logic.SMT as SMT --(int, SMT, Decl)
@@ -86,16 +86,20 @@ main = do
 
 verify :: Name -> Name -> Gen (Block Name)
 verify input output = do
-  inProb00 <- getTotalProbForVar "q" 0 (bvLit 1 0x0) (symbol input)
-  inProb11 <- getTotalProbForVar "q" 0 (bvLit 1 0x1) (symbol input)
+    pure $ smtBlock [true] -- TODO: Implement
 
-  outProb00 <- getTotalProbForVar "q" 0 (bvLit 2 0x0) (symbol output)
-  outProb11 <- getTotalProbForVar "q" 0 (bvLit 2 0x3) (symbol output)
 
-  pure . smtBlock $
-    [assert $ eq outProb00 (div inProb00 sqrt2)
-    ,assert $ eq outProb11 (div inProb11 sqrt2)
-    ]
+  -- inProb00 <- getTotalProbForVar "q" 0 (bvLit 1 0x0) (symbol input)
+  -- inProb11 <- getTotalProbForVar "q" 0 (bvLit 1 0x1) (symbol input)
+  --
+  -- outProb00 <- getTotalProbForVar "q" 0 (bvLit 2 0x0) (symbol output)
+  -- outProb11 <- getTotalProbForVar "q" 0 (bvLit 2 0x3) (symbol output)
+  --
+  -- pure . smtBlock $
+  --   [assert $ eq outProb00 (div inProb00 sqrt2)
+  --   ,assert $ eq outProb11 (div inProb11 sqrt2)
+  --   ]
+
   --   -- [assert $ eq (select (symbol input) (int 0)) (int 1)
   --   -- ,assert $ eq (select (symbol input) (int 1)) (int 0)
   --   -- ,assert $ eq (select (symbol input) (int 2)) (int 0)
