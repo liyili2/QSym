@@ -506,9 +506,9 @@ bvPosition = BitVecPosition
 bvSMT :: BitVector a -> SMT a (Array Int Int)
 bvSMT (BitVector _ e) = e
 
-getBit :: IsString a => BitVector a -> BitVecPosition -> SMT a Int
+getBit :: IsString a => BitVector a -> BitVecPosition -> BitVector a
 getBit (BitVector _ e) (BitVecPosition pos) =
-  SExpr $ apply' (apply "_" ["extract", IntLit pos, IntLit pos]) [toSExpr e]
+  BitVector 1 $ SExpr $ apply' (apply "_" ["extract", IntLit pos, IntLit pos]) [toSExpr e]
 
 toInt :: IsString a => BitVector a -> SMT a Int
 toInt (BitVector _ e) = SExpr $ apply "bv2nat" [toSExpr e]

@@ -258,6 +258,14 @@ controlled gatePosition p op =
   op
     { opTransform = \mem f -> opTransform op mem (\mem' -> f mem <> controlledAccessor gatePosition p mem) -- INVARIANT: mem and mem' should be the same
     }
+
+controlledNot :: Int -> Int -> Operation
+controlledNot controlPosition notPosition =
+  controlled controlPosition predicate (notOp notPosition)
+  where
+    predicate entry =
+      eq (bvSMT (getBit (memEntryBitVec entry) (bvPosition controlPosition)))
+         (bvSMT (bvLit 1 0x1))
     
 
 -- controlled :: Int -> Operation -> Operation
