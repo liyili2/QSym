@@ -125,7 +125,7 @@ import Prettyprinter hiding (sep)
 
 import Data.Bits
 
-import Numeric (showHex)
+import Numeric (showBin)
 
 import Data.Foldable
 import Data.Coerce
@@ -139,7 +139,8 @@ data SExpr a
   -- | StringLit String
   | BoolLit Bool
   | IntLit Int
-  | BvLit Int
+  | BvLit Int -- | Bit length
+          Int -- | Value
   | DoubleLit Double
   deriving (Show, Functor, Foldable)
 
@@ -521,7 +522,7 @@ bv2nat :: IsString a => BitVector a -> SMT a Int
 bv2nat (BitVector _ e) = SExpr $ apply "bv2nat" [toSExpr e]
 
 bvLit :: Int -> Int -> BitVector a
-bvLit size bits = BitVector size (SExpr (BvLit bits))
+bvLit size bits = BitVector size (SExpr (BvLit size bits))
 
 bvConcat :: IsString a => [BitVector a] -> BitVector a
 bvConcat bvs = BitVector totalSize $ SExpr $ apply "concat" (map (toSExpr . get) bvs)
@@ -579,7 +580,7 @@ bitVectorSize :: BitVector a -> Int
 bitVectorSize (BitVector n _) = n
 
 ones :: IsString a => Int -> BitVector a
-ones size = BitVector size (SExpr (BvLit (2 ^ (size - 1))))
+ones size = BitVector size (SExpr (BvLit size (2 ^ (size - 1))))
 
 invertBitVec :: IsString a => BitVector a -> BitVector a
 invertBitVec bv@(BitVector size x) = bvXor bv (ones size)
@@ -624,7 +625,13 @@ instance (IsString a, Pretty a) => Pretty (SExpr a) where
   pretty (BoolLit b) = pretty $ toLowerString $ show b -- SMTLIB v2 specifies booleans as lowercase keywords
   pretty (IntLit i) = pretty i
   pretty (DoubleLit x) = pretty x
-  pretty (BvLit x) = "#x" <> pretty (showHex x "")
+  pretty (BvLit size x) =
+    let bin = showBin x ""
+        paddingSize = size - length bin
+        padding = replicate paddingSize '0'
+        paddedBin = padding ++ bin
+    in
+    "#b" <> pretty paddedBin
 
 instance (IsString a, Pretty a) => Pretty (SMT a b) where
   pretty (Decl x) = pretty x
