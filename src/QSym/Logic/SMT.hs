@@ -453,6 +453,7 @@ smtPreamble =
     ,setOption ":produce-models" "true"
     ,setOption ":pp.decimal" "true"
     ,setOption ":produce-unsat-cores" "true"
+    -- ,setOption ":verbose" "10"
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
     ,assert $ gt "sqrt2" (int 0)

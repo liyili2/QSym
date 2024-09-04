@@ -80,7 +80,7 @@ main = do
 
   -- either error (print . pretty) smt
 
-  print $ pretty smt
+  -- print $ pretty smt
   executeSMTLoudly z3Config smt
   pure ()
 

@@ -81,6 +81,8 @@ import QSym.Utils (indexed)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Debug.Trace
+
 {- Design:
    What might one want from an API?
     => submit all commands at once
@@ -256,7 +258,7 @@ executeSMTWithHandler config smt_code smt_handler =
     statements = lines $ renderString $ layoutCompact $ pretty smt_code
   in
   -- runs a new computation using the 'Process' backend and returns an IO monad
-  SMTProcess.with
+  trace (unlines statements) $ SMTProcess.with
     config
     $ \handle -> do
       -- convert the process handle to an actual backend

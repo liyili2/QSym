@@ -64,20 +64,20 @@ extendMemory mem newDims updateName =
     , memBitVecName = updateName $ memBitVecName mem
     }
 
-declareMemory :: Memory -> Block Name
-declareMemory mem =
+declareMemory :: Int -> Memory -> Block Name
+declareMemory bitSize mem =
     traceShow (memAmpName mem) $
     smtBlock
-      [ declare memAmpName
-      , declare memPhaseName
-      , declare memBitVecName
+      [ declare "Int" memAmpName
+      , declare "Int" memPhaseName
+      , declare ("(_ BitVec " ++ show bitSize ++ ")") memBitVecName
       ]
   where
-    declare f = 
-      declareConst (f mem) (fromString (buildType (memTypeSize (memType mem))))
+    declare baseTy f = 
+      declareConst (f mem) (fromString (buildType baseTy (memTypeSize (memType mem))))
 
-    buildType 0 = "Int"
-    buildType n = "(Array Int " ++ buildType (n-1) ++ ")"
+    buildType baseTy 0 = baseTy
+    buildType baseTy n = "(Array Int " ++ buildType baseTy (n-1) ++ ")"
 
 mkBounds :: MemType -> [String] -> SMT Name Bool
 mkBounds (EN uppers) vs =

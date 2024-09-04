@@ -105,7 +105,7 @@ toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
     Nothing -> mempty
     Just block ->
-      let initialDecls = declareMemory (initialMemory bitSize)
+      let initialDecls = declareMemory bitSize (initialMemory bitSize)
 
           go = do --mainPart <- blockListConstraints (reverse (inBlock block)) -- TODO: Find a better way than reversing here
                   mainPart <- blockListConstraints (inBlock block)
@@ -121,13 +121,15 @@ genOperationBlock op = do
 
   put mem'
 
-  pure $ declareMemory mem' <> one (assert smt)
+  bitSize <- envBitSize <$> ask
+
+  pure $ declareMemory bitSize mem' <> one (assert smt)
 
 blockListConstraints :: [Stmt ()] -> Gen (Block Name)
 blockListConstraints [] = pure mempty
 blockListConstraints (x:xs) = do
   prop <- blockConstraints x
-  rest <- mconcat <$> traverse (fmap (id) . blockConstraints) xs
+  rest <- mconcat <$> traverse blockConstraints xs
   pure (prop <> rest)
 
 blockConstraints :: Stmt () -> Gen (Block Name)
