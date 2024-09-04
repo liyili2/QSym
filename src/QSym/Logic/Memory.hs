@@ -2,14 +2,15 @@
 {-# LANGUAGE DataKinds #-}
 
 module QSym.Logic.Memory
-  -- (MemType (..)
-  -- ,Memory
-  -- ,mkMemory
-  -- ,forEach
-  -- ,setIndex1
-  -- ,setIndex2
-  -- ,setIndex3
-  -- )
+  (MemType (..)
+  ,Memory
+  ,mkMemory
+  ,MemEntry (..)
+  ,forEach
+  ,memTypeSize
+  ,indexMemoryByList
+  ,setToMemEntry
+  )
   where
 
 import QSym.Logic.Gen
@@ -117,79 +118,6 @@ forEach mem f =
         implies (mkBounds (memType mem) namesList)
           (f (ixsToList ixs))
 
-
--- forEach :: Memory -> (MemEntry -> SMT Name Bool) -> SMT Name Bool
--- forEach mem f =
---   case mkIndexVars (memType mem) of
---     SomeIxs ixs ->
---       let namesList = ixsToNames_unsafe ixs
---       in
---       forAll (map (, "Int") namesList) $
---         implies (mkBounds (memType mem) namesList)
---           (f (indexMemory mem ixs))
-
--- | 1 dimensions
-setIndex1 :: Memory -> (SMT Name Int -> MemEntry) -> SMT Name Bool
-setIndex1 mem0 = undefined
-  where
-    mem = ensureMemType mem0 1 --(EN 1)
-
--- | 2 dimensions
-setIndex2 :: Memory -> (SMT Name Int -> SMT Name Int -> MemEntry) -> SMT Name Bool
-setIndex2 mem0 = undefined
-  where
-    mem = ensureMemType mem0 2 --(EN 2)
-
--- | 3 dimensions
-setIndex3 :: Memory -> (SMT Name Int -> SMT Name Int -> SMT Name Int -> MemEntry) -> SMT Name Bool
-setIndex3 mem0 = undefined
-  where
-    mem = ensureMemType mem0 3 --(EN 3)
-
--- data Nat = Z | S Nat
---
--- infixr :|
--- data Tuple n a where
---   TupleOne :: a -> Tuple ('S 'Z) a
---   (:|) :: a -> Tuple n a -> Tuple ('S n) a
---
--- type Dim1 = 'S 'Z
--- type Dim2 = 'S Dim1
--- type Dim3 = 'S Dim2
--- type Dim4 = 'S Dim3
-
-type Modifier = Memory -> [SMT Name Int] -> MemEntry -> MemEntry
-type Transform = Memory -> [SMT Name Int] -> SMT Name Bool
-
--- | This mediates access to the previous memory state
-newtype Accessor = Accessor { runAccessor :: Memory -> [SMT Name Int] -> [SMT Name Int] -> (MemEntry -> SMT Name Bool) -> SMT Name Bool }
-
-instance Semigroup Accessor where
-  Accessor p <> Accessor q =
-    Accessor $ \mem' ix newIx k ->
-      p mem' ix newIx (\_ -> q mem' ix newIx k)
-
-mkIdentityAccessor :: Memory -> Accessor
-mkIdentityAccessor mem = Accessor $ \_mem' ix _newIx k ->
-  k (indexMemoryByList mem ix)
-
--- extendAccessor :: Accessor -> (Memory -> Accessor) -> Accessor
--- extendAccessor acc f = Accessor $ \ix k ->
---   acc ix $
-
-data Operation
-  = Operation
-      { opAddedDims :: [Int]
-      , opTransform :: Memory -> (Memory -> Accessor) -> Transform
-      }
-
-mkOperation :: [Int] -> (Accessor -> Transform) -> Operation
-mkOperation addedDims transform =
-  Operation
-    { opAddedDims = addedDims
-    , opTransform = \mem f -> transform (f mem)
-    }
-
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
   and'
@@ -202,120 +130,6 @@ setToMemEntry mem ixs entry =
     , eq (selectWithList (symbol (memBitVecName mem)) ixs)
          (bvSMT (memEntryBitVec entry))
     ]
-
--- runOperation :: Memory -> (Name -> Name) -> Operation -> SMT Name Bool
--- runOperation mem updateName op =
---   let mem' = extendMemory mem (opAddedDims op) updateName
---   in
---   forEach mem' $ \ixs ->
---     setToMemEntry mem' ixs (opTransform op mem ixs)
-
-hadamard :: Int -> Operation
-hadamard gatePosition0 =
-  let gatePosition = bvPosition gatePosition0
-      bitsAppliedTo = 1
-  in
-  mkOperation [2] $
-    \accessor mem' [j, k] ->
-        runAccessor accessor mem' [j] [j, k] $ \oldEntry ->
-          let oldBvEntry = memEntryBitVec oldEntry
-              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
-          in
-          setToMemEntry mem' [j, k] $
-            MemEntry
-              { memEntryAmp = 1 -- ?
-              , memEntryPhase = omega (bit * k) (2 ^ bitsAppliedTo)
-              , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
-              }
-
-notOp :: Int -> Operation
-notOp gatePosition0 =
-  let gatePosition = bvPosition gatePosition0
-  in
-  mkOperation [] $
-    \accessor mem' [j] ->
-        runAccessor accessor mem' [j] [j] $ \oldEntry ->
-          let oldBvEntry = memEntryBitVec oldEntry
-              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
-          in
-          setToMemEntry mem' [j] $
-          MemEntry
-            { memEntryAmp = memEntryAmp oldEntry
-            , memEntryPhase = memEntryPhase oldEntry
-            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
-            }
-
-controlledAccessor :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
-controlledAccessor gatePosition p mem = Accessor $ \mem' ix newIx k ->
-  let entry = indexMemoryByList mem ix
-  in
-  ifThenElse (p entry)
-    (k entry)
-    (setToMemEntry mem' newIx entry)
-
-controlled :: Int -> (MemEntry -> SMT Name Bool) -> Operation -> Operation
-controlled gatePosition p op =
-  op
-    { opTransform = \mem f -> opTransform op mem (\mem' -> f mem <> controlledAccessor gatePosition p mem) -- INVARIANT: mem and mem' should be the same
-    }
-
-controlledNot :: Int -> Int -> Operation
-controlledNot controlPosition notPosition =
-  controlled controlPosition predicate (notOp notPosition)
-  where
-    predicate entry =
-      eq (bvSMT (getBit (memEntryBitVec entry) (bvPosition controlPosition)))
-         (bvSMT (bvLit 1 0x1))
-    
-
--- controlled :: Int -> Operation -> Operation
--- controlled gatePosition0 = changeModifier controlModifier
---   where
---     controlModifier = undefined
---   -- let gatePosition = bvPosition gatePosition0
---   -- in
---   -- Operation
---   --   { opAddedDims = opAddedDims op
---   --   , opTransform = \mem ixs ->
---   --       undefined
---   --   }
-
--- -- Hadamard:
--- --   setIndex2 (extendMemory mem nextNames)
--- --      $ \j k ->
--- --          let oldEntry = indexMemoryByList mem [j]
--- --              oldBvEntry = memEntryBitVec oldEntry
--- --              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
--- --          in
--- --          MemEntry
--- --            { memEntryAmp = 1 -- ?
--- --            , memEntryPhase = omega (bit * k)
--- --            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (nat2bv k)
--- --            }
---
--- -- NOT:
--- --   setIndex1 (extendMemory mem nextNames)
--- --      $ \j ->
--- --          let oldEntry = indexMemoryByList mem [j]
--- --              oldBvEntry = memEntryBitVec oldEntry
--- --              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
--- --          in
--- --          MemEntry
--- --            { memEntryAmp = memEntryAmp mem
--- --            , memEntryPhase = memEntryPhase mem
--- --            , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec bit)
--- --            }
---
--- -- IF p, given an f:
--- --   setIndex1 (extendMemory mem nextNames)
--- --      $ \j ->
--- --          let oldEntry = indexMemoryByList mem [j]
--- --              oldBvEntry = memEntryBitVec oldEntry
--- --              bits = bv2nat (bvGetRange oldBvEntry gateInputStart gateInputEnd)
--- --          in
--- --          ifThenElse (p bits)
--- --            ()
--- --            (reshape mem (gateDimensions f))
 
 ensureMemType :: HasCallStack => Memory -> Int -> Memory
 ensureMemType mem size = ensureType mem (memType mem) size
