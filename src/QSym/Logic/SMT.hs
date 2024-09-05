@@ -33,6 +33,7 @@ module QSym.Logic.SMT
 
   ,var
   ,forAll
+  ,exists
 
   ,pointsTo
   ,emp
@@ -140,6 +141,7 @@ data SExpr a
   = Atom a
   | Var String
   | ForAll [(String, String)] (SExpr a) -- TODO: Use a better approach for names
+  | Exists [(String, String)] (SExpr a)
   | List [SExpr a]
   -- | StringLit String
   | BoolLit Bool
@@ -349,6 +351,9 @@ overSExpr f (SExpr e) = SExpr (f e)
 
 forAll :: [(String, String)] -> SMT a Bool -> SMT a Bool
 forAll bnds body = SExpr $ ForAll bnds (toSExpr body)
+
+exists :: [(String, String)] -> SMT a Bool -> SMT a Bool
+exists bnds body = SExpr $ Exists bnds (toSExpr body)
 
 -- freshIndex :: SMT a b -> Int
 -- freshIndex x = 1 + maxVar (toSExpr x)
@@ -650,6 +655,11 @@ instance (IsString a, Pretty a) => Pretty (SExpr a) where
 
   pretty (ForAll bnds body) =
     pretty $ List [Atom "forall", List (map pairToList bnds), body]
+    where
+      pairToList (v, type_) = List [Atom (fromString v), Atom (fromString type_)]
+
+  pretty (Exists bnds body) =
+    pretty $ List [Atom "exists", List (map pairToList bnds), body]
     where
       pairToList (v, type_) = List [Atom (fromString v), Atom (fromString type_)]
 

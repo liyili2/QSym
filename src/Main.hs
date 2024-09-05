@@ -134,6 +134,19 @@ verifyBellPair input output = do
 
       -- Output
       -- TODO: Improve the interface used here
+
+    , assert $ existsIx output $ \ixs ->
+        let entry = indexMemoryByList output ixs
+        in
+        eq (bvSMT (memEntryBitVec entry))
+                  (bvSMT (int2bv 2 0x0))
+
+    , assert $ existsIx output $ \ixs ->
+        let entry = indexMemoryByList output ixs
+        in
+        eq (bvSMT (memEntryBitVec entry))
+                  (bvSMT (int2bv 2 0x3))
+
     , assert $ forEach output $ \ixs ->
         let entry = indexMemoryByList output ixs
         in

@@ -12,6 +12,7 @@ module QSym.Logic.Memory
   ,declareMemory
   ,MemEntry (..)
   ,forEach
+  ,existsIx
   ,memTypeSize
   ,indexMemoryByList
   ,setToMemEntry
@@ -134,15 +135,23 @@ indexMemoryByList mem ixs =
       case ixsFromList is of
         SomeIxs is' -> SomeIxs (ConsIx i is')
 
-forEach :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
-forEach mem f =
+quantifiedBy ::
+  ([(String, String)] -> SMT Name Bool -> SMT Name Bool) ->
+  Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+quantifiedBy quantifier mem f =
   case mkIndexVars (memType mem) of
     SomeIxs ixs ->
       let namesList = ixsToNames_unsafe ixs
       in
-      forAll (map (, "Int") namesList) $
+      quantifier (map (, "Int") namesList) $
         implies (mkBounds (memType mem) namesList)
           (f (ixsToList ixs))
+
+forEach :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+forEach = quantifiedBy forAll
+
+existsIx :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+existsIx = quantifiedBy exists
 
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
