@@ -136,7 +136,7 @@ data Op1
 
 data GuardExp
   = GEPartition Partition (Maybe (Exp ())) -- guard partition with a split at
-  | GClass (XRec x (Exp x))
+  | GClass (Exp ())
   deriving (Show, Eq)
 
 -- the exp is not reversible
