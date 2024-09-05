@@ -65,6 +65,9 @@ controlled :: Int -> (MemEntry -> SMT Name Bool) -> Operation -> Operation
 controlled gatePosition p op =
   extendAccessor op $ controlledAccessor gatePosition p
 
+controlled' :: Int -> (SMT Name Int -> SMT Name Bool) -> Operation -> Operation
+controlled' gatePosition p = controlled gatePosition (p . bv2nat . memEntryBitVec)
+
 controlledNot :: Int -> Int -> Operation
 controlledNot controlPosition notPosition =
   controlled controlPosition predicate (notOp notPosition)
