@@ -39,7 +39,8 @@ import Debug.Trace
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> block <> smtCheck <> smtBlock [checkSAT, symbol "(get-unsat-core)"]
+  smtPreamble <> mkDeclarations block <> block <> smtCheck <>
+    smtBlock [checkSAT, symbol "(get-unsat-core)"]
   where
     block = astConstraints verifyEqs bitSize ast
 

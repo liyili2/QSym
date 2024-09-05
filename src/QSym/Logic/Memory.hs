@@ -137,21 +137,22 @@ indexMemoryByList mem ixs =
 
 quantifiedBy ::
   ([(String, String)] -> SMT Name Bool -> SMT Name Bool) ->
+  (SMT Name Bool -> SMT Name Bool -> SMT Name Bool) ->
   Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
-quantifiedBy quantifier mem f =
+quantifiedBy quantifier connective mem f =
   case mkIndexVars (memType mem) of
     SomeIxs ixs ->
       let namesList = ixsToNames_unsafe ixs
       in
       quantifier (map (, "Int") namesList) $
-        implies (mkBounds (memType mem) namesList)
+        connective (mkBounds (memType mem) namesList)
           (f (ixsToList ixs))
 
 forEach :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
-forEach = quantifiedBy forAll
+forEach = quantifiedBy forAll implies
 
 existsIx :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
-existsIx = quantifiedBy exists
+existsIx = quantifiedBy exists (^&&^)
 
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
