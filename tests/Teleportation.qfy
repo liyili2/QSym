@@ -36,7 +36,7 @@ method Teleporation(q: Q[1], p: Q[1], r: Q[1]) returns (y:nat, prob:real)
    // assert { r[0] : en ↦ ∑ j ∈ [0 , 2) . a[j] . ω (z * j, 2) . |j⟩}
     //this is valid because if y {apply X gate} means |k⟩ ==> |k ⊕ y ⟩ == |k ⊕ j ⊕ k ⟩ == | j ⟩
     
-    if (z==1) { r[0] *= λ (x => ω (1 * x, 2) . (x)); } //a Z gate
+    if (z==1) { r[0] *= λ (x => ω (1 * x, 2) ~ (x)); } //a Z gate
     
     //assert { r[0] : en ↦ ∑ j ∈ [0 , 2) . a[j] |j⟩ };
     //same as the output, if z == 0, then, ω (z * j , 2) == ω (0, 2) == 1
