@@ -147,6 +147,7 @@ executable QSym
                    QSym.Logic.Name
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTUtils
+                   Qafny.Syntax.EmitBinding
                    Qafny.Syntax.IR
                    Qafny.Syntax.Lexer
                    Qafny.Syntax.Parser
