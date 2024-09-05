@@ -16,6 +16,7 @@ module QSym.Logic.Memory
   ,indexMemoryByList
   ,setToMemEntry
   ,extendMemory
+  ,mkIndexVars
   )
   where
 

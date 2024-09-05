@@ -17,6 +17,8 @@ import QSym.Logic.SMT
 import QSym.Logic.Name
 import QSym.Logic.Memory
 
+import Data.String
+
 import Debug.Trace
 
 type Transform = Memory -> [SMT Name Int] -> [SMT Name Int] -> SMT Name Bool
@@ -46,7 +48,8 @@ runOperation mem updateName op = (mem', generatedSMT)
     mem' = extendMemory mem newDims updateName
 
     generatedSMT =
-      forEach mem $ \oldIxs ->
+      let oldIxs = map (symbol . BuiltinName . fromString) $ someIxsToNames_unsafe (mkIndexVars (memType mem))
+      in
       forEach mem' $ \ixs ->
         traceShow (oldIxs, ixs) $
         let transform = opTransform op mem (mkIdentityAccessor mem)
