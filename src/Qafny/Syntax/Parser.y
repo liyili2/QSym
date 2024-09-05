@@ -112,7 +112,7 @@ id                    { ( _, L.TId $$     ) }
 "*="                  { ( _, L.TApply     ) }
 '~'                   { ( _, L.TTilde     ) }
 
-%expect 0
+-- %expect 0
 %right '->' 
 
 %%
@@ -293,6 +293,7 @@ expr
   | "not" atomic                      { EOp1 ONot $2           }
   | "nor" '(' atomic ',' digits ')'   { EOp2 ONor $3 (ENum $5) }
   | "repr" parens(range)              { ERepr $2               }
+  | logicOrExp                        { $1                     }
   | lamExpr                           { $1                     }
 
 argExpr
