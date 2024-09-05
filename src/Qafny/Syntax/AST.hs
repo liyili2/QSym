@@ -136,6 +136,7 @@ data Op1
 
 data GuardExp
   = GEPartition Partition (Maybe (Exp ())) -- guard partition with a split at
+  | GEq (XRec x (Exp x)) (XRec x (Exp x))
   deriving (Show, Eq)
 
 -- the exp is not reversible
@@ -400,7 +401,7 @@ data Stmt x where
   SAssert :: (XRec x (Exp x)) -> Stmt x
   SCall :: Var -> [(XRec x (Exp x))] -> Stmt x
   SVar :: (XRec x (Binding x)) -> (Maybe (XRec x (Exp x))) -> Stmt x
-  (::=:) :: Var -> (XRec x (Exp x)) -> Stmt x
+  (::=:) :: [Var] -> (XRec x (Exp x)) -> Stmt x
   (:*=:) :: Partition -> (XRec x (Exp x)) -> Stmt x
   SDafny :: String -> Stmt x
   SIf :: GuardExp -> Partition -> (Block x) -> Stmt x

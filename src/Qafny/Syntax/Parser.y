@@ -183,7 +183,7 @@ stmt :: { Stmt' }
   | "assert" expr ';'                 { SAssert $2                           }
   | "var" binding ';'                 { SVar $2 Nothing                      }
   | "var" binding ":=" expr ';'       { SVar $2 (Just $4)                    }
-  | id ":=" expr ';'                  { $1 ::=: $3                           }
+  | manyComma(id) ":=" expr ';'                  { $1 ::=: $3                           }
   | partition "*=" expr ';'           { $1 :*=: $3                           }
     | "if" '(' guardExpr ')' block
     { SIf $3 (Partition {ranges = []}) $5                    }
@@ -199,6 +199,7 @@ splitAt :: { Exp' }
 
 guardExpr :: { GuardExp }
   : partition opt(splitAt)            { GEPartition $1 $2 }
+  | arithExpr "==" arithExpr          { GEq $1 $2 }
                                                                           
 partition :: { Partition }
   : manyComma(range)                  { Partition $ $1 }
