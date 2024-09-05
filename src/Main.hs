@@ -11,9 +11,10 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
-import QSym.Logic.GenConstraint (Verify (..), astSMT, Name)
+import QSym.Logic.GenConstraint (Verify (..), VerifySatisfies, astSMT, Name)
 import QSym.Logic.Gen (Gen)
 import QSym.Logic.SMTBackend
+import QSym.Logic.Memory
 import QSym.Logic.SMT as SMT --(int, SMT, Decl)
 
 import Qafny.Syntax.Parser
@@ -66,6 +67,7 @@ data Test =
     { testName :: String
     , testFile :: String
     , testQubitCount :: Int
+    , testVerify :: VerifySatisfies
     }
 
 lookupTest :: [Test] -> String -> Test
@@ -80,19 +82,21 @@ allTests =
       { testName = "Teleportation"
       , testFile = "tests/Teleportation.qfy"
       , testQubitCount = 3
+      , testVerify = \_ _ -> pure $ smtBlock [assert true] -- TODO
       }
 
   , Test
       { testName = "BellPair"
       , testFile = "tests/BellPair.qfy"
       , testQubitCount = 2
+      , testVerify = verifyBellPair
       }
   ]
 
 main :: IO ()
 main = do
-  -- let test = lookupTest allTests "BellPair"
-  let test = lookupTest allTests "Teleportation"
+  let test = lookupTest allTests "BellPair"
+  -- let test = lookupTest allTests "Teleportation"
 
   -- TODO: read filename in from the command line
 
@@ -109,7 +113,7 @@ main = do
 
   -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
   -- let smt = either error (astSMT (ExactValues [int 1, int 0, int 1, int 0]) 3) qafny_ast
-  let smt = either error (astSMT (Satisfies verify) (testQubitCount test)) qafny_ast
+  let smt = either error (astSMT (Satisfies (testVerify test)) (testQubitCount test)) qafny_ast
 
   -- either error (print . pretty) smt
 
@@ -117,9 +121,52 @@ main = do
   executeSMTLoudly z3Config smt
   pure ()
 
-verify :: Name -> Name -> Gen (Block Name)
-verify input output = do
-    pure $ smtBlock [assert true] -- TODO: Implement
+verifyBellPair :: VerifySatisfies
+verifyBellPair input output = do
+  pure $ smtBlock
+    [ -- Input
+      assert $ setToMemEntry input [int 0]
+                $ MemEntry
+                    { memEntryAmp = 1
+                    , memEntryPhase = 1
+                    , memEntryBitVec = int2bv 2 0x0
+                    }
+
+      -- Output
+      -- TODO: Improve the interface used here
+    , assert $ forEach output $ \ixs ->
+        let entry = indexMemoryByList output ixs
+        in
+        implies (eq (bvSMT (memEntryBitVec entry))
+                    (bvSMT (int2bv 2 0x0)))
+
+                (eq (memEntryPhase entry)
+                    invSqrt2)
+
+    , assert $ forEach output $ \ixs ->
+        let entry = indexMemoryByList output ixs
+        in
+        implies (eq (bvSMT (memEntryBitVec entry))
+                    (bvSMT (int2bv 2 0x3)))
+
+                (eq (memEntryPhase entry)
+                    invSqrt2)
+
+    --   -- Output
+    -- , assert $ setToMemEntry output [int 0]
+    --             $ MemEntry
+    --                 { memEntryAmp = 1
+    --                 , memEntryPhase = invSqrt2
+    --                 , memEntryBitVec = int2bv 2 0
+    --                 }
+    -- , assert $ setToMemEntry output [int 1]
+    --             $ MemEntry
+    --                 { memEntryAmp = 1
+    --                 , memEntryPhase = invSqrt2
+    --                 , memEntryBitVec = int2bv 2 3
+    --                 }
+    ]
+    -- pure $ smtBlock [assert true] -- TODO: Implement
 
 
   -- inProb00 <- getTotalProbForVar "q" 0 (bvLit 1 0x0) (symbol input)

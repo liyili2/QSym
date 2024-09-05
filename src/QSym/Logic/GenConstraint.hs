@@ -3,6 +3,7 @@
 module QSym.Logic.GenConstraint
   (Name
   ,Verify (..)
+  ,VerifySatisfies
   ,astSMT
   )
   where
@@ -105,13 +106,15 @@ toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
   case qmBody qm of
     Nothing -> mempty
     Just block ->
-      let initialDecls = declareMemory bitSize (initialMemory bitSize)
+      let initialMem = initialMemory bitSize
+          initialDecls = declareMemory bitSize initialMem
 
           go = do --mainPart <- blockListConstraints (reverse (inBlock block)) -- TODO: Find a better way than reversing here
                   mainPart <- blockListConstraints (inBlock block)
-                  fmap ((initialDecls <> mainPart) <>) (verify (currentVar "mem") (getLastMem mainPart))
+                  lastMem <- get
+                  fmap ((initialDecls <> mainPart) <>) (verify initialMem lastMem)
       in
-      traceShow block $ runGen go (buildEnv bitSize qm) (initialMemory bitSize)
+      traceShow block $ runGen go (buildEnv bitSize qm) initialMem
 
 genOperationBlock :: Operation -> Gen (Block Name)
 genOperationBlock op = do
@@ -267,8 +270,8 @@ applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
   subst [(paramVar, arg)] body
 
 type VerifySatisfies =
-  Name -> -- Input
-  Name -> -- Output
+  Memory -> -- Input
+  Memory -> -- Output
   Gen (Block Name)
 
 data Verify
@@ -293,11 +296,6 @@ bitVecLit i = fromString $ "(_ bv" ++ i ++ " " ++ show bitVecSize ++ ")"
 
 mkLoc :: Int -> SMT Name a
 mkLoc i = fromString (show i) --fromString $ "q" ++ show i
-
-getLastMem :: Block Name -> Name
-getLastMem block =
-  let blockNames = getBlockNames block
-  in VarName . maximumBy (comparing steppedToInt) . nub $ getSteppedVar "mem" blockNames
 
 mkDeclarations :: Block Name -> Block Name
 mkDeclarations block =
