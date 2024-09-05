@@ -7,6 +7,9 @@ module QSym.Logic.Operation
   ,mkOperation
   ,runOperation
   ,extendAccessor
+  ,bitVecOp
+  ,numericOp
+  ,toBitVecFn
   )
   where
 
@@ -52,6 +55,27 @@ mkOperation addedDims transform =
     { opAddedDims = addedDims
     , opTransform = \_mem accessor -> transform accessor
     }
+
+bitVecOp ::
+  (BitVector Name -> BitVector Name) ->
+  Int ->
+  Operation
+bitVecOp f gatePosition =
+  mkOperation [] $
+    \accessor mem' ixs ->
+      runAccessor accessor mem' ixs ixs $ \oldEntry ->
+        setToMemEntry mem' ixs $
+        MemEntry
+          { memEntryAmp = memEntryAmp oldEntry
+          , memEntryPhase = memEntryPhase oldEntry
+          , memEntryBitVec = f (memEntryBitVec oldEntry)
+          }
+
+numericOp ::
+  (SMT Name Int -> SMT Name Int) ->
+  Int ->
+  Operation
+numericOp f = bitVecOp (toBitVecFn f)
 
 extendAccessor :: Operation -> (Memory -> Accessor) -> Operation
 extendAccessor op newAccessorF =

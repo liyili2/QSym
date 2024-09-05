@@ -57,6 +57,8 @@ module QSym.Logic.SMT
   ,sub
   ,mul
   ,div
+  ,mod'
+  ,pow
   ,store
   ,Ixs (..)
   ,SomeIxs (..)
@@ -94,6 +96,7 @@ module QSym.Logic.SMT
   ,invertBitVec
   ,ones
   ,getBit
+  ,toBitVecFn
   -- ,overwriteIndexBits
   ,overwriteBits
   ,selectWithBitVector
@@ -327,6 +330,12 @@ mul x y = SExpr $ apply "*" [toSExpr x, toSExpr y]
 div :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
 div x y = SExpr $ apply "/" [toSExpr x, toSExpr y]
 
+mod' :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+mod' x y = SExpr $ apply "mod" [toSExpr x, toSExpr y]
+
+pow :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
+pow x y = SExpr $ apply "to_int" [apply "^" [toSExpr x, toSExpr y]]
+
 true :: SMT a Bool
 true = SExpr (BoolLit True)
 
@@ -539,19 +548,23 @@ listToBits xs = int2bv (length xs) . go $ reverse xs
     go [] = 0
     go (b:bs) = b + (2 * go bs)
 
--- withPadding :: IsString a => (BitVector a -> BitVector a -> r) -> BitVector a -> BitVector a -> r
--- withPadding k x@(BitVector n _) y@(BitVector m _) =
---   let paddedX = pad n m x
---       paddedY = pad m n y
---   in
---   k paddedX paddedY
---   where
---     pad thisSize otherSize v
---       | otherSize > thisSize =
---           let padding = bvLit (otherSize - thisSize) 0
---           in
---           bvConcat [padding, v]
---       | otherwise = v
+toBitVecFn :: IsString a => (SMT a Int -> SMT a Int) -> (BitVector a -> BitVector a)
+toBitVecFn f x =
+  int2bv (bitVectorSize x) (f (bv2nat x))
+
+withPadding :: IsString a => (BitVector a -> BitVector a -> r) -> BitVector a -> BitVector a -> r
+withPadding k x@(BitVector n _) y@(BitVector m _) =
+  let paddedX = pad n m x
+      paddedY = pad m n y
+  in
+  k paddedX paddedY
+  where
+    pad thisSize otherSize v
+      | otherSize > thisSize =
+          let padding = bvLit (otherSize - thisSize) 0
+          in
+          bvConcat [padding, v]
+      | otherwise = v
 
 bvShiftL :: IsString a => BitVector a -> Int -> BitVector a
 bvShiftL v@(BitVector n x) amount =

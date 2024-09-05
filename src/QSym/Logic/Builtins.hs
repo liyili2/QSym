@@ -41,6 +41,18 @@ notOp gatePosition0 =
             , memEntryBitVec = overwriteBits oldBvEntry gatePosition (invertBitVec (int2bv 1 bit))
             }
 
+addOp :: SMT Name Int -> Int -> Operation
+addOp x = numericOp (add x)
+
+mulOp :: SMT Name Int -> Int -> Operation
+mulOp x = numericOp (mul x)
+
+modOp2 :: SMT Name Int -> Int -> Operation
+modOp2 x = numericOp (`mod'` x)
+
+powOp2 :: SMT Name Int -> Int -> Operation
+powOp2 x = numericOp (`pow` x)
+
 controlledAccessor :: Int -> (MemEntry -> SMT Name Bool) -> Memory -> Accessor
 controlledAccessor gatePosition p mem = Accessor $ \mem' ix newIx k ->
   let entry = indexMemoryByList mem ix
