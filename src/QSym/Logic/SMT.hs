@@ -134,6 +134,8 @@ import Data.Foldable
 import Data.Coerce
 import Data.String
 
+import GHC.Stack
+
 data SExpr a
   = Atom a
   | Var String
@@ -419,7 +421,8 @@ select arr i = SExpr (at' (toSExpr arr) (toSExpr i))
 --   ArrayBase (Array i b) = b
 
 -- TODO: Find a way to improve type-safety here
-selectWithList :: forall a b i r. IsString a => SMT a (Array i b) -> [SMT a i] -> SMT a r
+selectWithList :: forall a b i r. (HasCallStack, IsString a) => SMT a (Array i b) -> [SMT a i] -> SMT a r
+selectWithList _ [] = error "selectWithList _ []"
 selectWithList arr [i] = SExpr (at' (toSExpr arr) (toSExpr i))
 selectWithList arr0 (i:is) =
   let arr = selectWithList arr0 is

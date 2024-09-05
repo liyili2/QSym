@@ -17,7 +17,9 @@ import QSym.Logic.SMT
 import QSym.Logic.Name
 import QSym.Logic.Memory
 
-type Transform = Memory -> [SMT Name Int] -> SMT Name Bool
+import Debug.Trace
+
+type Transform = Memory -> [SMT Name Int] -> [SMT Name Int] -> SMT Name Bool
 
 -- | This mediates access to the previous memory state
 newtype Accessor = Accessor { runAccessor :: Memory -> [SMT Name Int] -> [SMT Name Int] -> (MemEntry -> SMT Name Bool) -> SMT Name Bool }
@@ -44,10 +46,12 @@ runOperation mem updateName op = (mem', generatedSMT)
     mem' = extendMemory mem newDims updateName
 
     generatedSMT =
+      forEach mem $ \oldIxs ->
       forEach mem' $ \ixs ->
+        traceShow (oldIxs, ixs) $
         let transform = opTransform op mem (mkIdentityAccessor mem)
         in
-        transform mem' ixs
+        transform mem' oldIxs (drop (length oldIxs) ixs)
 
 mkOperation :: [Int] -> (Accessor -> Transform) -> Operation
 mkOperation addedDims transform =
@@ -62,9 +66,11 @@ bitVecOp ::
   Operation
 bitVecOp f gatePosition =
   mkOperation [] $
-    \accessor mem' ixs ->
-      runAccessor accessor mem' ixs ixs $ \oldEntry ->
-        setToMemEntry mem' ixs $
+    \accessor mem' oldIxs ixs ->
+      let fullIxs = oldIxs ++ ixs
+      in
+      runAccessor accessor mem' oldIxs fullIxs $ \oldEntry ->
+        setToMemEntry mem' fullIxs $
         MemEntry
           { memEntryAmp = memEntryAmp oldEntry
           , memEntryPhase = memEntryPhase oldEntry

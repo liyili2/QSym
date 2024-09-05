@@ -138,6 +138,8 @@ blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 
+blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
+
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
   (physStart, physEnd) <- rangeToPhysicalIndices lhs

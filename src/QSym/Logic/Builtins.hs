@@ -12,29 +12,36 @@ hadamard gatePosition0 =
       bitsAppliedTo = 1
   in
   mkOperation [2] $
-    \accessor mem' [j, k] ->
-        runAccessor accessor mem' [j] [j, k] $ \oldEntry ->
-          let oldBvEntry = memEntryBitVec oldEntry
-              bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+    \accessor mem' oldIxs ixs ->
+      case ixs of
+        [k] ->
+          let fullIx = oldIxs ++ ixs
           in
-          setToMemEntry mem' [j, k] $
-            MemEntry
-              { memEntryAmp = memEntryAmp oldEntry -- TODO: Is this right?
-              , memEntryPhase = omega (bit * k) (2 ^ bitsAppliedTo)
-              , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
-              }
+          runAccessor accessor mem' oldIxs fullIx $ \oldEntry ->
+            let oldBvEntry = memEntryBitVec oldEntry
+                bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
+            in
+            setToMemEntry mem' fullIx $
+              MemEntry
+                { memEntryAmp = memEntryAmp oldEntry -- TODO: Is this right?
+                , memEntryPhase = omega (bit * k) (2 ^ bitsAppliedTo)
+                , memEntryBitVec = overwriteBits oldBvEntry gatePosition (int2bv bitsAppliedTo k)
+                }
+        _ -> error $ "ixs = " ++ show ixs
 
 notOp :: Int -> Operation
 notOp gatePosition0 =
   let gatePosition = bvPosition gatePosition0
   in
   mkOperation [] $
-    \accessor mem' ixs ->
-        runAccessor accessor mem' ixs ixs $ \oldEntry ->
+    \accessor mem' oldIxs ixs ->
+      let fullIxs = oldIxs ++ ixs
+      in
+        runAccessor accessor mem' oldIxs fullIxs $ \oldEntry ->
           let oldBvEntry = memEntryBitVec oldEntry
               bit = bv2nat (bvGetRange oldBvEntry gatePosition gatePosition)
           in
-          setToMemEntry mem' ixs $
+          setToMemEntry mem' fullIxs $
           MemEntry
             { memEntryAmp = memEntryAmp oldEntry
             , memEntryPhase = memEntryPhase oldEntry
