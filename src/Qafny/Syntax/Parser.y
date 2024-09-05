@@ -339,7 +339,7 @@ cmp :: { Op2 }
  | '<'                      { OLt }
  | ">="                     { OGe }
  | "<="                     { OLe }
- | "=="                     { QEq }
+ | "=="                     { OEq }
  
 arithExpr :: { Exp' }
  : atomic arith arithExpr   { EOp2 $2 $1 $3 }
