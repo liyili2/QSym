@@ -180,7 +180,7 @@ interpretGuardExp paramName (GEPartition (Partition [range]) expMaybe) = do
           Nothing -> true
           Just exp -> interpretBoolFn paramName exp arg
 
-  pure $ \arg -> partPredicate arg ^&&^ expPredicate arg
+  trace ("range = " ++ show (physStart, physEnd)) $ pure $ \arg -> partPredicate arg ^&&^ expPredicate arg
 
 interpretIntFn :: String -> Exp () -> (SMT Name Int -> SMT Name Int)
 interpretIntFn paramName = go

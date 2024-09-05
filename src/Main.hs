@@ -25,6 +25,8 @@ import Data.String
 
 import Data.Sum
 
+import Data.List (find)
+
 import Prettyprinter
 
 import qualified QSym.Syntax as QSym
@@ -59,12 +61,42 @@ interpretExpr :: Exp () -> QSym.Expr
 interpretExpr EHad = undefined
 interpretExpr (EOp2 OAdd x y) = undefined
 
+data Test =
+  Test
+    { testName :: String
+    , testFile :: String
+    , testQubitCount :: Int
+    }
+
+lookupTest :: [Test] -> String -> Test
+lookupTest tests name =
+  let Just r = find ((== name) . testName) tests
+  in
+  r
+
+allTests :: [Test]
+allTests =
+  [ Test
+      { testName = "Teleportation"
+      , testFile = "tests/Teleportation.qfy"
+      , testQubitCount = 3
+      }
+
+  , Test
+      { testName = "BellPair"
+      , testFile = "tests/BellPair.qfy"
+      , testQubitCount = 2
+      }
+  ]
+
 main :: IO ()
 main = do
+  let test = lookupTest allTests "Teleportation"
+
   -- TODO: read filename in from the command line
 
   -- file_text <- Utf8.readFile "tests/BellPair.qfy"
-  file_text <- Utf8.readFile "tests/Teleportation.qfy"
+  file_text <- Utf8.readFile (testFile test)
 
   -- read in the qafny code and convert into an AST
   -- unpack converts Data.Text.Text (from Utf8.readFile) to a String
@@ -76,7 +108,7 @@ main = do
 
   -- let smt = either error (astSMT [[int 1, int 0], [int 1, int 0]] 3) qafny_ast
   -- let smt = either error (astSMT (ExactValues [int 1, int 0, int 1, int 0]) 3) qafny_ast
-  let smt = either error (astSMT (Satisfies verify) 2) qafny_ast
+  let smt = either error (astSMT (Satisfies verify) (testQubitCount test)) qafny_ast
 
   -- either error (print . pretty) smt
 
