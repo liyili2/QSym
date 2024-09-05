@@ -156,7 +156,6 @@ baseTy
   : "nat"                             { TNat              }
   | "real"                            { TReal              }
   | "int"                             { TInt              }
-  | "measured"                        { TMeasured         }
   | "bool"                            { TBool             }
   | '[' ty ']'                        { TSeq $2           }
   | "Q" '[' digits ']'             { TQReg (ANat $3)   }
@@ -199,7 +198,7 @@ splitAt :: { Exp' }
 
 guardExpr :: { GuardExp }
   : partition opt(splitAt)            { GEPartition $1 $2 }
-  | arithExpr "==" arithExpr          { GEq $1 $2 }
+  | logicOrExp                        { GClass $1 }
                                                                           
 partition :: { Partition }
   : manyComma(range)                  { Partition $ $1 }
@@ -294,7 +293,6 @@ expr
   | "not" atomic                      { EOp1 ONot $2           }
   | "nor" '(' atomic ',' digits ')'   { EOp2 ONor $3 (ENum $5) }
   | "repr" parens(range)              { ERepr $2               }
-  | logicOrExp                        { $1                     }
   | lamExpr                           { $1                     }
 
 argExpr
@@ -341,8 +339,8 @@ cmp :: { Op2 }
  | '<'                      { OLt }
  | ">="                     { OGe }
  | "<="                     { OLe }
- | "=="                     { OEq }
-
+ | "=="                     { QEq }
+ 
 arithExpr :: { Exp' }
  : atomic arith arithExpr   { EOp2 $2 $1 $3 }
  | atomic                   { $1 }
