@@ -290,7 +290,7 @@ expr
   : '_'                               { EWildcard              }
   | spec                              { $1                     }
   | qops                              { $1                     }
-  | "measure" partition               { EMeasure $2            }
+  | "measure" '(' partition ')'       { EMeasure $3            }
   | "not" atomic                      { EOp1 ONot $2           }
   | "nor" '(' atomic ',' digits ')'   { EOp2 ONor $3 (ENum $5) }
   | "repr" parens(range)              { ERepr $2               }
