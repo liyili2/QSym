@@ -628,8 +628,8 @@ overwriteBits bv@(BitVector n _) (BitVecPosition pos) newMiddlePart =
       -- Example: 11100111
       invertedMask = bvLit n $ (2 ^ (n - 1)) `xor` mask
 
-      -- Example: bb  -->  bbb00
-      newBits = newMiddlePart `bvShiftL` pos
+      -- Example: bb  -->  bb00
+      newBits = int2bv n (bv2nat (newMiddlePart `bvShiftL` pos)) -- TODO: Could this be nicer?
   in
   bvOr (bvAnd bv invertedMask) newBits
 
