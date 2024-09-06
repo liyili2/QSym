@@ -111,6 +111,9 @@ data Expr b where
   Or :: [Expr Bool] -> Expr Bool
   Not :: Expr Bool -> Expr Bool
 
+(.==.) :: Expr a -> Expr a -> Expr Bool
+(.==.) = Equal
+
 instance Num (Expr EReal) where
   (+) = Add
   (-) = Sub
@@ -126,6 +129,9 @@ instance Num (Expr Int) where
   (*) = Mul
 
   fromInteger = IntLit . fromInteger
+
+bvLit :: Int -> Int -> Expr EBitVec
+bvLit n = ToBitVec n . IntLit
 
 mul :: Expr EReal -> Expr EReal -> Expr EReal
 mul (AmpFactor a) (AmpFactor b) = AmpFactor (a + b)
@@ -179,6 +185,17 @@ notOp whichQubit =
           (OverwriteBits (GetBitVec oldVec)
                          whichQubit
                          (InvertBitVec (ToBitVec 1 bit)))
+
+controlledNot :: Int -> Int -> Sum
+controlledNot controlPosition notPosition =
+  withControlBit controlPosition (notOp notPosition)
+
+withControlBit :: Int -> Sum -> Sum
+withControlBit controlPosition = control predicate
+  where
+    predicate :: Expr EVec -> Expr Bool
+    predicate oldVec =
+      GetBit (GetBitVec oldVec) (IntLit controlPosition) .==. bvLit 1 0x1
 
 -- control :: Expr Bool -> Expr EVec -> Expr EVec
 -- control = Control
