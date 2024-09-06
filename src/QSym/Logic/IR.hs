@@ -130,6 +130,7 @@ mul :: Expr EReal -> Expr EReal -> Expr EReal
 mul (AmpFactor a) (AmpFactor b) = AmpFactor (a + b)
 mul a (AmpFactor b) = mul (AmpFactor b) a
 mul a (Mul b c) = mul (mul a b) c
+mul (Mul a b) c = mul (mul a b) c
 mul a b = Mul a b
 
 and' :: [Expr Bool] -> Expr Bool
