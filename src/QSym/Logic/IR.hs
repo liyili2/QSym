@@ -99,6 +99,7 @@ data Expr b where
   Sub :: Expr b -> Expr b -> Expr b
   Mul :: Expr b -> Expr b -> Expr b
   Div :: Expr b -> Expr b -> Expr b
+  Sqrt :: Expr b -> Expr b
 
   -- Booleans --
   Equal :: Expr b -> Expr b -> Expr Bool
@@ -111,6 +112,12 @@ instance Num (Expr EReal) where
   (+) = Add
   (-) = Sub
   (*) = Mul
+
+instance Fractional (Expr EReal) where
+  (/) = Div
+
+instance Floating (Expr EReal) where
+  sqrt = Sqrt
 
 instance Num (Expr Int) where
   (+) = Add
@@ -144,7 +151,7 @@ hadamard whichQubit =
         let bit = FromBitVec (GetBit (GetBitVec oldVec) j)
         in
         MkVec
-          (GetAmp oldVec)
+          ((1/sqrt 2) * GetAmp oldVec)
           (Omega (bit * j) (2 ^ qubitsAppliedTo))
           (OverwriteBits (GetBitVec oldVec)
                          whichQubit
