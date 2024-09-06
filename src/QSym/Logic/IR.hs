@@ -102,7 +102,6 @@ data Expr b where
   Sub :: Expr b -> Expr b -> Expr b
   Mul :: Expr b -> Expr b -> Expr b
   Div :: Expr b -> Expr b -> Expr b
-  Sqrt :: Expr b -> Expr b
 
   -- Booleans --
   Equal :: Expr b -> Expr b -> Expr Bool
@@ -114,14 +113,11 @@ data Expr b where
 instance Num (Expr EReal) where
   (+) = Add
   (-) = Sub
-  (*) = Mul
+  (*) = mul
   fromInteger = FromInt . IntLit . fromInteger
 
 instance Fractional (Expr EReal) where
   (/) = Div
-
-instance Floating (Expr EReal) where
-  sqrt = Sqrt
 
 instance Num (Expr Int) where
   (+) = Add
@@ -129,6 +125,12 @@ instance Num (Expr Int) where
   (*) = Mul
 
   fromInteger = IntLit . fromInteger
+
+mul :: Expr EReal -> Expr EReal -> Expr EReal
+mul (AmpFactor a) (AmpFactor b) = AmpFactor (a + b)
+mul a (AmpFactor b) = mul (AmpFactor b) a
+mul a (Mul b c) = mul (mul a b) c
+mul a b = Mul a b
 
 and' :: [Expr Bool] -> Expr Bool
 and' xs0 =
