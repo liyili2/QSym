@@ -71,6 +71,7 @@ library
                      QSym.Logic.Memory
                      QSym.Logic.Builtins
                      QSym.Logic.Syntax
+                     QSym.Logic.IR
                      QSym.Logic.Gen
                      QSym.Logic.Operation
                      QSym.Logic.GenLogic
