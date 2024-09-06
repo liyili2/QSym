@@ -291,6 +291,10 @@ declareHeap lhs rhs = Decl $ apply "declare-heap" [Atom lhs, Atom rhs]
 declareConst :: IsString a => a -> a -> SMT a Decl
 declareConst name ty = Decl $ apply "declare-const" [Atom name, Atom ty]
 
+declareFun :: IsString a => a -> [a] -> a -> SMT a Decl
+declareFun name argTys resTy =
+  Decl $ apply "declare-fun" [Atom name, List (map Atom argTys), Atom resTy]
+
 declareConstList :: IsString a => [(a, a)] -> Block a
 declareConstList = smtBlock . map (uncurry declareConst)
 
@@ -468,14 +472,16 @@ smtPreamble :: IsString a => Block a
 smtPreamble =
   smtBlock
     [setLogic "ALL"
-    ,setOption ":produce-models" "true"
+    -- ,setOption ":produce-models" "true"
     ,setOption ":pp.decimal" "true"
-    ,setOption ":produce-unsat-cores" "true"
+    -- ,setOption ":produce-unsat-cores" "true"
     -- ,setOption ":verbose" "10"
     ,declareConst "sqrt2" "Real"
     ,assert $ eq (mul "sqrt2" "sqrt2") (int 2)
     ,assert $ gt "sqrt2" (int 0)
-    ]
+
+    ,declareFun "omega" ["Real", "Real"] "Real"
+    ] <> omegaSpec
 
 -- TODO: Improve type safety
 double :: Double -> SMT a Int
@@ -489,7 +495,16 @@ pi' = symbol "pi"
 
 omega :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
 omega a b =
-  sin' (2 * pi' * a `div` b)
+  SExpr $ apply "omega" [toSExpr a, toSExpr b]
+  -- sin' (2 * pi' * a `div` b)
+
+omegaSpec :: IsString a => Block a
+omegaSpec =
+  smtBlock
+    [ assert $ forAll [("a", "Real"), ("b", "Real"), ("c", "Real")] $
+        eq (mul (omega (var "a") (var "b")) (omega (var "c") (var "b")))
+           (omega (add (var "a") (var "c")) (var "b"))
+    ]
 
 invSqrt2 :: IsString a => SMT a Int
 invSqrt2 = div (int 1) sqrt2

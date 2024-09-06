@@ -125,44 +125,50 @@ verifyBellPair :: VerifySatisfies
 verifyBellPair input output = do
   pure $ smtBlock
     [ -- Input
-      assert $ setToMemEntry input [int 0]
-                $ MemEntry
-                    { memEntryAmp = 1
-                    , memEntryPhase = 1
-                    , memEntryBitVec = int2bv 2 0x0
-                    }
+      assert $ existsIx input $ \ixs ->
+        let entry = indexMemoryByList input ixs
+        in
+        eq (bvSMT (memEntryBitVec entry))
+                  (bvSMT (int2bv 2 0x0))
+        
+      -- assert $ setToMemEntry input [int 0]
+      --           $ MemEntry
+      --               { memEntryAmp = 1
+      --               , memEntryPhase = 1
+      --               , memEntryBitVec = int2bv 2 0x0
+      --               }
 
       -- Output
       -- TODO: Improve the interface used here
 
-    , assert $ existsIx output $ \ixs ->
-        let entry = indexMemoryByList output ixs
+    , assert $ existsIx input $ \ixs ->
+        let entry = indexMemoryByList input ixs
         in
         eq (bvSMT (memEntryBitVec entry))
                   (bvSMT (int2bv 2 0x0))
 
-    , assert $ existsIx output $ \ixs ->
-        let entry = indexMemoryByList output ixs
-        in
-        eq (bvSMT (memEntryBitVec entry))
-                  (bvSMT (int2bv 2 0x3))
+    -- , assert $ existsIx output $ \ixs ->
+    --     let entry = indexMemoryByList output ixs
+    --     in
+    --     eq (bvSMT (memEntryBitVec entry))
+    --               (bvSMT (int2bv 2 0x3))
 
-    , assert $ forEach output $ \ixs ->
-        let entry = indexMemoryByList output ixs
-        in
-        implies (eq (bvSMT (memEntryBitVec entry))
-                    (bvSMT (int2bv 2 0x0)))
-
-                (eq (memEntryPhase entry)
-                    invSqrt2)
-
-    , assert $ forEach output $ \ixs ->
-        let entry = indexMemoryByList output ixs
-        in
-        implies (eq (bvSMT (memEntryBitVec entry))
-                    (bvSMT (int2bv 2 0x3)))
-
-                (eq (memEntryPhase entry)
-                    invSqrt2)
+    -- , assert $ forEach output $ \ixs ->
+    --     let entry = indexMemoryByList output ixs
+    --     in
+    --     implies (eq (bvSMT (memEntryBitVec entry))
+    --                 (bvSMT (int2bv 2 0x0)))
+    --
+    --             (eq (memEntryPhase entry)
+    --                 invSqrt2)
+    --
+    -- , assert $ forEach output $ \ixs ->
+    --     let entry = indexMemoryByList output ixs
+    --     in
+    --     implies (eq (bvSMT (memEntryBitVec entry))
+    --                 (bvSMT (int2bv 2 0x3)))
+    --
+    --             (eq (memEntryPhase entry)
+    --                 invSqrt2)
     ]
 

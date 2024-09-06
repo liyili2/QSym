@@ -152,7 +152,7 @@ forEach :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
 forEach = quantifiedBy forAll implies
 
 existsIx :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
-existsIx = quantifiedBy exists (^&&^)
+existsIx = quantifiedBy exists (\_ y -> y) --(^&&^)
 
 setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =

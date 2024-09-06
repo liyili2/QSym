@@ -39,14 +39,15 @@ import Debug.Trace
 
 astSMT :: Verify -> Int -> AST -> Block Name
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> block <> smtCheck <>
-    smtBlock [checkSAT, symbol "(get-unsat-core)"]
+  smtPreamble <> mkDeclarations block <> block <> smtCheck
+     -- <> smtBlock [symbol "(get-info :reason-unknown)", checkSAT, symbol "(get-unsat-core)"]
   where
     block = astConstraints verifyEqs bitSize ast
 
     smtCheck =
       smtBlock
         [checkSAT
+        ,symbol "(get-info :reason-unknown)"
         ,getModel
         -- ,symbol "(get-unsat-core)"
         ]
@@ -96,7 +97,7 @@ astConstraints verify bitSize =
 initialMemory :: Int -> Memory
 initialMemory bitSize =
   mkMemory
-    (EN [0])
+    (EN [2 ^ bitSize])
     bitSize
     (currentVar "mem-amp")
     (currentVar "mem-phase")
