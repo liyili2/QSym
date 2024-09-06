@@ -65,6 +65,9 @@ data EBitVec
 data EVec
 
 data Expr b where
+  Var :: -- NOTE: Do not make this visible
+    String -> Expr a
+
   MkVec ::
     Expr EReal ->   -- | Amplitude
     Expr EReal ->   -- | Phase
