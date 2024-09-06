@@ -85,6 +85,7 @@ data Expr b where
   GetBit :: Expr EBitVec -> Expr Int -> Expr EBitVec
   OverwriteBits :: Expr EBitVec -> Int -> Expr EBitVec -> Expr EBitVec
   GetBitRange :: Expr EBitVec -> Int -> Int -> Expr EBitVec
+  InvertBitVec :: Expr EBitVec -> Expr EBitVec
 
   ToBitVec :: Int -> Expr Int -> Expr EBitVec
   FromBitVec :: Expr EBitVec -> Expr Int
@@ -157,16 +158,27 @@ hadamard whichQubit =
   in
   mkSum (2 :! IBZ)         -- Upper bounds for additional indices for summation
     $ \oldVec (j :| IZ) -> -- Additional indices for summation
-        let bit = FromBitVec (GetBit (GetBitVec oldVec) j)
+        let bit = FromBitVec (GetBit (GetBitVec oldVec) (IntLit whichQubit))
         in
         MkVec
           (AmpFactor 1 * GetAmp oldVec)
-          (Omega (bit * j) (2 ^ qubitsAppliedTo))
+          (Omega (bit * j) (2 ^ qubitsAppliedTo)) -- TODO: Do we use the phase of the old vector?
           (OverwriteBits (GetBitVec oldVec)
                          whichQubit
                          (ToBitVec qubitsAppliedTo j))
 
-
+notOp :: Int -> Sum
+notOp whichQubit =
+  mkSum IBZ
+    $ \oldVec IZ ->
+        let bit = FromBitVec (GetBit (GetBitVec oldVec) (IntLit whichQubit))
+        in
+        MkVec
+          (GetAmp oldVec)
+          (GetPhase oldVec)
+          (OverwriteBits (GetBitVec oldVec)
+                         whichQubit
+                         (InvertBitVec (ToBitVec 1 bit)))
 
 -- control :: Expr Bool -> Expr EVec -> Expr EVec
 -- control = Control
