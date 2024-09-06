@@ -112,6 +112,7 @@ instance Num (Expr EReal) where
   (+) = Add
   (-) = Sub
   (*) = Mul
+  fromInteger = FromInt . IntLit . fromInteger
 
 instance Fractional (Expr EReal) where
   (/) = Div
@@ -123,6 +124,8 @@ instance Num (Expr Int) where
   (+) = Add
   (-) = Sub
   (*) = Mul
+
+  fromInteger = IntLit . fromInteger
 
 and' :: [Expr Bool] -> Expr Bool
 and' xs0 =
