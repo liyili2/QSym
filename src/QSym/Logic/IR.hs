@@ -78,6 +78,9 @@ data Expr b where
   GetPhase :: Expr EVec -> Expr EReal
   GetBitVec :: Expr EVec -> Expr EBitVec
 
+    -- | (1/sqrt(2))^n
+  AmpFactor :: Int -> Expr EReal
+
   -- Bit vectors --
   GetBit :: Expr EBitVec -> Expr Int -> Expr EBitVec
   OverwriteBits :: Expr EBitVec -> Int -> Expr EBitVec -> Expr EBitVec
@@ -154,7 +157,7 @@ hadamard whichQubit =
         let bit = FromBitVec (GetBit (GetBitVec oldVec) j)
         in
         MkVec
-          ((1/sqrt 2) * GetAmp oldVec)
+          (AmpFactor 1 * GetAmp oldVec)
           (Omega (bit * j) (2 ^ qubitsAppliedTo))
           (OverwriteBits (GetBitVec oldVec)
                          whichQubit
