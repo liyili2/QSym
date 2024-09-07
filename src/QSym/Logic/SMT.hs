@@ -16,6 +16,8 @@ module QSym.Logic.SMT
 
   ,Array
 
+  ,unvar
+
   ,varMap
   ,varMapBlock
   ,Decl
@@ -150,6 +152,9 @@ data SExpr a
           Int -- | Value
   | DoubleLit Double
   deriving (Show, Functor, Foldable)
+
+unvar :: SMT a b -> String
+unvar (SExpr (Var v)) = v
 
 -- |SMT
 data SMT a b
@@ -383,8 +388,8 @@ exists bnds body = SExpr $ Exists bnds (toSExpr body)
 -- shiftBinders (DoubleLit d) = DoubleLit d
 
 data Ixs a b i r where
-  OneIx :: SMT a i -> Ixs a (Array i r) i r
-  ConsIx :: SMT a i -> Ixs a b i r -> Ixs a (Array i b) i r
+  OneIx :: String -> Ixs a (Array i r) i r
+  ConsIx :: String -> Ixs a b i r -> Ixs a (Array i b) i r
 
 data SomeIxs a i r = forall b. SomeIxs (Ixs a (Array i b) i r)
 
@@ -395,17 +400,17 @@ retagIxs_unsafe (ConsIx x xs) =
   case retagIxs_unsafe xs of
     SomeIxs xs' -> SomeIxs (ConsIx x xs')
 
-ixsToList :: Ixs a b i r -> [SMT a i]
+ixsToList :: Ixs a b i r -> [String]
 ixsToList (OneIx x) = [x]
 ixsToList (ConsIx x xs) = x : ixsToList xs
 
-someIxsToList :: SomeIxs a i r -> [SMT a i]
+someIxsToList :: SomeIxs a i r -> [String]
 someIxsToList (SomeIxs i) = ixsToList i
 
 -- TODO: Find a better approach
 ixsToNames_unsafe :: Ixs a b i r -> [String]
-ixsToNames_unsafe (OneIx (SExpr (Var v))) = [v]
-ixsToNames_unsafe (ConsIx (SExpr (Var v)) rest) = v : ixsToNames_unsafe rest
+ixsToNames_unsafe (OneIx v) = [v]
+ixsToNames_unsafe (ConsIx v rest) = v : ixsToNames_unsafe rest
 
 someIxsToNames_unsafe :: SomeIxs a i r -> [String]
 someIxsToNames_unsafe (SomeIxs i) = ixsToNames_unsafe i
@@ -439,7 +444,7 @@ selectWithList arr0 (i:is) =
   SExpr (at' (toSExpr arr) (toSExpr i))
 
 selects :: forall a b i r. IsString a => SMT a (Array i b) -> Ixs a (Array i b) i r -> SMT a r
-selects arr ixs0 = SExpr (go (ixsToList ixs0))
+selects arr ixs0 = SExpr (go (map var (ixsToList ixs0)))
   where
     go :: [SMT a i] -> SExpr a
     go [i] = at' (toSExpr arr) (toSExpr i)

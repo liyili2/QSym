@@ -93,10 +93,10 @@ mkIndexVars :: MemType -> SomeIxs Name Int Int
 mkIndexVars (EN xs) = go xs names
   where
     go :: [Int] -> [String] -> SomeIxs Name Int Int
-    go [_] (name:_) = SomeIxs (OneIx (var name))
+    go [_] (name:_) = SomeIxs (OneIx name)
     go (_:restDims) (name:restNames) =
       case go restDims restNames of
-        SomeIxs r -> SomeIxs (ConsIx (var name) r)
+        SomeIxs r -> SomeIxs (ConsIx name r)
 
     baseNames = ["i", "j", "k"]
 
@@ -124,12 +124,12 @@ indexMemory mem ixs
         phaseArr = symbol (memPhaseName mem)
         bitVecArr = symbol (memBitVecName mem)
 
-indexMemoryByList :: Memory -> [SMT Name Int] -> MemEntry
+indexMemoryByList :: Memory -> [String] -> MemEntry
 indexMemoryByList mem ixs =
     case ixsFromList ixs of
       SomeIxs is -> indexMemory mem is
   where
-    ixsFromList :: [SMT Name Int] -> SomeIxs Name Int Int
+    ixsFromList :: [String] -> SomeIxs Name Int Int
     ixsFromList [i] = SomeIxs (OneIx i)
     ixsFromList (i:is) = 
       case ixsFromList is of
@@ -138,7 +138,7 @@ indexMemoryByList mem ixs =
 quantifiedBy ::
   ([(String, String)] -> SMT Name Bool -> SMT Name Bool) ->
   (SMT Name Bool -> SMT Name Bool -> SMT Name Bool) ->
-  Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+  Memory -> ([String] -> SMT Name Bool) -> SMT Name Bool
 quantifiedBy quantifier connective mem f =
   case mkIndexVars (memType mem) of
     SomeIxs ixs ->
@@ -148,22 +148,22 @@ quantifiedBy quantifier connective mem f =
         connective (mkBounds (memType mem) namesList)
           (f (ixsToList ixs))
 
-forEach :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+forEach :: Memory -> ([String] -> SMT Name Bool) -> SMT Name Bool
 forEach = quantifiedBy forAll implies
 
-existsIx :: Memory -> ([SMT Name Int] -> SMT Name Bool) -> SMT Name Bool
+existsIx :: Memory -> ([String] -> SMT Name Bool) -> SMT Name Bool
 existsIx = quantifiedBy exists (\_ y -> y) --(^&&^)
 
-setToMemEntry :: Memory -> [SMT Name Int] -> MemEntry -> SMT Name Bool
+setToMemEntry :: Memory -> [String] -> MemEntry -> SMT Name Bool
 setToMemEntry mem ixs entry =
   and'
-    [ eq (selectWithList (symbol (memAmpName mem)) ixs)
+    [ eq (selectWithList (symbol (memAmpName mem)) (map var ixs))
          (memEntryAmp entry)
 
-    , eq (selectWithList (symbol (memPhaseName mem)) ixs)
+    , eq (selectWithList (symbol (memPhaseName mem)) (map var ixs))
          (memEntryPhase entry)
 
-    , eq (selectWithList (symbol (memBitVecName mem)) ixs)
+    , eq (selectWithList (symbol (memBitVecName mem)) (map var ixs))
          (bvSMT (memEntryBitVec entry))
     ]
 

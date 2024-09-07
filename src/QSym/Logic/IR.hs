@@ -1,72 +1,114 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module QSym.Logic.IR
+  (Nat (..)
+  -- ,IxBounds (..)
+  -- ,Ixs (..)
+  ,Sum
+  ,pattern Sum
+  ,mkSum
+
+  ,control
+  ,Controlled
+  ,pattern Controlled
+  ,cCondition
+  ,cBody
+
+  ,Expr
+  ,var
+  ,unMkVec
+
+  ,EVec
+  ,EBitVec
+  ,EReal
+
+  ,bvLit
+  ,and'
+  ,(.&&.)
+  ,omega
+  ,intLit
+  ,overwriteBits
+  ,getBitRange
+  ,toBitVec
+  ,fromBitVec
+  ,fromInt
+  ,(*.)
+  ,(.==.)
+  ,getBit
+  ,invertBitVec
+  ,getBitVec
+  ,ampFactor
+  ,getAmp
+  ,getPhase
+  ,mkVec
+  )
   where
 
-type family Ix a
+import Data.Ratio
 
--- type family Ix a
--- type family Coeff a
--- type family BitVec a
--- type family Vec a
--- type family Boolean a
--- type family IntTy a
+import Prettyprinter
 
 data Nat = Z | S Nat
 
--- data MemEntry a =
---   MemEntry
---     { memEntryAmp :: Expr EReal
---     , memEntryPhase :: Expr EReal
---     , memEntryBitVec :: Expr EBitVec
---     }
+-- infixr :!
+-- infixr :|
 
-infixr :!
-infixr :|
-
-data IxBounds n where
-  IBZ :: IxBounds Z
-  (:!) :: Int -> IxBounds n -> IxBounds (S n)
-
-data Ixs n where
-  IZ :: Ixs Z
-  (:|) :: Expr Int -> Ixs n -> Ixs (S n)
+-- data IxBounds n where
+--   IBZ :: IxBounds Z
+--   (:!) :: Int -> IxBounds n -> IxBounds (S n)
+--
+-- data Ixs n where
+--   IZ :: Ixs Z
+--   (:|) :: Expr Int -> Ixs n -> Ixs (S n)
 
 data Sum where
   MkSum ::
-    IxBounds n ->
-    (Expr EVec -> Ixs n -> Controlled EVec) ->
+    [Int] ->
+    (Expr EVec -> [Expr Int] -> Controlled EVec) ->
     Sum
 
+-- | A unidirectional pattern. This allows us (outside this module)
+-- to only match on Sum values, without being able to construct them using
+-- the constructor.
+-- To construct them outside the module, we must use the mkSum smart
+-- constructor.
+pattern Sum bounds f <- MkSum bounds f
+
 mkSum ::
-  IxBounds n ->
-  (Expr EVec -> Ixs n -> Expr EVec) ->
+  [Int] ->
+  (Expr EVec -> [Expr Int] -> Expr EVec) ->
   Sum
 mkSum bounds f =
   MkSum bounds $ \vec ixs ->
-    Controlled (BoolLit True) (f vec ixs)
+    MkControlled (BoolLit True) (f vec ixs)
 
 control :: (Expr EVec -> Expr Bool) -> Sum -> Sum
 control predicate (MkSum bounds f) =
   MkSum bounds $ \vec ixs ->
     let Controlled fControlResult fBody = f vec ixs
     in
-    Controlled (predicate vec .&&. fControlResult) fBody
+    MkControlled (predicate vec .&&. fControlResult) fBody
 
 data Controlled a =
-  Controlled
+  MkControlled
     { cCondition :: Expr Bool
     , cBody :: Expr a
     }
+
+pattern Controlled c b <- MkControlled c b
 
 data EReal
 data EBitVec
 data EVec
 
+unMkVec :: Expr b -> (Expr EReal, Expr EReal, Expr EBitVec)
+unMkVec (MkVec x y z) = (x, y, z)
+
+-- (Do not export the value constructors for Expr.)
 data Expr b where
-  Var :: -- NOTE: Do not make this visible
-    String -> Expr a
+  Var :: String -> Expr a
 
   MkVec ::
     Expr EReal ->   -- | Amplitude
@@ -110,6 +152,10 @@ data Expr b where
   And :: [Expr Bool] -> Expr Bool
   Or :: [Expr Bool] -> Expr Bool
   Not :: Expr Bool -> Expr Bool
+  -- deriving (Show)
+
+var :: String -> Expr a
+var = Var
 
 (.==.) :: Expr a -> Expr a -> Expr Bool
 (.==.) = Equal
@@ -118,15 +164,21 @@ instance Num (Expr EReal) where
   (+) = Add
   (-) = Sub
   (*) = mul
+  abs = error "Expr Int: abs"
+  signum = error "Expr Int: signum"
+
   fromInteger = FromInt . IntLit . fromInteger
 
 instance Fractional (Expr EReal) where
   (/) = Div
+  fromRational q = fromInteger (numerator q) / fromInteger (denominator q)
 
 instance Num (Expr Int) where
   (+) = Add
   (-) = Sub
   (*) = Mul
+  abs = error "Expr Int: abs"
+  signum = error "Expr Int: signum"
 
   fromInteger = IntLit . fromInteger
 
@@ -158,82 +210,35 @@ and' xs0 =
 (.&&.) :: Expr Bool -> Expr Bool -> Expr Bool
 x .&&. y = and' [x, y]
 
-hadamard :: Int -> Sum
-hadamard whichQubit =
-  let qubitsAppliedTo = 1
-  in
-  mkSum (2 :! IBZ)         -- Upper bounds for additional indices for summation
-    $ \oldVec (j :| IZ) -> -- Additional indices for summation
-        let bit = FromBitVec (GetBit (GetBitVec oldVec) (IntLit whichQubit))
-        in
-        MkVec
-          (AmpFactor 1 * GetAmp oldVec)
-          (Omega (bit * j) (2 ^ qubitsAppliedTo)) -- TODO: Do we use the phase of the old vector?
-          (OverwriteBits (GetBitVec oldVec)
-                         whichQubit
-                         (ToBitVec qubitsAppliedTo j))
+omega :: Expr Int -> Expr Int -> Expr EReal
+omega = Omega
 
-notOp :: Int -> Sum
-notOp whichQubit =
-  mkSum IBZ
-    $ \oldVec IZ ->
-        let bit = FromBitVec (GetBit (GetBitVec oldVec) (IntLit whichQubit))
-        in
-        MkVec
-          (GetAmp oldVec)
-          (GetPhase oldVec)
-          (OverwriteBits (GetBitVec oldVec)
-                         whichQubit
-                         (InvertBitVec (ToBitVec 1 bit)))
+intLit :: Int -> Expr Int
+intLit = IntLit
 
-controlledNot :: Int -> Int -> Sum
-controlledNot controlPosition notPosition =
-  withControlBit controlPosition (notOp notPosition)
+overwriteBits :: Expr EBitVec -> Int -> Expr EBitVec -> Expr EBitVec
+overwriteBits = OverwriteBits
 
-withControlBit :: Int -> Sum -> Sum
-withControlBit controlPosition = control predicate
-  where
-    predicate :: Expr EVec -> Expr Bool
-    predicate oldVec =
-      GetBit (GetBitVec oldVec) (IntLit controlPosition) .==. bvLit 1 0x1
+getBitRange :: Expr EBitVec -> Int -> Int -> Expr EBitVec
+getBitRange = GetBitRange
 
--- control :: Expr Bool -> Expr EVec -> Expr EVec
--- control = Control
---
--- omega :: Expr (IntTy a) -> Expr (IntTy a) -> Expr (Coeff a)
--- omega = Omega
---
--- intLit :: Int -> Expr (IntTy a)
--- intLit = IntLit
---
--- overwriteBits :: Expr (BitVec a) -> Int -> Expr (BitVec a) -> Expr (BitVec a)
--- overwriteBits = OverwriteBits
---
--- getBitRange :: Expr (BitVec a) -> Int -> Int -> Expr (BitVec a)
--- getBitRange = GetBitRange
---
--- toBitVec :: Int -> Expr (IntTy a) -> Expr (BitVec a)
--- toBitVec = ToBitVec
---
--- fromBitVec :: Expr EBitVec -> Expr Int
--- fromBitVec = FromBitVec
---
--- fromInt :: Expr Int -> Expr EReal
--- fromInt = FromInt
---
--- scalar :: EReal -> Expr EReal
--- scalar = Scalar
---
--- (*.) :: Expr EReal -> Expr EVec -> Expr EVec
--- (*.) = ScalarMult
---
--- (.+.) :: Expr b -> Expr b -> Expr b
--- (.+.) = Add
---
--- (.-.) :: Expr b -> Expr b -> Expr b
--- (.-.) = Sub
---
--- (.==.) :: Expr b -> Expr b -> Expr Bool
--- (.==.) = Equal
---
---
+toBitVec :: Int -> Expr Int -> Expr EBitVec
+toBitVec = ToBitVec
+
+fromBitVec :: Expr EBitVec -> Expr Int
+fromBitVec = FromBitVec
+
+fromInt :: Expr Int -> Expr EReal
+fromInt = FromInt
+
+(*.) :: Expr EReal -> Expr EVec -> Expr EVec
+(*.) = ScalarMult
+
+getBit = GetBit
+invertBitVec = InvertBitVec
+getBitVec = GetBitVec
+ampFactor = AmpFactor
+getAmp = GetAmp
+getPhase = GetPhase
+mkVec = MkVec
+
