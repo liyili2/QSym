@@ -9,8 +9,8 @@ hadamard :: Int -> Sum
 hadamard whichQubit =
   let qubitsAppliedTo = 1
   in
-  mkSum (2 :! IBZ)         -- Upper bounds for additional indices for summation
-    $ \oldVec (j :| IZ) -> -- Additional indices for summation
+  mkSum [2]          -- Upper bounds for additional indices for summation
+    $ \oldVec [j] -> -- Additional indices for summation
         let bit = fromBitVec (getBit (getBitVec oldVec) (intLit whichQubit))
         in
         mkVec
@@ -22,8 +22,8 @@ hadamard whichQubit =
 
 notOp :: Int -> Sum
 notOp whichQubit =
-  mkSum IBZ
-    $ \oldVec IZ ->
+  mkSum []
+    $ \oldVec [] ->
         let bit = fromBitVec (getBit (getBitVec oldVec) (intLit whichQubit))
         in
         mkVec
