@@ -11,7 +11,7 @@ hadamard whichQubit =
   in
   mkSum [2]          -- Upper bounds for additional indices for summation
     $ \oldVec [j] -> -- Additional indices for summation
-        let bit = fromBitVec (getBit (getBitVec oldVec) (intLit whichQubit))
+        let bit = fromBitVec (getBit (getBitVec oldVec) whichQubit)
         in
         mkVec
           (ampFactor 1 * getAmp oldVec)
@@ -24,7 +24,7 @@ notOp :: Int -> Sum
 notOp whichQubit =
   mkSum []
     $ \oldVec [] ->
-        let bit = fromBitVec (getBit (getBitVec oldVec) (intLit whichQubit))
+        let bit = fromBitVec (getBit (getBitVec oldVec) whichQubit)
         in
         mkVec
           (getAmp oldVec)
@@ -42,7 +42,7 @@ withControlBit controlPosition = control predicate
   where
     predicate :: Expr EVec -> Expr Bool
     predicate oldVec =
-      getBit (getBitVec oldVec) (intLit controlPosition) .==. bvLit 1 0x1
+      getBit (getBitVec oldVec) controlPosition .==. bvLit 1 0x1
 
 -- import QSym.Logic.Memory
 -- import QSym.Logic.Operation

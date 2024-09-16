@@ -153,8 +153,9 @@ data SExpr a
   | DoubleLit Double
   deriving (Show, Functor, Foldable)
 
-unvar :: SMT a b -> String
+unvar :: (Show a, HasCallStack) => SMT a b -> String
 unvar (SExpr (Var v)) = v
+unvar x = error $ "unvar " ++ show x
 
 -- |SMT
 data SMT a b

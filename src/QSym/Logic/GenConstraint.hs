@@ -186,9 +186,9 @@ toMemEntry vec =
 
 fromMemEntry :: MemEntry -> Expr EVec
 fromMemEntry (MemEntry x y z) =
-  mkVec (IR.var (unvar x))
-        (IR.var (unvar y))
-        (IR.var (unvar (bvSMT z)))
+  mkVec (IR.mkSMT x)
+        (IR.mkSMT y)
+        (IR.mkSMT z)
 
 sumToSMTGen :: Sum -> Gen (Block Name)
 sumToSMTGen sum = do

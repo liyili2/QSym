@@ -2,6 +2,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module QSym.Logic.IR
   (Nat (..)
@@ -22,6 +24,7 @@ module QSym.Logic.IR
 
   ,Expr
   ,var
+  ,mkSMT
   ,unMkVec
 
   ,EVec
@@ -115,9 +118,16 @@ data EVec
 unMkVec :: Expr b -> (Expr EReal, Expr EReal, Expr EBitVec)
 unMkVec (MkVec x y z) = (x, y, z)
 
+type family SmtTy a where
+  SmtTy Int = SMT Name Int
+  SmtTy EReal = SMT Name Int
+  SmtTy EBitVec = BitVector Name
+  SmtTy EVec = ()
+
 -- (Do not export the value constructors for Expr.)
 data Expr b where
   Var :: String -> Expr a
+  MkSMT :: SmtTy a -> Expr a
 
   BitVecVar :: Int -> String -> Expr EBitVec
 
@@ -135,7 +145,7 @@ data Expr b where
   AmpFactor :: Int -> Expr EReal
 
   -- Bit vectors --
-  GetBit :: Expr EBitVec -> Expr Int -> Expr EBitVec
+  GetBit :: Expr EBitVec -> Int -> Expr EBitVec
   OverwriteBits :: Expr EBitVec -> Int -> Expr EBitVec -> Expr EBitVec
   GetBitRange :: Expr EBitVec -> Int -> Int -> Expr EBitVec
   InvertBitVec :: Expr EBitVec -> Expr EBitVec
@@ -158,17 +168,19 @@ data Expr b where
   Div :: Expr b -> Expr b -> Expr b
 
   -- Booleans --
-  Equal :: Expr b -> Expr b -> Expr Bool
+  Equal :: Show (SmtTy b) => Expr b -> Expr b -> Expr Bool
   BoolLit :: Bool -> Expr Bool
   And :: [Expr Bool] -> Expr Bool
   Or :: [Expr Bool] -> Expr Bool
   Not :: Expr Bool -> Expr Bool
   -- deriving (Show)
 
+deriving instance Show (SmtTy a) => Show (Expr a)
+
 var :: String -> Expr a
 var = Var
 
-(.==.) :: Expr a -> Expr a -> Expr Bool
+(.==.) :: Show (SmtTy a) => Expr a -> Expr a -> Expr Bool
 (.==.) = Equal
 
 instance Num (Expr EReal) where
@@ -252,9 +264,11 @@ ampFactor = AmpFactor
 getAmp = GetAmp
 getPhase = GetPhase
 mkVec = MkVec
+mkSMT = MkSMT
 
 intToSMT :: Expr Int -> SMT Name Int
 intToSMT (Var x) = SMT.var x
+intToSMT (MkSMT x) = x
 intToSMT (IntLit i) = SMT.int i
 intToSMT (Add x y) = SMT.add (intToSMT x) (intToSMT y)
 intToSMT (Sub x y) = SMT.sub (intToSMT x) (intToSMT y)
@@ -264,6 +278,7 @@ intToSMT (FromBitVec x) = SMT.bv2nat $ bitVecToSMT x
 
 realToSMT :: Expr EReal -> SMT Name Int
 realToSMT (Var x) = SMT.var x
+realToSMT (MkSMT x) = x
 realToSMT (FromInt i) = intToSMT i
 realToSMT (Add x y) = SMT.add (realToSMT x) (realToSMT y)
 realToSMT (Sub x y) = SMT.sub (realToSMT x) (realToSMT y)
@@ -279,13 +294,25 @@ realToSMT (GetPhase x) =
     MkVec _ phase _ -> realToSMT phase
 
 bitVecToSMT :: Expr EBitVec -> BitVector Name
+bitVecToSMT (MkSMT x) = x
 bitVecToSMT (BitVecVar size x) = SMT.int2bv size $ SMT.var x
 bitVecToSMT (GetBitVec x) =
   case x of
     MkVec _ _ bitVec -> bitVecToSMT bitVec
 
+bitVecToSMT (GetBit bv ix) =
+  SMT.getBit (bitVecToSMT bv) (SMT.bvPosition ix)
+
 bitVecToSMT (OverwriteBits bv pos newPart) =
   SMT.overwriteBits (bitVecToSMT bv) (SMT.bvPosition pos) (bitVecToSMT newPart)
+
+bitVecToSMT (InvertBitVec bv) =
+  SMT.invertBitVec $ bitVecToSMT bv
+
+bitVecToSMT (ToBitVec size e) =
+  SMT.int2bv size $ intToSMT e
+
+bitVecToSMT x = error $ "bitVecToSMT: " ++ show x
 
 vecToSMT :: Expr EVec -> BitVector Name
 vecToSMT (MkVec _ _ x) = bitVecToSMT x
