@@ -15,6 +15,7 @@ import QSym.Logic.SMT
 import QSym.Logic.Name
 import QSym.Logic.Gen
 import QSym.Logic.Memory
+import QSym.Logic.Builtins
 import QSym.Logic.IR as IR
 -- import QSym.Logic.Operation
 -- import QSym.Logic.Builtins
@@ -149,19 +150,21 @@ blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
   (physStart, physEnd) <- rangeToPhysicalIndices lhs
-  undefined
+  sumToSMTGen $ hadamard physStart
 
   -- genOperationBlock (hadamard physStart)
 blockConstraints (SDafny _) = pure mempty
 
 -- TODO: Generalize this
 blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })])) = do
-    undefined
-  -- let Partition [controlRange] = part
-  -- (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
-  --
-  -- let Partition [bodyRange] = x
-  -- (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
+  
+  let Partition [controlRange] = part
+  (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
+
+  let Partition [bodyRange] = x
+  (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
+
+  sumToSMTGen $ controlledNot physStartControl physStartBody
   --
   -- predicateFn <- interpretGuardExp param guardExp
   -- let bodyFn = interpretIntFn param lambdaBody
@@ -181,18 +184,22 @@ toMemEntry vec =
     (realToSMT y)
     (bitVecToSMT z)
 
-realToSMT = undefined
-bitVecToSMT = undefined
-
 fromMemEntry :: MemEntry -> Expr EVec
 fromMemEntry (MemEntry x y z) =
   mkVec (IR.var (unvar x))
         (IR.var (unvar y))
         (IR.var (unvar (bvSMT z)))
 
+sumToSMTGen :: Sum -> Gen (Block Name)
+sumToSMTGen sum = do
+  mem <- get
+  let (mem', smt) = sumToSMT mem sum
+  put mem'
+  pure (one smt)
+
 sumToSMT :: Memory -> Sum -> (Memory, SMT Name Bool)
 sumToSMT mem (Sum bounds f) =
-  (undefined, smt)
+  (mem', smt)
   where
     mem' = extendMemory mem (EN bounds) step
 

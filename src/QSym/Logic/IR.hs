@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module QSym.Logic.IR
   (Nat (..)
@@ -9,6 +10,9 @@ module QSym.Logic.IR
   ,Sum
   ,pattern Sum
   ,mkSum
+
+  ,realToSMT
+  ,bitVecToSMT
 
   ,control
   ,Controlled
@@ -47,6 +51,11 @@ module QSym.Logic.IR
   where
 
 import Data.Ratio
+
+import qualified QSym.Logic.SMT as SMT
+import QSym.Logic.SMT (SMT, BitVector)
+
+import QSym.Logic.Name
 
 import Prettyprinter
 
@@ -109,6 +118,8 @@ unMkVec (MkVec x y z) = (x, y, z)
 -- (Do not export the value constructors for Expr.)
 data Expr b where
   Var :: String -> Expr a
+
+  BitVecVar :: Int -> String -> Expr EBitVec
 
   MkVec ::
     Expr EReal ->   -- | Amplitude
@@ -241,4 +252,41 @@ ampFactor = AmpFactor
 getAmp = GetAmp
 getPhase = GetPhase
 mkVec = MkVec
+
+intToSMT :: Expr Int -> SMT Name Int
+intToSMT (Var x) = SMT.var x
+intToSMT (IntLit i) = SMT.int i
+intToSMT (Add x y) = SMT.add (intToSMT x) (intToSMT y)
+intToSMT (Sub x y) = SMT.sub (intToSMT x) (intToSMT y)
+intToSMT (Mul x y) = SMT.mul (intToSMT x) (intToSMT y)
+intToSMT (Div x y) = SMT.div (intToSMT x) (intToSMT y)
+intToSMT (FromBitVec x) = SMT.bv2nat $ bitVecToSMT x
+
+realToSMT :: Expr EReal -> SMT Name Int
+realToSMT (Var x) = SMT.var x
+realToSMT (FromInt i) = intToSMT i
+realToSMT (Add x y) = SMT.add (realToSMT x) (realToSMT y)
+realToSMT (Sub x y) = SMT.sub (realToSMT x) (realToSMT y)
+realToSMT (Mul x y) = SMT.mul (realToSMT x) (realToSMT y)
+realToSMT (Div x y) = SMT.div (realToSMT x) (realToSMT y)
+realToSMT (Omega x y) = SMT.omega (intToSMT x) (intToSMT y)
+realToSMT (AmpFactor n) = SMT.pow SMT.invSqrt2 (SMT.int n)
+realToSMT (GetAmp x) =
+  case x of
+    MkVec amp _ _ -> realToSMT amp
+realToSMT (GetPhase x) =
+  case x of
+    MkVec _ phase _ -> realToSMT phase
+
+bitVecToSMT :: Expr EBitVec -> BitVector Name
+bitVecToSMT (BitVecVar size x) = SMT.int2bv size $ SMT.var x
+bitVecToSMT (GetBitVec x) =
+  case x of
+    MkVec _ _ bitVec -> bitVecToSMT bitVec
+
+bitVecToSMT (OverwriteBits bv pos newPart) =
+  SMT.overwriteBits (bitVecToSMT bv) (SMT.bvPosition pos) (bitVecToSMT newPart)
+
+vecToSMT :: Expr EVec -> BitVector Name
+vecToSMT (MkVec _ _ x) = bitVecToSMT x
 
