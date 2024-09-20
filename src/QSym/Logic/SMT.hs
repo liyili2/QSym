@@ -478,6 +478,7 @@ smtPreamble :: IsString a => Block a
 smtPreamble =
   smtBlock
     [setLogic "ALL"
+    ,setOption ":timeout" "5000"
     -- ,setOption ":produce-models" "true"
     ,setOption ":pp.decimal" "true"
     -- ,setOption ":produce-unsat-cores" "true"
