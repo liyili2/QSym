@@ -114,7 +114,7 @@ toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
           initialDecls = declareMemory bitSize initialMem
 
           go = do --mainPart <- blockListConstraints (reverse (inBlock block)) -- TODO: Find a better way than reversing here
-                  mainPart <- blockListConstraints (inBlock block)
+                  mainPart <- blockListConstraints bitSize (inBlock block)
                   lastMem <- get
                   fmap ((initialDecls <> mainPart) <>) (verify initialMem lastMem)
       in
@@ -132,12 +132,16 @@ toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
 --
 --   pure $ declareMemory bitSize mem' <> one (assert smt)
 
-blockListConstraints :: [Stmt ()] -> Gen (Block Name)
-blockListConstraints [] = pure mempty
-blockListConstraints (x:xs) = do
-  prop <- blockConstraints x
-  rest <- mconcat <$> traverse blockConstraints xs
-  pure (prop <> rest)
+blockListConstraints :: Int -> [Stmt ()] -> Gen (Block Name)
+-- blockListConstraints bitSize [] = pure mempty
+blockListConstraints bitSize xs = do
+  mconcat <$> traverse go xs
+  where
+    go s = do
+      r <- blockConstraints s
+      mem <- get
+      let memDecl = declareMemory bitSize mem
+      pure (memDecl <> r)
 
 blockConstraints :: Stmt () -> Gen (Block Name)
 blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
