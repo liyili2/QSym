@@ -195,7 +195,7 @@ sumToSMTGen sum = do
   mem <- get
   let (mem', smt) = sumToSMT mem sum
   put mem'
-  pure (one smt)
+  pure (one (assert smt))
 
 sumToSMT :: Memory -> Sum -> (Memory, SMT Name Bool)
 sumToSMT mem (Sum bounds f) =

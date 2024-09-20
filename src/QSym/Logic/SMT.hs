@@ -510,6 +510,10 @@ omegaSpec =
     [ assert $ forAll [("a", "Real"), ("b", "Real"), ("c", "Real")] $
         eq (mul (omega (var "a") (var "b")) (omega (var "c") (var "b")))
            (omega (add (var "a") (var "c")) (var "b"))
+
+    , assert $ forAll [("b", "Real")] $
+        eq (omega (int 0) (var "b"))
+           (int 1)
     ]
 
 invSqrt2 :: IsString a => SMT a Int
