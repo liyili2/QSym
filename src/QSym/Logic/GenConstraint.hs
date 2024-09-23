@@ -173,11 +173,14 @@ blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block bod
 
   pure $ map (withControlBit physStartControl) bodyConstraints
 
-blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })) = do
+blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], ePhase = phase, eBases = [lambdaBody] })) = do
   let Partition [bodyRange] = x
   (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
 
-  pure [convertLambda param physStartBody physEndBody lambdaBody]
+  let bodySum = convertLambda param physStartBody physEndBody lambdaBody
+      updatedPhaseSum = withPhaseFunction (convertPhaseExp param phase) bodySum
+
+  pure [bodySum]
 
 blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
     -- TODO: Implement the control here
@@ -185,7 +188,11 @@ blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
 
 blockConstraints s = error $ "unimplemented: " ++ show s
 
--- convertBool :: 
+convertPhaseExp :: Var -> PhaseExp -> (Expr Int -> Expr Int)
+convertPhaseExp param PhaseWildCard e = e
+convertPhaseExp param PhaseZ e = e
+convertPhaseExp param (PhaseOmega x y) e =
+  trace ("PhaseOmega " ++ show (x, y)) e
 
 convertLambda :: Var -> Int -> Int -> Exp () -> Sum
 convertLambda param startQubit endQubit body =

@@ -21,6 +21,7 @@ module QSym.Logic.IR
   ,control
   ,Controlled
   ,pattern Controlled
+  ,withPhaseFunction
   ,cCondition
   ,cBody
 
@@ -118,6 +119,19 @@ mkSum bounds f =
   MkSum bounds $ \vec ixs ->
     MkControlled (BoolLit True) (f vec ixs)
 
+withPhaseFunction :: (Expr Int -> Expr Int) -> Sum -> Sum
+withPhaseFunction phaseF0 (MkSum bounds sumF) =
+  let phaseF = FromInt . phaseF0 . ToInt
+  in
+  MkSum bounds $ \vec ixes ->
+    let MkControlled pred body = sumF vec ixes
+    in
+    MkControlled pred $
+    mkVec
+      (getAmp body)
+      (phaseF (getPhase body))
+      (getBitVec body)
+
 control :: (Expr EVec -> Expr Bool) -> Sum -> Sum
 control predicate (MkSum bounds f) =
   MkSum bounds $ \vec ixs ->
@@ -185,6 +199,7 @@ data Expr b where
 
   -- Integers --
   FromInt :: Expr Int -> Expr EReal
+  ToInt :: Expr EReal -> Expr Int
   IntLit :: Int -> Expr Int
   Omega :: Expr Int -> Expr Int -> Expr EReal
 
@@ -298,10 +313,20 @@ fromInt = FromInt
 
 getBit = GetBit
 invertBitVec = InvertBitVec
-getBitVec = GetBitVec
 ampFactor = AmpFactor
-getAmp = GetAmp
-getPhase = GetPhase
+
+getAmp :: Expr EVec -> Expr EReal
+getAmp (MkVec x _ _) = x
+getAmp e = GetAmp e
+
+getPhase :: Expr EVec -> Expr EReal
+getPhase (MkVec _ x _) = x
+getPhase e = GetPhase e
+
+getBitVec :: Expr EVec -> Expr EBitVec
+getBitVec (MkVec _ _ x) = x
+getBitVec e = GetBitVec e
+
 mkVec = MkVec
 mkSMT = MkSMT
 
