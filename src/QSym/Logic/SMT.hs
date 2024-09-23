@@ -80,6 +80,7 @@ module QSym.Logic.SMT
   ,sin'
   ,pi'
   ,omega
+  ,ampFactor
 
   ,BitVector
   ,BitVecPosition
@@ -504,6 +505,9 @@ omega :: IsString a => SMT a Int -> SMT a Int -> SMT a Int
 omega a b =
   SExpr $ apply "omega" [toSExpr a, toSExpr b]
   -- sin' (2 * pi' * a `div` b)
+
+ampFactor :: IsString a => Int -> SMT a Int
+ampFactor n = pow invSqrt2 (int n)
 
 omegaSpec :: IsString a => Block a
 omegaSpec =

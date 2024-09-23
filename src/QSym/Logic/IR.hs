@@ -310,7 +310,7 @@ realToSMT (Sub x y) = SMT.sub (realToSMT x) (realToSMT y)
 realToSMT (Mul x y) = SMT.mul (realToSMT x) (realToSMT y)
 realToSMT (Div x y) = SMT.div (realToSMT x) (realToSMT y)
 realToSMT (Omega x y) = SMT.omega (intToSMT x) (intToSMT y)
-realToSMT (AmpFactor n) = SMT.pow SMT.invSqrt2 (SMT.int n)
+realToSMT (AmpFactor n) = SMT.ampFactor n
 realToSMT (GetAmp x) =
   case x of
     MkVec amp _ _ -> realToSMT amp
@@ -381,7 +381,7 @@ instance Pretty (SmtTy a) => Pretty (Expr a) where
     Not x -> prettyCall "not" [pretty x]
 
 prettyLambda :: Pretty a => [String] -> a -> Doc ann
-prettyLambda params body = pretty "\\" <> hsep (map pretty params) <> pretty "." <+> pretty body
+prettyLambda params body = pretty "\\" <> sep (map pretty params) <> pretty "." <+> pretty body
 
 prettyCall :: Pretty a => a -> [Doc ann] -> Doc ann
 prettyCall f args = pretty f <> parens (hsep (punctuate (pretty ",") args))

@@ -89,7 +89,7 @@ allTests =
       { testName = "BellPair"
       , testFile = "tests/BellPair.qfy"
       , testQubitCount = 2
-      , testVerify = verifyBellPair
+      , testVerify = verifyBellPair 2
       }
   ]
 
@@ -122,31 +122,55 @@ main = do
   executeSMTLoudly z3Config smt
   pure ()
 
-verifyBellPair :: VerifySatisfies
-verifyBellPair input output = do
+vectorExactlyEqual :: Int -> Memory -> Int -> Maybe (SMT Name Int) -> Maybe (SMT Name Int) -> SMT Name Decl
+vectorExactlyEqual bitSize mem bitVec0 amp phase =
+  let bitVec = int bitVec0
+  in
+  assert $ forEach mem $ \ixs ->
+    let entry = indexMemoryByList mem ixs
+    in
+    implies (eq (bvSMT (memEntryBitVec entry)) (bvSMT (int2bv bitSize bitVec)))
+            (and' $ concat
+              [eqMaybe (memEntryAmp entry) amp
+              ,eqMaybe (memEntryPhase entry) phase
+              ])
+  where
+    eqMaybe x (Just y) = [eq x y]
+    eqMaybe _ Nothing = []
+
+verifyBellPair :: Int -> VerifySatisfies
+verifyBellPair bitSize input output = do
   pure $ smtBlock
     [ -- Input
-      assert $ existsIx input $ \ixs ->
-        let entry = indexMemoryByList input ixs
-        in
-        eq (bvSMT (memEntryBitVec entry))
-                  (bvSMT (int2bv 2 0x0))
-        
-      -- assert $ setToMemEntry input [int 0]
-      --           $ MemEntry
-      --               { memEntryAmp = 1
-      --               , memEntryPhase = 1
-      --               , memEntryBitVec = int2bv 2 0x0
-      --               }
+      vectorExactlyEqual bitSize input 0x0 (Just 1) Nothing
+
+
+      -- Output
+    , vectorExactlyEqual bitSize output 0x0 (Just (ampFactor 1)) Nothing
+    , vectorExactlyEqual bitSize output 0x3 (Just (ampFactor 1)) Nothing
+
+
+      -- assert $ existsIx input $ \ixs ->
+      --   let entry = indexMemoryByList input ixs
+      --   in
+      --   eq (bvSMT (memEntryBitVec entry))
+      --      (bvSMT (int2bv 2 0x0))
+      --   
+      -- -- assert $ setToMemEntry input [int 0]
+      -- --           $ MemEntry
+      -- --               { memEntryAmp = 1
+      -- --               , memEntryPhase = 1
+      -- --               , memEntryBitVec = int2bv 2 0x0
+      -- --               }
 
       -- Output
       -- TODO: Improve the interface used here
 
-    , assert $ existsIx input $ \ixs ->
-        let entry = indexMemoryByList input ixs
-        in
-        eq (bvSMT (memEntryBitVec entry))
-                  (bvSMT (int2bv 2 0x0))
+    -- , assert $ existsIx input $ \ixs ->
+    --     let entry = indexMemoryByList input ixs
+    --     in
+    --     eq (bvSMT (memEntryBitVec entry))
+    --               (bvSMT (int2bv 2 0x0))
 
     -- , assert $ existsIx output $ \ixs ->
     --     let entry = indexMemoryByList output ixs
