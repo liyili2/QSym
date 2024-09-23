@@ -5,6 +5,8 @@ module QSym.Logic.Builtins
 
 import QSym.Logic.IR
 
+-- import Debug.Trace
+
 hadamard :: Int -> Sum
 hadamard whichQubit =
   let qubitsAppliedTo = 1
@@ -22,20 +24,45 @@ hadamard whichQubit =
 
 notOp :: Int -> Sum
 notOp whichQubit =
-  mkSum []
-    $ \oldVec [] ->
-        let bit = fromBitVec (getBit (getBitVec oldVec) whichQubit)
-        in
-        mkVec
-          (getAmp oldVec)
-          (getPhase oldVec)
-          (overwriteBits (getBitVec oldVec)
-                         whichQubit
-                         (invertBitVec (toBitVec 1 bit)))
+  unaryOp invertBitVec whichQubit whichQubit
+  -- mkSum []
+  --   $ \oldVec [] ->
+  --       let bit = getBitRange (getBitVec oldVec) whichQubit whichQubit
+  --       in
+  --       mkVec
+  --         (getAmp oldVec)
+  --         (getPhase oldVec)
+  --         (overwriteBits (getBitVec oldVec)
+  --                        whichQubit
+  --                        (invertBitVec bit))
 
 controlledNot :: Int -> Int -> Sum
 controlledNot controlPosition notPosition =
   withControlBit controlPosition (notOp notPosition)
+
+unaryOp ::
+  (Expr EBitVec -> Expr EBitVec) ->
+  Int -> Int -> Sum
+unaryOp op startQubit endQubit =
+  mkSum []
+    $ \oldVec [] ->
+      let oldBits = getBitVec oldVec
+          argBits = getBitRange oldBits startQubit (endQubit - 1)
+          newBits = op argBits
+      in
+      mkVec
+        (getAmp oldVec)
+        (getPhase oldVec)
+        (overwriteBits oldBits startQubit newBits)
+
+unaryIntOp ::
+  (Expr Int -> Expr Int) ->
+  Int -> Int -> Sum
+unaryIntOp op startQubit endQubit =
+  let bitCount = endQubit - startQubit -- + 1
+  in
+  -- trace ("bitCount = " ++ show bitCount) $
+  unaryOp (toBitVec bitCount . op . fromBitVec) startQubit endQubit
 
 withControlBit :: Int -> Sum -> Sum
 withControlBit controlPosition = control predicate

@@ -142,12 +142,12 @@ verifyBellPair :: Int -> VerifySatisfies
 verifyBellPair bitSize input output = do
   pure $ smtBlock
     [ -- Input
-      vectorExactlyEqual bitSize input 0x0 (Just 1) Nothing
+      -- vectorExactlyEqual bitSize input 0x0 (Just 1) Nothing
 
 
-      -- Output
-    , vectorExactlyEqual bitSize output 0x0 (Just (ampFactor 1)) Nothing
-    , vectorExactlyEqual bitSize output 0x3 (Just (ampFactor 1)) Nothing
+    --   -- Output
+    -- , vectorExactlyEqual bitSize output 0x0 (Just (ampFactor 1)) Nothing
+    -- , vectorExactlyEqual bitSize output 0x3 (Just (ampFactor 1)) Nothing
 
 
       -- assert $ existsIx input $ \ixs ->

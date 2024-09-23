@@ -33,6 +33,12 @@ module QSym.Logic.IR
   ,EBitVec
   ,EReal
 
+  ,mul
+  ,add
+  ,sub
+  ,modulo
+  ,neg
+
   ,bvLit
   ,and'
   ,(.&&.)
@@ -190,6 +196,7 @@ data Expr b where
   Sub :: Expr b -> Expr b -> Expr b
   Mul :: Expr b -> Expr b -> Expr b
   Div :: Expr b -> Expr b -> Expr b
+  Mod :: Expr b -> Expr b -> Expr b
 
   -- Booleans --
   Equal :: (Pretty (SmtTy b), Show (SmtTy b)) => Expr b -> Expr b -> Expr Bool
@@ -232,12 +239,19 @@ instance Num (Expr Int) where
 bvLit :: Int -> Int -> Expr EBitVec
 bvLit n = ToBitVec n . IntLit
 
-mul :: Expr EReal -> Expr EReal -> Expr EReal
+mul :: Expr a -> Expr a -> Expr a
 mul (AmpFactor a) (AmpFactor b) = AmpFactor (a + b)
 mul a (AmpFactor b) = mul (AmpFactor b) a
 mul a (Mul b c) = mul (mul a b) c
 mul (Mul a b) c = mul (mul a b) c
 mul a b = Mul a b
+
+add = Add
+sub = Sub
+modulo = Mod
+
+neg :: Expr Int -> Expr Int
+neg = Sub (intLit 0)
 
 and' :: [Expr Bool] -> Expr Bool
 and' xs0 =
@@ -299,6 +313,7 @@ intToSMT (Add x y) = SMT.add (intToSMT x) (intToSMT y)
 intToSMT (Sub x y) = SMT.sub (intToSMT x) (intToSMT y)
 intToSMT (Mul x y) = SMT.mul (intToSMT x) (intToSMT y)
 intToSMT (Div x y) = SMT.div (intToSMT x) (intToSMT y)
+intToSMT (Mod x y) = SMT.mod' (intToSMT x) (intToSMT y)
 intToSMT (FromBitVec x) = SMT.bv2nat $ bitVecToSMT x
 
 realToSMT :: Expr EReal -> SMT Name Int
@@ -328,11 +343,20 @@ bitVecToSMT (GetBitVec x) =
 bitVecToSMT (GetBit bv ix) =
   SMT.getBit (bitVecToSMT bv) (SMT.bvPosition ix)
 
+bitVecToSMT (GetBitRange bv start end) =
+  SMT.bvGetRange (bitVecToSMT bv) (SMT.bvPosition start) (SMT.bvPosition end)
+
 bitVecToSMT (OverwriteBits bv pos newPart) =
   SMT.overwriteBits (bitVecToSMT bv) (SMT.bvPosition pos) (bitVecToSMT newPart)
 
 bitVecToSMT (InvertBitVec bv) =
   SMT.invertBitVec $ bitVecToSMT bv
+
+bitVecToSMT (Add x y) = SMT.bvAdd (bitVecToSMT x) (bitVecToSMT y)
+bitVecToSMT (Sub x y) = SMT.bvSub (bitVecToSMT x) (bitVecToSMT y)
+bitVecToSMT (Mul x y) = SMT.bvMul (bitVecToSMT x) (bitVecToSMT y)
+bitVecToSMT (Mod x y) = SMT.bvMod (bitVecToSMT x) (bitVecToSMT y)
+-- bitVecToSMT (Div x y) = SMT.div (bitVecToSMT x) (bitVecToSMT y)
 
 bitVecToSMT (ToBitVec size e) =
   SMT.int2bv size $ intToSMT e
@@ -373,6 +397,7 @@ instance Pretty (SmtTy a) => Pretty (Expr a) where
     Sub x y -> prettyCall "sub" [pretty x, pretty y]
     Mul x y -> prettyCall "mul" [pretty x, pretty y]
     Div x y -> prettyCall "div" [pretty x, pretty y]
+    Mod x y -> prettyCall "mod" [pretty x, pretty y]
 
     Equal x y -> prettyCall "equal" [pretty x, pretty y]
     BoolLit x -> pretty x

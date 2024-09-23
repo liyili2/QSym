@@ -97,6 +97,10 @@ module QSym.Logic.SMT
   ,bvAnd
   ,bvShiftL
   ,bvGetRange
+  ,bvAdd
+  ,bvSub
+  ,bvMul
+  ,bvMod
   ,invertBitVec
   ,ones
   ,getBit
@@ -625,6 +629,22 @@ bvAnd = \(BitVector n x) (BitVector m y) ->
 bvGetRange :: IsString a => BitVector a -> BitVecPosition -> BitVecPosition -> BitVector a
 bvGetRange (BitVector n x) (BitVecPosition start) (BitVecPosition end) =
   BitVector (end - start + 1) $ SExpr $ apply' (apply "_" ["extract", IntLit end, IntLit start]) [toSExpr x]
+
+bvAdd :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvAdd = \(BitVector n x) (BitVector m y) ->
+  BitVector (max n m) $ SExpr $ apply "bvadd" [toSExpr x, toSExpr y]
+
+bvSub :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvSub = \(BitVector n x) (BitVector m y) ->
+  BitVector (max n m) $ SExpr $ apply "bvsub" [toSExpr x, toSExpr y]
+
+bvMul :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvMul = \(BitVector n x) (BitVector m y) ->
+  BitVector (max n m) $ SExpr $ apply "bvmul" [toSExpr x, toSExpr y]
+
+bvMod :: IsString a => BitVector a -> BitVector a -> BitVector a
+bvMod = \(BitVector n x) (BitVector m y) ->
+  BitVector (max n m) $ SExpr $ apply "bvsmod" [toSExpr x, toSExpr y]
 
 -- overwriteIndexBits :: IsString a => Int -> SMT a Int -> BitVecPosition -> BitVector a -> SMT a Int
 -- overwriteIndexBits overallSize ix (BitVecPosition pos) newMiddleVec@(BitVector middleSize newMiddle) =

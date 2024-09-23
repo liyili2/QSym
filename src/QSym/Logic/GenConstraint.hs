@@ -131,7 +131,7 @@ toplevelSmtM :: VerifySatisfies -> Int -> Toplevel () -> Gen ([Sum], Block Name)
 toplevelSmtM verify bitSize toplevel@(Toplevel (Inl qm)) =
   case qmBody qm of
     Just block -> do
-      sums <- blockListConstraints bitSize (inBlock block)
+      sums <- blockListConstraints (inBlock block)
       block <- sumsToSmtM verify (toplevelEnv bitSize toplevel) sums
       pure (sums, block)
 
@@ -142,9 +142,9 @@ toplevelSmt satisfies bitSize toplevel =
   in
   runGen (toplevelSmtM satisfies bitSize toplevel) env initialMem
 
-blockListConstraints :: Int -> [Stmt ()] -> Gen [Sum]
--- blockListConstraints bitSize [] = pure mempty
-blockListConstraints bitSize xs = mconcat <$> traverse blockConstraints xs
+blockListConstraints :: [Stmt ()] -> Gen [Sum]
+-- blockListConstraints [] = pure mempty
+blockListConstraints xs = mconcat <$> traverse blockConstraints xs
 
 -- TODO: Separate out the `State` part from `Gen` and use the part without
 -- it here.
@@ -165,22 +165,64 @@ blockConstraints (Partition [lhs] :*=: EHad) = do
 blockConstraints (SDafny _) = pure mempty
 
 -- TODO: Generalize this
-blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block [x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })])) = do
-  
+blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block body)) = do
+  bodyConstraints <- blockListConstraints body
+
   let Partition [controlRange] = part
   (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
 
-  let Partition [bodyRange] = x
-  (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
+  pure $ map (withControlBit physStartControl) bodyConstraints
+  -- (Qafny.Block [x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })])
+  -- let Partition [controlRange] = part
+  -- (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
+  --
+  -- let Partition [bodyRange] = x
+  -- (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
+  --
+  -- pure [controlledNot physStartControl physStartBody]
 
-  pure [controlledNot physStartControl physStartBody]
   --
   -- predicateFn <- interpretGuardExp param guardExp
   -- let bodyFn = interpretIntFn param lambdaBody
   --
   -- genOperationBlock $ controlled' physStartControl predicateFn $ numericOp bodyFn physStartBody
   -- genOperationBlock (controlledNot physStartControl physStartNot)
+blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })) = do
+  let Partition [bodyRange] = x
+  (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
+
+  pure [convertLambda param physStartBody physEndBody lambdaBody]
 blockConstraints s = error $ "unimplemented: " ++ show s
+
+convertLambda :: Var -> Int -> Int -> Exp () -> Sum
+convertLambda param startQubit endQubit body =
+  unaryIntOp (convertLambdaBody param body) startQubit endQubit
+
+convertLambdaBody :: Var -> Exp () -> (Expr Int -> Expr Int)
+convertLambdaBody param (ENum i) _ = intLit i
+convertLambdaBody param (EVar v) arg
+  | v == param = arg
+  | otherwise = error $ "convertLambdaBody: EVar " ++ show v
+convertLambdaBody param (EOp1 op x) arg = convertOp1 param op x arg
+convertLambdaBody param (EOp2 op x y) arg = convertOp2 param op x y arg
+
+convertOp1 :: Var -> Op1 -> Exp () -> (Expr Int -> Expr Int)
+convertOp1 param ONeg x arg = neg (convertLambdaBody param x arg)
+
+convertOp2 :: Var -> Op2 -> Exp () -> Exp () -> (Expr Int -> Expr Int)
+convertOp2 param op x y arg =
+  case op of
+    OAdd -> go IR.add
+    OSub -> go IR.sub
+    OMul -> go IR.mul
+    OMod -> go IR.modulo
+  where
+    go f = f (convertLambdaBody param x arg) (convertLambdaBody param y arg)
+
+-- smtBinOp ::
+--   (BitVector Name -> BitVector Name -> BitVector Name) ->
+-- smtBinOp op = undefined
+
 
 -- TODO: Move to another module --
 

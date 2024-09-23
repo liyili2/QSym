@@ -143,6 +143,7 @@ executable QSym
                    QSym.Logic.SMTBackend
                    QSym.Logic.Builtins
                    QSym.Logic.Gen
+                   QSym.Logic.IR
                    QSym.Logic.Memory
                    QSym.Logic.Operation
                    QSym.Logic.Name
