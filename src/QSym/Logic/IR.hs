@@ -94,12 +94,12 @@ pattern Sum bounds f <- MkSum bounds f
 
 instance Pretty Sum where
   pretty (Sum bounds f) =
-    pretty "sum" <> parens (hsep $ punctuate (pretty ",") (pretty "i" : zipWith (fmap pretty . showRange) indexVars bounds)) <> parens (pretty body)
+    pretty "sum" <> parens (hsep $ punctuate (pretty ",") (pretty oldMemIx : zipWith (fmap pretty . showRange) indexVars bounds)) <> parens (pretty body)
     -- prettyCall "sum" (map pretty (zipWith showRange indexVars bounds) : pretty body)
     where
-
-      indexVars = map (:[]) $ take (length bounds) "jkabcd"
-      vecName = "mem[i]"
+      oldMemIx = "j"
+      indexVars = map (:[]) $ take (length bounds) "kabcd"
+      vecName = "mem[" ++ oldMemIx ++ "]"
       body = f (Var vecName) (map Var indexVars)
 
       showRange var upperBound = var ++ "[1 to " ++ show upperBound ++ "]"
@@ -348,7 +348,7 @@ instance Pretty (SmtTy a) => Pretty (Expr a) where
     MkSMT x -> pretty x
     BitVecVar _size x -> pretty x
     MkVec amp phase bv ->
-      parens (pretty amp <+> pretty "*" <+> pretty "exp" <> parens (pretty phase) <+> pretty bv)
+      parens (pretty amp <+> pretty "*" <+> pretty "exp" <> parens (pretty "i" <+> pretty "*" <+> pretty phase) <+> pretty bv)
 
     GetAmp x -> prettyCall "getAmp" [pretty x]
     GetPhase x -> prettyCall "getPhase" [pretty x]
