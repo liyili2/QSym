@@ -5,6 +5,9 @@ module QSym.Logic.GenConstraint
   ,Verify (..)
   ,VerifySatisfies
   ,astSMT
+  ,toplevelEnv
+  ,toplevelSmt
+  ,sumsToSmt
   )
   where
 
@@ -39,12 +42,12 @@ import Prettyprinter
 
 import Debug.Trace
 
-astSMT :: Verify -> Int -> AST -> Block Name
+astSMT :: Verify -> Int -> AST -> ([Sum], Block Name)
 astSMT verify bitSize ast =
-  smtPreamble <> mkDeclarations block <> block <> smtCheck
+  (sums, smtPreamble <> mkDeclarations block <> block <> smtCheck)
      -- <> smtBlock [symbol "(get-info :reason-unknown)", checkSAT, symbol "(get-unsat-core)"]
   where
-    block = astConstraints verifyEqs bitSize ast
+    (sums, block) = astConstraints verifyEqs bitSize ast
 
     smtCheck =
       smtBlock
@@ -92,9 +95,9 @@ astSMT verify bitSize ast =
 --
 --   pure $ sum (map (selectWithBitVector mem) allPossibilities)
 
-astConstraints :: VerifySatisfies -> Int -> AST -> Block Name
+astConstraints :: VerifySatisfies -> Int -> AST -> ([Sum], Block Name)
 astConstraints verify bitSize =
-  mconcat . map (toplevelConstraints verify bitSize)
+  mconcat . map (toplevelSmt verify bitSize)
 
 initialMemory :: Int -> Memory
 initialMemory bitSize =
@@ -105,45 +108,47 @@ initialMemory bitSize =
     (currentVar "mem-phase")
     (currentVar "mem-bit-vec")
 
-toplevelConstraints :: VerifySatisfies -> Int -> Toplevel () -> Block Name
-toplevelConstraints verify bitSize (Toplevel (Inl qm)) =
+sumsToSmt :: VerifySatisfies -> Env -> [Sum] -> Block Name
+sumsToSmt verify env sums =
+  let bitSize = envBitSize env
+      initialMem = initialMemory bitSize
+  in
+  runGen (sumsToSmtM verify env sums) env initialMem
+
+sumsToSmtM :: VerifySatisfies -> Env -> [Sum] -> Gen (Block Name)
+sumsToSmtM verify env sums = do
+  let bitSize = envBitSize env
+      initialMem = initialMemory bitSize
+      initialDecls = declareMemory bitSize initialMem
+  mainPart <- traverse (sumToSMTGen bitSize) sums
+  lastMem <- get
+  fmap ((initialDecls <> mconcat mainPart) <>) (verify initialMem lastMem)
+
+toplevelEnv :: Int -> Toplevel () -> Env
+toplevelEnv bitSize (Toplevel (Inl qm)) = buildEnv bitSize qm
+
+toplevelSmtM :: VerifySatisfies -> Int -> Toplevel () -> Gen ([Sum], Block Name)
+toplevelSmtM verify bitSize toplevel@(Toplevel (Inl qm)) =
   case qmBody qm of
-    Nothing -> mempty
-    Just block ->
-      let initialMem = initialMemory bitSize
-          initialDecls = declareMemory bitSize initialMem
+    Just block -> do
+      sums <- blockListConstraints bitSize (inBlock block)
+      block <- sumsToSmtM verify (toplevelEnv bitSize toplevel) sums
+      pure (sums, block)
 
-          go = do --mainPart <- blockListConstraints (reverse (inBlock block)) -- TODO: Find a better way than reversing here
-                  mainPart <- blockListConstraints bitSize (inBlock block)
-                  lastMem <- get
-                  fmap ((initialDecls <> mainPart) <>) (verify initialMem lastMem)
-      in
-      traceShow block $ runGen go (buildEnv bitSize qm) initialMem
+toplevelSmt :: VerifySatisfies -> Int -> Toplevel () -> ([Sum], Block Name)
+toplevelSmt satisfies bitSize toplevel =
+  let env = toplevelEnv bitSize toplevel
+      initialMem = initialMemory bitSize
+  in
+  runGen (toplevelSmtM satisfies bitSize toplevel) env initialMem
 
--- genOperationBlock :: Operation -> Gen (Block Name)
--- genOperationBlock op = do
---   mem <- get
---
---   let (mem', smt) = runOperation mem step op
---
---   put mem'
---
---   bitSize <- envBitSize <$> ask
---
---   pure $ declareMemory bitSize mem' <> one (assert smt)
-
-blockListConstraints :: Int -> [Stmt ()] -> Gen (Block Name)
+blockListConstraints :: Int -> [Stmt ()] -> Gen [Sum]
 -- blockListConstraints bitSize [] = pure mempty
-blockListConstraints bitSize xs = do
-  mconcat <$> traverse go xs
-  where
-    go s = do
-      r <- blockConstraints s
-      mem <- get
-      let memDecl = declareMemory bitSize mem
-      pure (memDecl <> r)
+blockListConstraints bitSize xs = mconcat <$> traverse blockConstraints xs
 
-blockConstraints :: Stmt () -> Gen (Block Name)
+-- TODO: Separate out the `State` part from `Gen` and use the part without
+-- it here.
+blockConstraints :: Stmt () -> Gen [Sum]
 blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
 blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
@@ -154,7 +159,7 @@ blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
   (physStart, physEnd) <- rangeToPhysicalIndices lhs
-  sumToSMTGen $ hadamard physStart
+  pure [hadamard physStart]
 
   -- genOperationBlock (hadamard physStart)
 blockConstraints (SDafny _) = pure mempty
@@ -168,7 +173,7 @@ blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block [x 
   let Partition [bodyRange] = x
   (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
 
-  sumToSMTGen $ controlledNot physStartControl physStartBody
+  pure [controlledNot physStartControl physStartBody]
   --
   -- predicateFn <- interpretGuardExp param guardExp
   -- let bodyFn = interpretIntFn param lambdaBody
@@ -194,12 +199,13 @@ fromMemEntry (MemEntry x y z) =
         (IR.mkSMT y)
         (IR.mkSMT z)
 
-sumToSMTGen :: Sum -> Gen (Block Name)
-sumToSMTGen sum = do
+sumToSMTGen :: Int -> Sum -> Gen (Block Name)
+sumToSMTGen bitSize sum = do
   mem <- get
   let (mem', smt) = sumToSMT mem sum
+  let memDecl = declareMemory bitSize mem'
   put mem'
-  pure (one (assert smt))
+  pure (memDecl <> one (assert smt))
 
 sumToSMT :: Memory -> Sum -> (Memory, SMT Name Bool)
 sumToSMT mem (Sum bounds f) =
