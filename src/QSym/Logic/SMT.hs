@@ -712,6 +712,9 @@ instance (IsString a, Pretty a) => Pretty (SomeSMT a) where
 instance (IsString a, Pretty a) => Pretty (Block a) where
   pretty (Block xs) = vcat $ map pretty xs
 
+instance (IsString a, Pretty a) => Pretty (BitVector a) where
+  pretty (BitVector _ x) = pretty x
+
 -- convertProp :: LExprProp -> SBool
 -- convertProp (Prop xs) = foldr (.&&) sTrue (map convertConjunct xs)
 --

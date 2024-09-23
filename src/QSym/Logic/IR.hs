@@ -4,6 +4,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 
 module QSym.Logic.IR
   (Nat (..)
@@ -60,6 +62,8 @@ import QSym.Logic.SMT (SMT, BitVector)
 
 import QSym.Logic.Name
 
+import Control.Monad.State
+
 import Prettyprinter
 
 data Nat = Z | S Nat
@@ -88,6 +92,14 @@ data Sum where
 -- constructor.
 pattern Sum bounds f <- MkSum bounds f
 
+instance Pretty Sum where
+  pretty (Sum bounds f) =
+    prettyCall "sum" [pretty bounds, pretty body]
+    where
+      indexVars = map (:[]) $ take (length bounds) "ijkabcd"
+      vecName = "mem"
+      body = f (Var vecName) (map Var indexVars)
+
 mkSum ::
   [Int] ->
   (Expr EVec -> [Expr Int] -> Expr EVec) ->
@@ -111,6 +123,13 @@ data Controlled a =
 
 pattern Controlled c b <- MkControlled c b
 
+instance (Pretty (SmtTy a)) => Pretty (Controlled a) where
+  pretty (Controlled (BoolLit True) body) = pretty body
+
+  pretty (Controlled cond body) =
+    prettyCall "controlled" [pretty cond, pretty body]
+
+
 data EReal
 data EBitVec
 data EVec
@@ -119,6 +138,7 @@ unMkVec :: Expr b -> (Expr EReal, Expr EReal, Expr EBitVec)
 unMkVec (MkVec x y z) = (x, y, z)
 
 type family SmtTy a where
+  SmtTy Bool = SMT Name Bool
   SmtTy Int = SMT Name Int
   SmtTy EReal = SMT Name Int
   SmtTy EBitVec = BitVector Name
@@ -168,19 +188,19 @@ data Expr b where
   Div :: Expr b -> Expr b -> Expr b
 
   -- Booleans --
-  Equal :: Show (SmtTy b) => Expr b -> Expr b -> Expr Bool
+  Equal :: (Pretty (SmtTy b), Show (SmtTy b)) => Expr b -> Expr b -> Expr Bool
   BoolLit :: Bool -> Expr Bool
   And :: [Expr Bool] -> Expr Bool
   Or :: [Expr Bool] -> Expr Bool
   Not :: Expr Bool -> Expr Bool
   -- deriving (Show)
 
-deriving instance Show (SmtTy a) => Show (Expr a)
+deriving instance (Pretty (SmtTy a), Show (SmtTy a)) => Show (Expr a)
 
 var :: String -> Expr a
 var = Var
 
-(.==.) :: Show (SmtTy a) => Expr a -> Expr a -> Expr Bool
+(.==.) :: (Pretty (SmtTy a), Show (SmtTy a)) => Expr a -> Expr a -> Expr Bool
 (.==.) = Equal
 
 instance Num (Expr EReal) where
@@ -316,4 +336,63 @@ bitVecToSMT x = error $ "bitVecToSMT: " ++ show x
 
 vecToSMT :: Expr EVec -> BitVector Name
 vecToSMT (MkVec _ _ x) = bitVecToSMT x
+
+instance Pretty (SmtTy a) => Pretty (Expr a) where
+  pretty = \case
+    Var x -> pretty x
+    MkSMT x -> pretty x
+    BitVecVar _size x -> pretty x
+    MkVec amp phase bv ->
+      parens (pretty amp <+> pretty "*" <+> pretty "exp" <> parens (pretty phase) <+> pretty bv)
+
+    GetAmp x -> prettyCall "getAmp" [pretty x]
+    GetPhase x -> prettyCall "getPhase" [pretty x]
+    GetBitVec x -> prettyCall "getBitVec" [pretty x]
+
+    AmpFactor i -> prettyCall "ampFactor" [pretty i]
+
+    GetBit x y -> prettyCall "getBit" [pretty x, pretty y]
+    OverwriteBits x y z -> prettyCall "overwriteBits" [pretty x, pretty y, pretty z]
+    GetBitRange x y z -> prettyCall "getBitRange" [pretty x, pretty y, pretty z]
+    InvertBitVec x -> prettyCall "invertBitVec" [pretty x]
+
+    ToBitVec x y -> prettyCall "toBitVec" [pretty x, pretty y]
+    FromBitVec x -> prettyCall "fromBitVec" [pretty x]
+
+    FromInt x -> pretty x
+    IntLit x -> pretty x
+    Omega x y -> prettyCall "omega" [pretty x, pretty y]
+
+    ScalarMult x y -> prettyCall "scalarMult" [pretty x, pretty y]
+    Add x y -> prettyCall "add" [pretty x, pretty y]
+    Sub x y -> prettyCall "sub" [pretty x, pretty y]
+    Mul x y -> prettyCall "mul" [pretty x, pretty y]
+    Div x y -> prettyCall "div" [pretty x, pretty y]
+
+    Equal x y -> prettyCall "equal" [pretty x, pretty y]
+    BoolLit x -> pretty x
+    And xs -> prettyCall "and" (map pretty xs)
+    Or xs -> prettyCall "or" (map pretty xs)
+    Not x -> prettyCall "not" [pretty x]
+
+prettyCall :: Pretty a => a -> [Doc ann] -> Doc ann
+prettyCall f args = pretty f <> parens (hsep (punctuate (pretty ",") args))
+
+----
+
+-- newtype Fresh a = Fresh (State Int a)
+--   deriving (Functor, Applicative, Monad)
+--
+-- runFresh :: Fresh a -> a
+-- runFresh (Fresh m) = evalState m 0
+--
+-- fresh :: Fresh Int
+-- fresh = do
+--   n <- Fresh get
+--   Fresh $ modify (+1)
+--   pure n
+
+-- prettyPrint :: Expr a -> Fresh (Doc ann)
+-- prettyPrint = \case
+--   Var x -> pure $ pretty x
 
