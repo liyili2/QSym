@@ -25,16 +25,6 @@ hadamard whichQubit =
 notOp :: Int -> Sum
 notOp whichQubit =
   unaryOp invertBitVec whichQubit whichQubit
-  -- mkSum []
-  --   $ \oldVec [] ->
-  --       let bit = getBitRange (getBitVec oldVec) whichQubit whichQubit
-  --       in
-  --       mkVec
-  --         (getAmp oldVec)
-  --         (getPhase oldVec)
-  --         (overwriteBits (getBitVec oldVec)
-  --                        whichQubit
-  --                        (invertBitVec bit))
 
 controlledNot :: Int -> Int -> Sum
 controlledNot controlPosition notPosition =
@@ -59,9 +49,8 @@ unaryIntOp ::
   (Expr Int -> Expr Int) ->
   Int -> Int -> Sum
 unaryIntOp op startQubit endQubit =
-  let bitCount = endQubit - startQubit -- + 1
+  let bitCount = endQubit - startQubit
   in
-  -- trace ("bitCount = " ++ show bitCount) $
   unaryOp (toBitVec bitCount . op . fromBitVec) startQubit endQubit
 
 withControlBit :: Int -> Sum -> Sum

@@ -95,8 +95,8 @@ allTests =
 
 main :: IO ()
 main = do
-  let test = lookupTest allTests "BellPair"
-  -- let test = lookupTest allTests "Teleportation"
+  -- let test = lookupTest allTests "BellPair"
+  let test = lookupTest allTests "Teleportation"
 
   -- TODO: read filename in from the command line
 

@@ -125,6 +125,10 @@ getLociSizesStmt (SIf (GEPartition part Nothing) part' (Qafny.Block xs)) =
   toLociSizes part
     <> toLociSizes part'
     <> mconcat (map getLociSizesStmt xs)
+getLociSizesStmt (SIf (GClass boolExp) part (Qafny.Block xs)) =
+  getLociSizesExp boolExp
+    <> toLociSizes part
+    <> mconcat (map getLociSizesStmt xs)
 getLociSizesStmt (lhs :*=: rhs) = toLociSizes lhs <> getLociSizesExp rhs
 getLociSizesStmt s = error $ show s
 
@@ -143,6 +147,7 @@ getLociSizesExp (EVar x) = mempty
 getLociSizesExp (EOp2 _ x y) = getLociSizesExp x <> getLociSizesExp y
 getLociSizesExp (ELambda (LambdaF { eBases = xs })) = mconcat $ map getLociSizesExp xs
 getLociSizesExp EHad = mempty
+getLociSizesExp (EMeasure x) = toLociSizes x
 getLociSizesExp e = error $ show e
 
 toLocus :: Partition -> Locus

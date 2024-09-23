@@ -152,9 +152,9 @@ blockConstraints :: Stmt () -> Gen [Sum]
 blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
 blockConstraints (SCall f xs) = error "SCall"
 blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
-blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
-
 blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
+
+blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
@@ -172,27 +172,20 @@ blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block bod
   (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
 
   pure $ map (withControlBit physStartControl) bodyConstraints
-  -- (Qafny.Block [x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })])
-  -- let Partition [controlRange] = part
-  -- (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
-  --
-  -- let Partition [bodyRange] = x
-  -- (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
-  --
-  -- pure [controlledNot physStartControl physStartBody]
 
-  --
-  -- predicateFn <- interpretGuardExp param guardExp
-  -- let bodyFn = interpretIntFn param lambdaBody
-  --
-  -- genOperationBlock $ controlled' physStartControl predicateFn $ numericOp bodyFn physStartBody
-  -- genOperationBlock (controlledNot physStartControl physStartNot)
 blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], eBases = [lambdaBody] })) = do
   let Partition [bodyRange] = x
   (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
 
   pure [convertLambda param physStartBody physEndBody lambdaBody]
+
+blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
+    -- TODO: Implement the control here
+  blockListConstraints body
+
 blockConstraints s = error $ "unimplemented: " ++ show s
+
+-- convertBool :: 
 
 convertLambda :: Var -> Int -> Int -> Exp () -> Sum
 convertLambda param startQubit endQubit body =
