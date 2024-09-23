@@ -61,7 +61,7 @@ data Token
   | TAnd | TOr | TNot
 
   -- Arithmetics
-  | TMul | TAdd | TDiv | TMod | TSub
+  | TMul | TAdd | TDiv | TMod | TSub | TPow
 
   -- Amplitudes
   | TISqrt | TSin | TCos
