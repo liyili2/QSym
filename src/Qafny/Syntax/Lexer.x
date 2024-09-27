@@ -100,6 +100,7 @@ token :-
   \+               { emit $  TAdd                }
   \-               { emit $  TSub                }
   \/               { emit $  TDiv                }
+  \^               { emit $  TPow                }
   \%               { emit $  TMod                }
   \[               { emit $  TLBracket           }
   \]               { emit $  TRBracket           }

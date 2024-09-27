@@ -86,6 +86,7 @@ dafny                 { ( _, L.TDafny $$  ) }
 '/'                   { ( _, L.TDiv       ) }
 '-'                   { ( _, L.TSub       ) }
 '*'                   { ( _, L.TMul       ) }
+'^'                   { ( _, L.TPow       ) }
 '\%'                  { ( _, L.TMod       ) }
 '|'                   { ( _, L.TBar       ) }
 '('                   { ( _, L.TLPar      ) }
@@ -306,6 +307,10 @@ lamExpr :: { Exp' }
     { let (bPhase, bBases) = $2
       in ELambda (LambdaF { bPhase, bBases, ePhase = $4, eBases = $5 })
     }
+  | "λ" lamBinder "=>" pspec mayket(expr) 
+    { let (bPhase, bBases) = $2
+      in ELambda (LambdaF { bPhase, bBases, ePhase = $4, eBases = $5 })
+    }
   | "λ" '(' lamBinder "=>" pspec tuple(expr) ')'
     { let (bPhase, bBases) = $3
       in ELambda (LambdaF { bPhase, bBases, ePhase = $5, eBases = $6 })
@@ -356,7 +361,7 @@ arith :: { Op2 }
  | '/'                      { ODiv }
  | '*'                      { OMul }
  | '\%'                     { OMod }
-
+ | '^'                      { OPow }
 
 atomic                                                                      
   : digits                            { ENum $1                }

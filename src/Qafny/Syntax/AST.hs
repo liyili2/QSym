@@ -114,6 +114,7 @@ data Op2
   = OAnd
   | OOr
   | OAdd
+  | OPow
   | ODiv
   | OSub
   | OMul
@@ -297,6 +298,7 @@ showExp (EOp2 op e1 e2) = showExp e1 ++ sop ++ showExp e2
         ODiv -> " / "
         OSub -> " - "
         OMul -> " * "
+        OPow -> " ^ "
         _    -> undefined
 showExp e = show e
 
@@ -520,6 +522,7 @@ instance Num (Exp ()) where
   e1 + e2 = EOp2 OAdd e1 e2
   e1 - e2 = EOp2 OSub e1 e2
   e1 * e2 = EOp2 OMul e1 e2
+  e1 ^ e2 = EOp2 OPow e1 e2
   negate = (0 -)
   abs = undefined
   signum = undefined
