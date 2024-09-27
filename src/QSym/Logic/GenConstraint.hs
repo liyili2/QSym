@@ -43,10 +43,12 @@ import Debug.Trace
 
 astSMT :: Verify -> Int -> AST -> ([Sum], Block Name)
 astSMT verify bitSize ast =
-  (sums, smtPreamble <> mkDeclarations block <> block <> smtCheck)
+  (sums, smtPreamble sqrtArgs <> mkDeclarations block <> block <> smtCheck)
      -- <> smtBlock [symbol "(get-info :reason-unknown)", checkSAT, symbol "(get-unsat-core)"]
   where
     (sums, block) = astConstraints verifyEqs bitSize ast
+
+    sqrtArgs = getSqrts sums
 
     smtCheck =
       smtBlock
@@ -155,6 +157,10 @@ blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
 
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 
+-- blockConstraints (Partition [lhs] :*=: EQft b) = do
+--   (physStart, physEnd) <- rangeToPhysicalIndices lhs
+--   pure [qft b physStart]
+
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
   (physStart, physEnd) <- rangeToPhysicalIndices lhs
@@ -218,11 +224,6 @@ convertOp2 param op x y arg =
   where
     go f = f (convertLambdaBody param x arg) (convertLambdaBody param y arg)
 
--- smtBinOp ::
---   (BitVector Name -> BitVector Name -> BitVector Name) ->
--- smtBinOp op = undefined
-
-
 -- TODO: Move to another module --
 
 toMemEntry :: Expr EVec -> MemEntry
@@ -261,110 +262,6 @@ sumToSMT mem (Sum bounds f) =
             Controlled fControl fBody = f (fromMemEntry oldEntry) (map IR.var newIxs)
         in
         setToMemEntry mem' ixs (toMemEntry fBody)
-
--- allPossibleBitVectors :: IsString a => Int -> [BitVector a]
--- allPossibleBitVectors size = map (int2bv size . int) [0 .. 2 ^ size]
---
--- -- TODO: Generalize to partitions with more than one element
--- interpretGuardExp :: String -> GuardExp -> Gen (SMT Name Int -> SMT Name Bool)
--- interpretGuardExp paramName (GEPartition (Partition [range]) expMaybe) = do
---   (physStart, physEnd) <- rangeToPhysicalIndices range
---   totalBits <- fmap envBitSize ask
---   let bitCount = physEnd - physStart
---   let partPredicate arg =
---           not' (eq (bv2nat (bvGetRange (int2bv totalBits arg) (bvPosition physStart) (bvPosition physEnd)))
---                (int 0))
---
---   let expPredicate arg =
---         case expMaybe of
---           Nothing -> true
---           Just exp -> interpretBoolFn paramName exp arg
---
---   trace ("range = " ++ show (physStart, physEnd)) $ pure $ \arg -> partPredicate arg ^&&^ expPredicate arg
---
--- interpretIntFn :: String -> Exp () -> (SMT Name Int -> SMT Name Int)
--- interpretIntFn paramName = go
---   where
---     go (ENum i) = \_ -> int i
---     go (EVar v)
---       | v /= paramName = error $ "Unknown variable: " ++ show v
---       | otherwise = \arg -> arg
---     go (EOp1 op x) = \arg -> interpretIntOp1 op (go x arg)
---     go (EOp2 op x y) = \arg -> interpretIntOp2 op (go x arg) (go y arg)
---
--- interpretBoolFn :: String -> Exp () -> (SMT Name Int -> SMT Name Bool)
--- interpretBoolFn paramName = go
---   where
---     go (EBool True) = \_ -> true
---     go (EBool False) = \_ -> false
---     go (EOp1 op x) = \arg -> interpretBoolOp1 op (go x arg)
---     go (EOp2 op x y) =
---       case op2ArgType op of
---         IntType -> \arg -> interpretIntBoolOp2 op (interpretIntFn paramName x arg) (interpretIntFn paramName y arg)
---         BoolType -> \arg -> interpretBoolBoolOp2 op (go x arg) (go y arg)
---
--- interpretInt :: Exp () -> SMT Name Int
--- interpretInt (ENum i) = int i
--- interpretInt (EVar v) = symbol $ mangleName v
--- interpretInt (EOp1 op x) = interpretIntOp1 op (interpretInt x)
--- interpretInt (EOp2 op x y) = interpretIntOp2 op (interpretInt x) (interpretInt y)
---
--- interpretBool :: Exp () -> SMT Name Bool
--- interpretBool (EBool True) = true
--- interpretBool (EBool False) = false
--- interpretBool (EOp1 op x) = interpretBoolOp1 op (interpretBool x)
--- interpretBool (EOp2 op x y) =
---   case op2ArgType op of
---     IntType -> interpretIntBoolOp2 op (interpretInt x) (interpretInt y)
---     BoolType -> interpretBoolBoolOp2 op (interpretBool x) (interpretBool y)
---
--- interpretBoolOp1 :: Op1 -> (SMT Name Bool -> SMT Name Bool)
--- interpretBoolOp1 ONot = not'
---
--- interpretIntOp1 :: Op1 -> (SMT Name Int -> SMT Name Int)
--- interpretIntOp1 ONeg = negate
---
--- data ArgType = IntType | BoolType
---
--- op2ArgType :: Op2 -> ArgType
--- op2ArgType OAdd = IntType
--- op2ArgType ODiv = IntType
--- op2ArgType OSub = IntType
--- op2ArgType OMul = IntType
--- op2ArgType OMod = IntType
--- op2ArgType OAnd = BoolType
--- op2ArgType OOr = BoolType
--- op2ArgType OLt = IntType
--- op2ArgType OLe = IntType
--- op2ArgType OGt = IntType
--- op2ArgType OGe = IntType
--- op2ArgType OEq = IntType
---
--- interpretIntOp2 :: Op2 -> (SMT Name Int -> SMT Name Int -> SMT Name Int)
--- interpretIntOp2 OAdd = add
--- interpretIntOp2 ODiv = div
--- interpretIntOp2 OSub = sub
--- interpretIntOp2 OMul = mul
--- interpretIntOp2 OMod = mod'
---
--- interpretBoolBoolOp2 :: Op2 -> (SMT Name Bool -> SMT Name Bool -> SMT Name Bool)
--- interpretBoolBoolOp2 OAnd = (^&&^)
--- interpretBoolBoolOp2 OOr = (^||^)
--- interpretBoolBoolOp2 ONor = \x y -> not' (x ^||^ y)
---
--- interpretIntBoolOp2 :: Op2 -> (SMT Name Int -> SMT Name Int -> SMT Name Bool)
--- interpretIntBoolOp2 OLt = lt
--- interpretIntBoolOp2 OLe = lte
--- interpretIntBoolOp2 OGt = gt
--- interpretIntBoolOp2 OGe = gte
--- interpretIntBoolOp2 OEq = eq
---
--- mangleName :: String -> Name
--- mangleName = BuiltinName . (<>"_")
---
--- applyLambda :: LambdaF (Exp ()) -> Exp () -> Exp ()
--- applyLambda (LambdaF { bBases = [paramVar], eBases = [body] }) arg =
---   subst [(paramVar, arg)] body
 
 type VerifySatisfies =
   Memory -> -- Input

@@ -22,6 +22,16 @@ hadamard whichQubit =
                          whichQubit
                          (toBitVec qubitsAppliedTo j))
 
+-- qft :: Bool -> Int -> Sum
+-- qft b startQubit =
+--   mkSum []
+--     \oldVec [] ->
+--        let bit = fromBitVec (getBit (getBitVec oldVec) whichQubit)
+--        in
+--         mkVec
+--           (ampFactor 1 * getAmp oldVec)
+--           (omega (bit * 
+
 notOp :: Int -> Sum
 notOp whichQubit =
   unaryOp invertBitVec whichQubit whichQubit

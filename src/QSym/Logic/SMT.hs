@@ -82,6 +82,8 @@ module QSym.Logic.SMT
   ,omega
   ,ampFactor
 
+  ,Sqrts (..)
+
   ,BitVector
   ,BitVecPosition
   ,bitVectorSize
@@ -146,6 +148,7 @@ import GHC.Stack
 
 data SExpr a
   = Atom a
+  | Sqrt Int
   | Var String
   | ForAll [(String, String)] (SExpr a) -- TODO: Use a better approach for names
   | Exists [(String, String)] (SExpr a)
@@ -479,8 +482,8 @@ setInfo = Decl . apply "set-info" . map Atom . flatten
 setOption :: IsString a => a -> a -> SMT a Decl
 setOption keyword attr_value = Decl $ apply "set-option" [Atom keyword, Atom attr_value]
 
-smtPreamble :: IsString a => Block a
-smtPreamble =
+smtPreamble :: IsString a => [Int] -> Block a
+smtPreamble sqrtArgs =
   smtBlock
     [setLogic "ALL"
     ,setOption ":timeout" "5000"
@@ -493,7 +496,18 @@ smtPreamble =
     ,assert $ gt "sqrt2" (int 0)
 
     ,declareFun "omega" ["Real", "Real"] "Real"
-    ] <> omegaSpec
+    ] <> omegaSpec <> mconcat (map sqrtSpec sqrtArgs)
+
+sqrtSpec :: IsString a => Int -> Block a
+sqrtSpec n =
+  let sqrtName = fromString $ "sqrt" ++ show n
+      sqrtSymbol = symbol sqrtName
+  in
+  smtBlock
+    [declareConst sqrtName "Real"
+    ,assert $ eq (mul sqrtSymbol sqrtSymbol) (int n)
+    ,assert $ gt sqrtSymbol (int 0)
+    ]
 
 -- TODO: Improve type safety
 double :: Double -> SMT a Int
@@ -531,6 +545,9 @@ invSqrt2 = div (int 1) sqrt2
 sqrt2 :: IsString a => SMT a Int
 sqrt2 = SExpr $ Atom "sqrt2"
 
+sqrtN :: IsString a => Int -> SMT a Int
+sqrtN = SExpr . Sqrt
+
 checkSAT :: IsString a => SMT a Decl
 checkSAT = Decl $ apply "check-sat" []
 
@@ -540,6 +557,35 @@ getModel = Decl $ apply "get-model" []
 -- NOTE: Do not export
 toSExpr :: SMT a b -> SExpr a
 toSExpr (SExpr e) = e
+
+class Sqrts a where
+  getSqrts :: a -> [Int]
+
+instance Sqrts a => Sqrts [a] where
+  getSqrts xs = concatMap getSqrts xs
+
+instance Sqrts (SExpr a) where
+  getSqrts (Atom {}) = []
+  getSqrts (Sqrt i) = [i]
+  getSqrts (Var {}) = []
+  getSqrts (ForAll _ e) = getSqrts e
+  getSqrts (Exists _ e) = getSqrts e
+  getSqrts (List xs) = concatMap getSqrts xs
+  getSqrts (BoolLit {}) = []
+  getSqrts (IntLit {}) = []
+  getSqrts (BvLit {}) = []
+  getSqrts (DoubleLit {}) = []
+
+instance Sqrts (SMT a b) where
+  getSqrts (Decl e) = getSqrts e
+  getSqrts (Assert e) = getSqrts e
+  getSqrts (SExpr e) = getSqrts e
+
+instance Sqrts (SomeSMT a) where
+  getSqrts (SomeSMT x) = getSqrts x
+
+instance Sqrts (Block a) where
+  getSqrts (Block xs) = concatMap getSqrts xs
 
 -- | Operations on bit vectors where the size is known "statically" (before
 -- the SMT solver runs).
@@ -702,6 +748,9 @@ selectWithBitVector arr bv =
 instance (IsString a, Pretty a) => Pretty (SExpr a) where
   pretty (Atom x) = pretty x
   pretty (Var v) = pretty v
+
+  pretty (Sqrt n) =
+    pretty $ Atom ("sqrt" ++ show n)
 
   pretty (ForAll bnds body) =
     pretty $ List [Atom "forall", List (map pairToList bnds), body]

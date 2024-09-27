@@ -522,7 +522,7 @@ instance Num (Exp ()) where
   e1 + e2 = EOp2 OAdd e1 e2
   e1 - e2 = EOp2 OSub e1 e2
   e1 * e2 = EOp2 OMul e1 e2
-  e1 ^ e2 = EOp2 OPow e1 e2
+  -- e1 ^ e2 = EOp2 OPow e1 e2
   negate = (0 -)
   abs = undefined
   signum = undefined

@@ -40,6 +40,8 @@ module QSym.Logic.IR
   ,modulo
   ,neg
 
+  ,sqrtN
+
   ,bvLit
   ,and'
   ,(.&&.)
@@ -65,11 +67,15 @@ module QSym.Logic.IR
 import Data.Ratio
 
 import qualified QSym.Logic.SMT as SMT
-import QSym.Logic.SMT (SMT, BitVector)
+import QSym.Logic.SMT (SMT, BitVector, Sqrts (..))
+
+import Control.Lens.Plated
+import Data.Data
+import GHC.Generics
 
 import QSym.Logic.Name
 
-import Control.Monad.State
+import Control.Monad.Writer
 
 import Prettyprinter
 
@@ -119,6 +125,10 @@ mkSum bounds f =
   MkSum bounds $ \vec ixs ->
     MkControlled (BoolLit True) (f vec ixs)
 
+instance Sqrts Sum where
+  getSqrts (MkSum bounds f) =
+    getSqrts $ f (Var "unused") (map intLit bounds)
+
 withPhaseFunction :: (Expr Int -> Expr Int) -> Sum -> Sum
 withPhaseFunction phaseF0 (MkSum bounds sumF) =
   let phaseF = FromInt . phaseF0 . ToInt
@@ -146,6 +156,9 @@ data Controlled a =
     }
 
 pattern Controlled c b <- MkControlled c b
+
+instance Sqrts (Controlled a) where
+  getSqrts (MkControlled a b) = getSqrts a <> getSqrts b
 
 instance (Pretty (SmtTy a)) => Pretty (Controlled a) where
   pretty (Controlled (BoolLit True) body) = pretty body
@@ -188,6 +201,8 @@ data Expr b where
     -- | (1/sqrt(2))^n
   AmpFactor :: Int -> Expr EReal
 
+  Sqrt :: Int -> Expr EReal
+
   -- Bit vectors --
   GetBit :: Expr EBitVec -> Int -> Expr EBitVec
   OverwriteBits :: Expr EBitVec -> Int -> Expr EBitVec -> Expr EBitVec
@@ -220,6 +235,50 @@ data Expr b where
   Or :: [Expr Bool] -> Expr Bool
   Not :: Expr Bool -> Expr Bool
   -- deriving (Show)
+
+-- TODO: Is there any way we could derive this from Plated, or something
+-- similar?
+plateExpr :: Applicative f =>
+  (forall a. Expr a -> f (Expr a)) ->
+  Expr b -> f (Expr b)
+plateExpr f = \case
+  Var x -> pure $ Var x
+  MkSMT x -> pure $ MkSMT x
+  BitVecVar i s -> pure $ BitVecVar i s
+  MkVec a b c -> MkVec <$> f a <*> f b <*> f c
+  GetAmp a -> GetAmp <$> f a
+  GetPhase a -> GetPhase <$> f a
+  GetBitVec a -> GetBitVec <$> f a
+  AmpFactor n -> pure $ AmpFactor n
+  Sqrt n -> pure $ Sqrt n
+  GetBit a i -> GetBit <$> f a <*> pure i
+  OverwriteBits a b c -> OverwriteBits <$> f a <*> pure b <*> f c
+  GetBitRange a b c -> GetBitRange <$> f a <*> pure b <*> pure c
+  InvertBitVec a -> InvertBitVec <$> f a
+  ToBitVec a b -> ToBitVec a <$> f b
+  FromBitVec a -> FromBitVec <$> f a
+  FromInt a -> FromInt <$> f a
+  ToInt a -> ToInt <$> f a
+  IntLit a -> pure $ IntLit a
+  Omega a b -> Omega <$> f a <*> f b
+  ScalarMult a b -> ScalarMult <$> f a <*> f b
+  Add a b -> Add <$> f a <*> f b
+  Sub a b -> Sub <$> f a <*> f b
+  Mul a b -> Mul <$> f a <*> f b
+  Div a b -> Div <$> f a <*> f b
+  Mod a b -> Mod <$> f a <*> f b
+  Equal a b -> Equal <$> f a <*> f b
+  BoolLit a -> pure $ BoolLit a
+  And xs -> And <$> traverse f xs
+  Or xs -> Or <$> traverse f xs
+  Not a -> Not <$> f a
+
+instance Sqrts (Expr a) where
+  getSqrts (Sqrt n) = [n]
+  getSqrts xs = execWriter . plateExpr go $ xs
+    where
+      go e@(Sqrt n) = tell [n] *> pure e
+      go e = pure e
 
 deriving instance (Pretty (SmtTy a), Show (SmtTy a)) => Show (Expr a)
 
@@ -264,6 +323,8 @@ mul a b = Mul a b
 add = Add
 sub = Sub
 modulo = Mod
+
+sqrtN = Sqrt
 
 neg :: Expr Int -> Expr Int
 neg = Sub (intLit 0)
