@@ -26,7 +26,6 @@ import QSym.Logic.IR as IR
 
 import Qafny.Syntax.AST hiding (Range (..), Block)
 import qualified Qafny.Syntax.AST as Qafny
-import Qafny.Syntax.Subst
 
 import Data.Sum
 

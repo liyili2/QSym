@@ -3,7 +3,6 @@ module QSym.Logic.Gen
 
 import Qafny.Syntax.AST hiding (Range (..), Block)
 import qualified Qafny.Syntax.AST as Qafny
-import Qafny.Syntax.Subst
 
 import QSym.Logic.SMT
 import QSym.Logic.Syntax

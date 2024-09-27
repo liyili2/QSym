@@ -9,7 +9,6 @@ import QSym.Logic.Gen
 
 import Qafny.Syntax.AST hiding (Range (..), Block, Var)
 import qualified Qafny.Syntax.AST as Qafny
-import Qafny.Syntax.Subst
 
 import QSym.Utils
 import QSym.ASTLogic

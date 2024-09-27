@@ -91,12 +91,20 @@ allTests =
       , testQubitCount = 2
       , testVerify = verifyBellPair 2
       }
+
+  , Test
+      { testName = "Shors"
+      , testFile = "tests/Shors.qfy"
+      , testQubitCount = 2
+      , testVerify = \_ _ -> pure $ smtBlock [assert true] -- TODO
+      }
   ]
 
 main :: IO ()
 main = do
   -- let test = lookupTest allTests "BellPair"
   let test = lookupTest allTests "Teleportation"
+  -- let test = lookupTest allTests "Shors"
 
   -- TODO: read filename in from the command line
 
