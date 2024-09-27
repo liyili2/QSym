@@ -157,9 +157,9 @@ blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
 
 blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
 
--- blockConstraints (Partition [lhs] :*=: EQft b) = do
---   (physStart, physEnd) <- rangeToPhysicalIndices lhs
---   pure [qft b physStart]
+blockConstraints (Partition [lhs] :*=: EQft b) = do
+  (physStart, physEnd) <- rangeToPhysicalIndices lhs
+  pure [qft b physStart physEnd]
 
 -- TODO: Generalize to applying Hadamard to more than one location
 blockConstraints (Partition [lhs] :*=: EHad) = do
