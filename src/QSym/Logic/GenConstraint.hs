@@ -24,6 +24,9 @@ import QSym.Logic.IR as IR
 -- import QSym.Logic.Builtins
 -- import QSym.Logic.Linear
 
+import Qafny.TTG
+
+import Qafny.Syntax.Subst
 import Qafny.Syntax.AST hiding (Range (..), Block)
 import qualified Qafny.Syntax.AST as Qafny
 
@@ -178,7 +181,7 @@ blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block bod
 
   pure $ map (withControlBit physStartControl) bodyConstraints
 
-blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], ePhase = phase, eBases = [lambdaBody] })) = do
+blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], ePhase = phase, eBases = [lambdaBody :: Exp ()] })) = do
   let Partition [bodyRange] = x
   (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
 
@@ -191,7 +194,20 @@ blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
     -- TODO: Implement the control here
   blockListConstraints body
 
+blockConstraints (SFor _ _ _ (GEPartition (Partition [Qafny.Range x (ENum start) (ENum end)]) _) _ _ (Qafny.Block body)) =
+  genForLoop x (start, end) body
+
 blockConstraints s = error $ "unimplemented: " ++ show s
+
+genForLoop :: Var -> (Int, Int) -> [Stmt ()] -> Gen [Sum]
+genForLoop x (start, end) body
+  | start > end = pure []
+  | otherwise = do
+      let body' = subst [(x, ENum start)] body
+      sums <- blockListConstraints body'
+
+      rest <- genForLoop x (start+1, end) body
+      pure (sums <> rest)
 
 convertPhaseExp :: Var -> PhaseExp -> (Expr Int -> Expr Int)
 convertPhaseExp param PhaseWildCard e = e

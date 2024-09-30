@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Qafny.Syntax.Subst where
 
 import           Data.Bifunctor
@@ -8,11 +10,11 @@ import           Data.Maybe
     (fromMaybe)
 import           Data.Sum
 
-import           Qafny.Analysis.Normalize
-    (Normalizable (normalize))
+-- import           Qafny.Analysis.Normalize
+--     (Normalizable (normalize))
 import           Qafny.Syntax.AST
-import           Qafny.Syntax.EmitBinding
-import           Qafny.Syntax.IR
+-- import           Qafny.Syntax.EmitBinding
+-- import           Qafny.Syntax.IR
 
 
 -- | Perform expression subtitution
@@ -93,28 +95,53 @@ substR env (Range x l r) =
   where
     go = substE env
 
-instance Substitutable EmitBinding where
-  subst a (EmitBinding (Inl r, t)) = EmitBinding (inj (subst a r), t)
-  subst a b                        = b
+substS :: AEnv -> Stmt () -> Stmt ()
+substS [] = id
+substS env = \case
+  SAssert e -> SAssert $ substE env e
+  SCall x args -> SCall x (map (substE env) args)
+  SVar x e -> SVar x (fmap (substE env) e)
+  a ::=: b -> a ::=: substE env b
+  SDafny s -> SDafny s
+  SIf guardExp part block ->
+    SIf (substGE env guardExp) (substP env part) (substB env block)
 
-  fVars (EmitBinding (Inl r, _)) = fVars r
-  fVars _                        = []
+substGE :: AEnv -> GuardExp -> GuardExp
+substGE env (GEPartition part e) =
+  GEPartition (substP env part) (fmap (substE env) e)
+substGE env (GClass e) = GClass (substE env e)
 
-instance Substitutable (Map.Map (Range :+: Loc) EmitData) where
-  subst = substMapKeys
-  fVars = fVarMapKeys
+substB :: AEnv -> Block () -> Block ()
+substB env (Block xs) = Block $ map (substS env) xs
 
-instance (Substitutable a, Normalizable a) => Substitutable (Normalized a) where
-  subst aenv = normalize . subst aenv . denorm
-  fVars = fVars . denorm
+instance Substitutable (Stmt ()) where
+  subst = substS
+  fVars = error "Stmt.fVars"
 
-instance Substitutable TState where
-  subst a (TState{ _sSt = s, _xSt = x, _emitSt = es }) =
-    TState { _sSt = first (subst a) <$> s
-           , _xSt = (first (subst a) <$>) <$> x
-           , _emitSt = Map.mapKeys (subst a) es
-           }
-  fVars (TState{ _sSt = s, _xSt = x, _emitSt = es }) =
-    concatMap (fVars . fst) s
-    ++ fVarMapKeys es
-    ++ concatMap (concatMap $ fVars . fst) (Map.elems x)
+
+-- instance Substitutable EmitBinding where
+--   subst a (EmitBinding (Inl r, t)) = EmitBinding (inj (subst a r), t)
+--   subst a b                        = b
+--
+--   fVars (EmitBinding (Inl r, _)) = fVars r
+--   fVars _                        = []
+--
+-- instance Substitutable (Map.Map (Range :+: Loc) EmitData) where
+--   subst = substMapKeys
+--   fVars = fVarMapKeys
+--
+-- instance (Substitutable a, Normalizable a) => Substitutable (Normalized a) where
+--   subst aenv = normalize . subst aenv . denorm
+--   fVars = fVars . denorm
+--
+-- instance Substitutable TState where
+--   subst a (TState{ _sSt = s, _xSt = x, _emitSt = es }) =
+--     TState { _sSt = first (subst a) <$> s
+--            , _xSt = (first (subst a) <$>) <$> x
+--            , _emitSt = Map.mapKeys (subst a) es
+--            }
+--   fVars (TState{ _sSt = s, _xSt = x, _emitSt = es }) =
+--     concatMap (fVars . fst) s
+--     ++ fVarMapKeys es
+--     ++ concatMap (concatMap $ fVars . fst) (Map.elems x)
+

@@ -83,13 +83,9 @@ library
                      Data.Sum
                      QSym.Logic.SMT
                      QSym.Logic.SMTBackend
-                     Qafny.Analysis.Normalize
-                     Qafny.Analysis.Partial
                      Qafny.Syntax.AST
-                     Qafny.Syntax.EmitBinding
-                     Qafny.Syntax.IR
-                     Qafny.Syntax.Subst
                      Qafny.Syntax.Token
+                     Qafny.Syntax.Subst
                      Qafny.TTG
                      Qafny.Utils.Common
 
@@ -105,6 +101,8 @@ library
                       recursion-schemes,
                       mtl,
                       lens,
+                      fused-effects,
+                      fused-effects-lens,
                       -- dependencies required for interacting with the SMT solver:
                       smtlib-backends,
                       -- smtlib-backends-cvc5 is still experimental
@@ -149,18 +147,12 @@ executable QSym
                    QSym.Logic.Name
                    Qafny.Syntax.AST
                    Qafny.Syntax.ASTUtils
-                   Qafny.Syntax.EmitBinding
-                   Qafny.Syntax.IR
                    Qafny.Syntax.Lexer
                    Qafny.Syntax.Parser
                    Qafny.Syntax.ParserUtils
                    Qafny.Syntax.Render
-                   Qafny.Syntax.Subst
                    Qafny.Syntax.Token
                    Data.Sum
-                   Qafny.Analysis.Interval
-                   Qafny.Analysis.Normalize
-                   Qafny.Analysis.Partial
                    Qafny.TTG
                    Qafny.Utils.Common
 
@@ -177,6 +169,8 @@ executable QSym
                          text >= 2.1,
                          recursion-schemes,
                          lens,
+                         fused-effects,
+                         fused-effects-lens,
                          bytestring,
                          smtlib-backends-process,
                          smtlib-backends,
