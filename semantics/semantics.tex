@@ -73,6 +73,7 @@
 \newcommand {\irSum} {\ir{sum}}
 \newcommand {\irOverwrite} {\ir{overwrite}}
 \newcommand {\irSlice} {\ir{slice}}
+\newcommand {\irGetBit} {\ir{getBit}}
 \newcommand {\irNat} {\ir{nat}}
 \newcommand {\irAmp} {\ir{amp}}
 \newcommand {\irPhase} {\ir{phase}}
@@ -149,7 +150,7 @@ This is first-order logic, together with the special operations mentioned in the
 
 Recall that we will later give two different semantics for IR terms. Each of these will have a different sort of environment. With that in mind, we will say we are given some set $A$ which will serve as a representation of our vectors. Later, we will choose an appropriate set for each of the translations. We will also have a locus environment, $\Env_A$.
 
-\textit{(\textbf{TODO}: More on locus environment.})
+\textit{(\textbf{TODO}: More on locus environment.)}
 
 So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IRep)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
 
@@ -157,10 +158,12 @@ So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IR
   \sem{\ell := H}(\sigma, v) = \irSum_{k=1}^{k=2}
     \left(\begin{aligned}
       &\frac{1}{\sqrt{2}} * \irAmp(v)\\
-      &\irOmega(\irSlice(\irBV(v), \sigma(\ell), \sigma(\ell)), 2^N)\\
+      &\irOmega(\irGetBit(\irBV(v), \sigma(\ell)), 2^N)\\
       &\irOverwrite(\sigma(\ell), \irBV(v), j)
       \end{aligned}\right)
 \]
+
+where $\irGetBit$ is defined as $\irGetBit(a, j) = \irSlice(a, j, j)$.
 
 \section{Linear transformation semantics of IR}
 
