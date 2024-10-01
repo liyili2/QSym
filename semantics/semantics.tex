@@ -1,0 +1,206 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage{proof}
+\usepackage{stmaryrd}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{varwidth}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\usepackage{nameref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{empheq}
+\usepackage[most]{tcolorbox}
+% \usepackage{syntax}
+% \usepackage{simplebnf}
+
+\usetikzlibrary{backgrounds,fit,decorations.pathreplacing,calc}
+\lstset{basicstyle=\ttfamily, mathescape=true, literate={~} {$\sim$}{1}}
+
+\definecolor{lightgreen}{HTML}{90EE90}
+
+% Based on https://tex.stackexchange.com/a/288326/186240
+\newtcbox{\condition}[1][]{%
+    nobeforeafter, math upper, tcbox raise base,
+    enhanced, colframe=blue!30!black,
+    colback=lightgreen, boxrule=1pt,
+    #1}
+
+\newcommand {\ite} {\textsf{if}}
+\newcommand {\Ra} {\Rightarrow}
+\newcommand {\deref} {\textsf{deref}}
+\newcommand {\apply} {\textsf{apply}}
+\newcommand {\ra} {\rightarrow}
+\newcommand {\labinfer} [3] [] {\infer[{\textsc{#1}}]{#2}{#3}}
+\newcommand {\Type} {\textsf{Type}}
+\newcommand {\Nat} {\textsf{Nat}}
+\newcommand {\Bool} {\textsf{Bool}}
+\newcommand {\Vect} {\textsf{Vec}}
+\newcommand {\ok} {\text{ type}}
+\newcommand {\Env} {\textsf{Env}}
+\newcommand {\State} {\textsf{State}}
+\newcommand {\Value} {\textsf{Value}}
+\newcommand {\Locus} {\textsf{Locus}}
+\newcommand {\Loc} {\textsf{Location}}
+\newcommand {\sem} [1] {\llbracket #1 \rrbracket}
+\newcommand {\Psem} [1] {\sem{#1}^p}
+\newcommand {\Tsem} [1] {\sem{#1}^t}
+\newcommand {\Expr} {\textsf{Expr}}
+\newcommand {\Cmd} {\textsf{Stmt}}
+\newcommand {\CmdTy} {\texttt{Stmt}}
+\newcommand {\ExprTy} {\texttt{ExprTy}}
+\newcommand {\Apply} {\textsf{Apply}}
+\newcommand {\fst} {\ensuremath{\textsf{proj}_1}}
+\newcommand {\snd} {\ensuremath{\textsf{proj}_2}}
+\newcommand {\Var} {\textsf{Var}}
+\newcommand {\Index} {\textsf{Index}}
+\newcommand {\Cast} {\textsf{Cast}}
+\newcommand {\Rename} {\textsf{Rename}}
+\newcommand {\Permute} {\textsf{Permute}}
+\newcommand {\loceq} {\approx}
+\newcommand {\sep} {\ast}
+\newcommand {\pointsto} {\mapsto}
+
+\newcommand {\Mem} {\textsf{Mem}}
+
+\newcommand {\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+
+% IR
+\newcommand {\ir} [1] {\textsf{\textbf{#1}}}
+\newcommand {\IRep} {\textsf{IR}}
+\newcommand {\irSum} {\ir{sum}}
+\newcommand {\irOverwrite} {\ir{overwrite}}
+\newcommand {\irSlice} {\ir{slice}}
+\newcommand {\irNat} {\ir{nat}}
+\newcommand {\irAmp} {\ir{amp}}
+\newcommand {\irPhase} {\ir{phase}}
+\newcommand {\irBV} {\ir{bitvec}}
+\newcommand {\irOmega} {\ir{omega}}
+
+\newcommand {\updateMem} {\textsf{updateMem}}
+
+\newcommand {\truthVals} {\Omega}
+
+\begin{document}
+
+\title{QSym Semantics}
+\author{}
+\institute{}
+\maketitle
+
+\section{Overview}
+
+In the following, we define a semantics for QSym by providing a function which takes syntactic QSym terms and produces a function from an ``environment'' to a intermediate representation term. This intermediate representation term can then be transformed into either a traditional linear transformation or into a logical predicate. This logical predicate can be fed into an SMT solver. (Fig.~\ref{fig:sem-fns})
+
+\begin{figure}
+  % https://q.uiver.app/#q=WzAsNCxbMCwxLCJcXHRleHRub3JtYWx7UVN5bX0iXSxbMiwxLCJcXHRleHRub3JtYWx7SVJ9Il0sWzQsMCwiXFx0ZXh0bm9ybWFse0xpbmVhciB0cmFuc2Zvcm1hdGlvbn0iXSxbNCwyLCJcXHRleHRub3JtYWx7TG9naWNhbCBwcmVkaWNhdGV9Il0sWzAsMSwiXFxsbGJyYWNrZXQtXFxycmJyYWNrZXQiXSxbMSwyLCJcXGxsYnJhY2tldC1cXHJyYnJhY2tldF50Il0sWzEsMywiXFxsbGJyYWNrZXQtXFxycmJyYWNrZXRecCIsMl1d
+  \[\begin{tikzcd}
+          &&&& {\textnormal{Linear transformation}} \\
+          {\textnormal{Qafny}} && {\textnormal{IR}} \\
+          &&&& {\textnormal{Logical predicate}}
+          \arrow["{\llbracket-\rrbracket}", from=2-1, to=2-3]
+          \arrow["{\llbracket-\rrbracket^t}", from=2-3, to=1-5]
+          \arrow["{\llbracket-\rrbracket^p}"', from=2-3, to=3-5]
+  \end{tikzcd}\]
+  \caption{Outline of semantic functions}
+  \label{fig:sem-fns}
+\end{figure}
+
+
+\section{Intermediate representation syntax}
+
+QSym internally uses an intermediate representation. A ``abstract sum'' in the intermediate representation has the following syntactic form:
+
+\[
+  \irSum_{\overline{k=a}}^{\overline{k=b}}(v \rightarrow (e; e; e))
+\]
+
+This is the main syntactic form of the IR. Each of the $\overline{k=a}$ at the bottom gives a lower bound for an index called $k$. The corresponding part at the top gives the upper bounds.
+The three expressions are the amplitude, phase and bitvector of the vector represented by the sum body. The $v \rightarrow \cdots$ is a binding form which defines the variable $v$. This variable represents the current vector of the old memory state. The entire sum describes the vectors of the new memory state. $a$ and $b$ both must be natural number literals.
+
+The syntax of IR expressions consist of standard arithmetic operations together with the following additional operations:
+
+\begin{itemize}
+  \item $\irOmega(j, k)$: This gives roots of unity.
+  \item $\irOverwrite(j, a, b)$: This overwrites the bitvector $a$ with the bitvector $b$, starting at index $j$.
+  \item $\irSlice(a, j, k)$: This gets the sub-bitvector from bitvector $a$ starting at index $j$ and ending at index $k$.
+  \item $\irNat(a)$: Interpret the bitvector $a$ as a natural number.
+  \item $\irAmp(v)$: Get the amplitude for vector $v$.
+  \item $\irPhase(v)$: Get the phase for vector $v$.
+  \item $\irBV(v)$: Get the bitvector for vector $v$.
+\end{itemize}
+
+This intermediate representation has two sets of semantics, given by the linear transformation interpretation and the logical predicate interpretation.
+
+\section{Language of logical predicates}
+
+This is first-order logic, together with the special operations mentioned in the IR syntax section.
+
+\section{Translation into IR}
+
+Recall that we will later give two different semantics for IR terms. Each of these will have a different sort of environment. With that in mind, in order to give a definition of environment that works for both, say we are given an arbitrary set $A$. We fix the number of qubits as $N$.
+
+Then, an $\Env_A$ is a pair consisting of an $A^N$ and a mapping $\Locus \ra \mathbb{N} \times \mathbb{N}$. The first item of the pair represents the memory. The second element maps a locus to the range of indices into the memory it represents. \textbf{TODO}: Figure out how to handle loci better.
+
+So, we define a semantic function $\sem{-} : \Env_A \ra (\IRep \ra A^N)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
+
+\[
+  \sem{\ell := H}\sigma = \irSum_{k=1}^{k=2}(v \rightarrow (\frac{1}{\sqrt{2}} * \irAmp(v); \irOmega(v, 2^N); \irOverwrite(\sigma(\ell), v, j)))
+\]
+
+\section{Linear transformation semantics of IR}
+
+\[
+  \Tsem{\irSum_{\overline{k=a}}^{\overline{k=b}} (v \rightarrow (e_1; e_2; e_3))} = u \mapsto \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} \Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)}
+\]
+
+\noindent
+The standard mathematical operations translate directly:
+
+\[
+  \Tsem{a + b}\sigma = \Tsem{a}\sigma + \Tsem{b}\sigma
+\]
+
+\section{Logical predicate semantics of IR}
+
+The environment here is pairs of memory states. The first item is the old memory state and the second is the new memory state. Specifically, we have this where $\truthVals$ represents the set of truth values for the logic: $\Psem{-} : (\Mem \times \Mem) \ra \truthVals$.
+
+If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the indices $\overline{k}$. The amplitude of the (``logical'') vector $u$ is given by $u_1$, the phase is given by $u_2$ and the bitvector is given by $u_3$.
+
+\begin{multline*}
+  \Psem{\irSum_{\overline{k=a}}^{\overline{k=b}} (v \rightarrow (e_1; e_2; e_3))} = (m, m') \mapsto \\
+    \forall j. \forall \overline{k}. (j >= 1) \land (j <= 2^n) \land (\overline{k >= a} \land \overline{k <= b})\\
+    \implies \updateMem(m, m', j, \overline{k}, e_1, e_2, e_3)
+    % m'(j)_1 = \Psem{e_1}(m) \land
+    % m'(j)_2 = \Psem{e_2}(m) \land
+    % m'(j)_3 = \Psem{e_3}(m)
+\end{multline*}
+
+In $\updateMem$, we will write the triple vertically:\\
+
+\[
+\begin{aligned}
+  \updateMem(m, m', j, &\overline{k}, e_1, e_2, e_3) =\\
+    &\left(m'[\overline{k}] = \left(\begin{aligned}
+                          &\Psem{e_1}(m[j], \overline{k})\\
+                          &\Psem{e_2}(m[j], \overline{k})\\
+                          &\Psem{e_3}(m[j], \overline{k})
+    \end{aligned}\right)\right)
+\end{aligned}
+\]
+
+\noindent
+IR expressions are translated as follows
+
+\begin{align*}
+  &\Psem{\irAmp(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_1\\
+  &\Psem{\irPhase(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_2\\
+  &\Psem{\irBV(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_3
+\end{align*}
+
+When $x$ is the variable representing the old vector, we have $\Psem{x}(m, \overline{k}) = m$. When $y$ is a variable representing the index variable $k_a$ from $\overline{k}$, we have $\Psem{x}(m, \overline{k}) = k_a$.
+
+\end{document}
+

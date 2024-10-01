@@ -1,0 +1,2 @@
+[ sum(j, k[1 to 2])((mul(ampFactor(1), getAmp(mem[j])) * exp(i * omega(mul(fromBitVec(getBit(getBitVec(mem[j]), 0)), k), 2)) overwriteBits(getBitVec(mem[j]), 0, toBitVec(1, k))))
+, sum(j)(controlled(and(equal(getBit(getBitVec(mem[j]), 0), toBitVec(1, 1))), (getAmp(mem[j]) * exp(i * getPhase(mem[j])) overwriteBits(getBitRange(getBitVec(mem[j]), 1, 1), 1, invertBitVec(getBitRange(getBitVec(mem[j]), 1, 1)))))) ]

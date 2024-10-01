@@ -1,5 +1,6 @@
 (set-logic ALL)
 (set-option :pp.decimal true)
+(set-option :smt.mbqi.trace true)
 
 (declare-const sqrt2 Real)
 (declare-const mem-amp2 (Array Int (Array Int Real)))
@@ -35,11 +36,11 @@
               (= (select (select mem-phase2 j) i) (select (select mem-phase1 j) i))
               (= (select (select mem-bit-vec2 j) i) (select (select mem-bit-vec1 j) i)))))))
 
-(assert (exists ((i Int)) (= (select mem-bit-vec0 i) ((_ int2bv 2) 0))))
-(assert (exists ((i Int)) (= (select mem-bit-vec0 i) ((_ int2bv 2) 0))))
+; (assert (exists ((i Int)) (= (select mem-bit-vec0 i) ((_ int2bv 2) 0))))
+; (assert (exists ((i Int)) (= (select mem-bit-vec0 i) ((_ int2bv 2) 0))))
 
 (set-option :timeout 5000)
 (check-sat)
 (get-info :reason-unknown)
-(get-info :all-statistics)
+; (get-info :all-statistics)
 
