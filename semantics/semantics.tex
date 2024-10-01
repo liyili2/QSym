@@ -83,6 +83,8 @@
 
 \newcommand {\truthVals} {\Omega}
 
+\newcommand {\Qafny} {\textsf{Qafny}}
+
 \begin{document}
 
 \title{QSym Semantics}
@@ -149,7 +151,7 @@ Recall that we will later give two different semantics for IR terms. Each of the
 
 \textit{(\textbf{TODO}: More on locus environment.})
 
-So, we define a semantic function $\sem{-} : \IRep \ra (\Env_A \times A \ra A)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
+So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IRep)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
 
 \[
   \sem{\ell := H}(\sigma, v) = \irSum_{k=1}^{k=2}
@@ -162,15 +164,17 @@ So, we define a semantic function $\sem{-} : \IRep \ra (\Env_A \times A \ra A)$.
 
 \section{Linear transformation semantics of IR}
 
+Here, we define a translation $\Tsem{-} : \IRep \ra (\Env \times \mathbb{C}^N \ra \mathbb{C}^N)$. We assume that the number of qubits is fixed as N.
+
 \[
   \Tsem{\irSum_{\overline{k=a}}^{\overline{k=b}}
     \left(\begin{aligned}
       &e_1\\
       &e_2\\
       &e_3
-    \end{aligned}\right)}
+    \end{aligned}\right)}(\sigma, u)
     =
-    u \mapsto \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} (\Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)})
+    \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} (\Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)})
 \]
 
 \noindent
@@ -182,7 +186,7 @@ The standard mathematical operations translate directly:
 
 \section{Logical predicate semantics of IR}
 
-The environment here is pairs of memory states. The first item is the old memory state and the second is the new memory state. Specifically, we have this where $\truthVals$ represents the set of truth values for the logic: $\Psem{-} : (\Mem \times \Mem) \ra \truthVals$.
+The environment here is pairs of memory states. The first item is the old memory state and the second is the new memory state. Specifically, we have this where $\truthVals$ represents the set of truth values for the logic: $\Psem{-} : \IRep \ra (\Env \times (\Mem \times \Mem) \ra \truthVals)$.
 
 If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the indices $\overline{k}$. The amplitude of the (``logical'') vector $u$ is given by $u_1$, the phase is given by $u_2$ and the bitvector is given by $u_3$.
 
@@ -192,7 +196,7 @@ If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the in
       &e_1\\
       &e_2\\
       &e_3
-    \end{aligned}\right)} = (m, m') \mapsto \\
+    \end{aligned}\right)}(\sigma, (m, m')) =\\
     \forall j. \forall \overline{k}. (j >= 1) \land (j <= 2^n) \land (\overline{k >= a} \land \overline{k <= b})\\
     \implies \updateMem(m, m', j, \overline{k}, e_1, e_2, e_3)
     % m'(j)_1 = \Psem{e_1}(m) \land
@@ -217,12 +221,12 @@ We define $\updateMem$ as follows.
 IR expressions are translated as follows
 
 \begin{align*}
-  &\Psem{\irAmp(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_1\\
-  &\Psem{\irPhase(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_2\\
-  &\Psem{\irBV(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_3
+  &\Psem{\irAmp(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_1\\
+  &\Psem{\irPhase(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_2\\
+  &\Psem{\irBV(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_3
 \end{align*}
 
-When $x$ is the variable representing the old vector, we have $\Psem{x}(m, \overline{k}) = m$. When $y$ is a variable representing the index variable $k_a$ from $\overline{k}$, we have $\Psem{x}(m, \overline{k}) = k_a$.
+When $x$ is the variable representing the old vector, we have $\Psem{x}(v, \overline{k}) = v$. When $y$ is a variable representing the index variable $k_a$ from $\overline{k}$, we have $\Psem{x}(m, \overline{k}) = k_a$.
 
 \end{document}
 
