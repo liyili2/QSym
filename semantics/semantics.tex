@@ -114,11 +114,16 @@ In the following, we define a semantics for QSym by providing a function which t
 QSym internally uses an intermediate representation. A ``abstract sum'' in the intermediate representation has the following syntactic form:
 
 \[
-  \irSum_{\overline{k=a}}^{\overline{k=b}}(v \rightarrow (e; e; e))
+  \irSum_{\overline{k=a}}^{\overline{k=b}}
+    \left(\begin{aligned}
+      &e_1\\
+      &e_2\\
+      &e_3
+    \end{aligned}\right)
 \]
 
 This is the main syntactic form of the IR. Each of the $\overline{k=a}$ at the bottom gives a lower bound for an index called $k$. The corresponding part at the top gives the upper bounds.
-The three expressions are the amplitude, phase and bitvector of the vector represented by the sum body. The $v \rightarrow \cdots$ is a binding form which defines the variable $v$. This variable represents the current vector of the old memory state. The entire sum describes the vectors of the new memory state. $a$ and $b$ both must be natural number literals.
+The three expressions are the amplitude, phase and bitvector of the vector represented by the sum body. The entire sum describes the vectors of the new memory state. $a$ and $b$ both must be natural number literals.
 
 The syntax of IR expressions consist of standard arithmetic operations together with the following additional operations:
 
@@ -132,7 +137,7 @@ The syntax of IR expressions consist of standard arithmetic operations together 
   \item $\irBV(v)$: Get the bitvector for vector $v$.
 \end{itemize}
 
-This intermediate representation has two sets of semantics, given by the linear transformation interpretation and the logical predicate interpretation.
+This intermediate representation has two sets of semantics, given by the linear transformation interpretation and the logical predicate interpretation. Because of this, we also allow the embedding of elements of another arbitrary set into the syntax of the IR. This is similar to how elements of $\mathbb{Z}$ can often be embedded into a language as an integer literal.
 
 \section{Language of logical predicates}
 
@@ -140,20 +145,32 @@ This is first-order logic, together with the special operations mentioned in the
 
 \section{Translation into IR}
 
-Recall that we will later give two different semantics for IR terms. Each of these will have a different sort of environment. With that in mind, in order to give a definition of environment that works for both, say we are given an arbitrary set $A$. We fix the number of qubits as $N$.
+Recall that we will later give two different semantics for IR terms. Each of these will have a different sort of environment. With that in mind, we will say we are given some set $A$ which will serve as a representation of our vectors. Later, we will choose an appropriate set for each of the translations. We will also have a locus environment, $\Env_A$.
 
-Then, an $\Env_A$ is a pair consisting of an $A^N$ and a mapping $\Locus \ra \mathbb{N} \times \mathbb{N}$. The first item of the pair represents the memory. The second element maps a locus to the range of indices into the memory it represents. \textbf{TODO}: Figure out how to handle loci better.
+\textit{(\textbf{TODO}: More on locus environment.})
 
-So, we define a semantic function $\sem{-} : \Env_A \ra (\IRep \ra A^N)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
+So, we define a semantic function $\sem{-} : \IRep \ra (\Env_A \times A \ra A)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
 
 \[
-  \sem{\ell := H}\sigma = \irSum_{k=1}^{k=2}(v \rightarrow (\frac{1}{\sqrt{2}} * \irAmp(v); \irOmega(v, 2^N); \irOverwrite(\sigma(\ell), v, j)))
+  \sem{\ell := H}(\sigma, v) = \irSum_{k=1}^{k=2}
+    \left(\begin{aligned}
+      &\frac{1}{\sqrt{2}} * \irAmp(v)\\
+      &\irOmega(\irSlice(\irBV(v), \sigma(\ell), \sigma(\ell)), 2^N)\\
+      &\irOverwrite(\sigma(\ell), \irBV(v), j)
+      \end{aligned}\right)
 \]
 
 \section{Linear transformation semantics of IR}
 
 \[
-  \Tsem{\irSum_{\overline{k=a}}^{\overline{k=b}} (v \rightarrow (e_1; e_2; e_3))} = u \mapsto \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} \Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)}
+  \Tsem{\irSum_{\overline{k=a}}^{\overline{k=b}}
+    \left(\begin{aligned}
+      &e_1\\
+      &e_2\\
+      &e_3
+    \end{aligned}\right)}
+    =
+    u \mapsto \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} (\Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)})
 \]
 
 \noindent
@@ -170,7 +187,12 @@ The environment here is pairs of memory states. The first item is the old memory
 If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the indices $\overline{k}$. The amplitude of the (``logical'') vector $u$ is given by $u_1$, the phase is given by $u_2$ and the bitvector is given by $u_3$.
 
 \begin{multline*}
-  \Psem{\irSum_{\overline{k=a}}^{\overline{k=b}} (v \rightarrow (e_1; e_2; e_3))} = (m, m') \mapsto \\
+  \Psem{\irSum_{\overline{k=a}}^{\overline{k=b}}
+    \left(\begin{aligned}
+      &e_1\\
+      &e_2\\
+      &e_3
+    \end{aligned}\right)} = (m, m') \mapsto \\
     \forall j. \forall \overline{k}. (j >= 1) \land (j <= 2^n) \land (\overline{k >= a} \land \overline{k <= b})\\
     \implies \updateMem(m, m', j, \overline{k}, e_1, e_2, e_3)
     % m'(j)_1 = \Psem{e_1}(m) \land
@@ -178,7 +200,7 @@ If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the in
     % m'(j)_3 = \Psem{e_3}(m)
 \end{multline*}
 
-In $\updateMem$, we will write the triple vertically:\\
+We define $\updateMem$ as follows.
 
 \[
 \begin{aligned}
@@ -195,9 +217,9 @@ In $\updateMem$, we will write the triple vertically:\\
 IR expressions are translated as follows
 
 \begin{align*}
-  &\Psem{\irAmp(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_1\\
-  &\Psem{\irPhase(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_2\\
-  &\Psem{\irBV(e)}(m, \overline{k}) = \Psem{e}(m, \overline{k})_3
+  &\Psem{\irAmp(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_1\\
+  &\Psem{\irPhase(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_2\\
+  &\Psem{\irBV(e)}(m, \overline{k}) = (\Psem{e}(m, \overline{k}))_3
 \end{align*}
 
 When $x$ is the variable representing the old vector, we have $\Psem{x}(m, \overline{k}) = m$. When $y$ is a variable representing the index variable $k_a$ from $\overline{k}$, we have $\Psem{x}(m, \overline{k}) = k_a$.
