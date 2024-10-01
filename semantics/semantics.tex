@@ -177,7 +177,8 @@ Here, we define a translation $\Tsem{-} : \IRep \ra (\Env \times \mathbb{C}^N \r
       &e_3
     \end{aligned}\right)}(\sigma, u)
     =
-    \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}} (\Tsem{e_1}(u_j) \cdot \Tsem{e_2}(u_j) \cdot \ket{\Tsem{e_3}(u_j)})
+    \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}}
+      (\underbrace{\Tsem{e_1}(u_j)}_{\textnormal{Amplitude}} \cdot \underbrace{\Tsem{e_2}(u_j)}_{\textnormal{Phase}} \cdot \underbrace{\ket{\Tsem{e_3}(u_j)}}_{\textnormal{Bitvector}})
 \]
 
 \noindent
