@@ -45,6 +45,7 @@
 \newcommand {\Locus} {\textsf{Locus}}
 \newcommand {\Loc} {\textsf{Location}}
 \newcommand {\sem} [1] {\llbracket #1 \rrbracket}
+\newcommand {\semE} [1] {\sem{#1}^e}
 \newcommand {\Psem} [1] {\sem{#1}^p}
 \newcommand {\Tsem} [1] {\sem{#1}^t}
 \newcommand {\Expr} {\textsf{Expr}}
@@ -70,6 +71,7 @@
 % IR
 \newcommand {\ir} [1] {\textsf{\textbf{#1}}}
 \newcommand {\IRep} {\textsf{IR}}
+\newcommand {\irUpgrade} {\ir{upgrade}}
 \newcommand {\irSum} {\ir{sum}}
 \newcommand {\irOverwrite} {\ir{overwrite}}
 \newcommand {\irSlice} {\ir{slice}}
@@ -79,6 +81,8 @@
 \newcommand {\irPhase} {\ir{phase}}
 \newcommand {\irBV} {\ir{bitvec}}
 \newcommand {\irOmega} {\ir{omega}}
+
+\newcommand {\qafnyUpgrade} {\textnormal{upgrade}}
 
 \newcommand {\updateMem} {\textsf{updateMem}}
 
@@ -138,6 +142,7 @@ The syntax of IR expressions consist of standard arithmetic operations together 
   \item $\irAmp(v)$: Get the amplitude for vector $v$.
   \item $\irPhase(v)$: Get the phase for vector $v$.
   \item $\irBV(v)$: Get the bitvector for vector $v$.
+  \item $\irUpgrade(A, a, b)$: Upgrade the operation $A$ so that it has an additional index with bounds $[a,b]$.
 \end{itemize}
 
 This intermediate representation has two sets of semantics, given by the linear transformation interpretation and the logical predicate interpretation. Because of this, we also allow the embedding of elements of another arbitrary set into the syntax of the IR. This is similar to how elements of $\mathbb{Z}$ can often be embedded into a language as an integer literal.
@@ -155,12 +160,29 @@ Recall that we will later give two different semantics for IR terms. Each of the
 So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IRep)$. We start by defining its output when it's applied to the $H$ (Hadamard) operation:
 
 \[
-  \sem{\ell := H}(\sigma, v) = \irSum_{k=1}^{k=2}
+  \sem{\ell := A}(\sigma, v) = \semE{A}(\sigma(\ell), v)
+  %
+  %
+  % \irSum_{k=1}^{k=2}
+  %   \left(\begin{aligned}
+  %     &\frac{1}{\sqrt{2}} * \irAmp(v)\\
+  %     &\irOmega(\irGetBit(\irBV(v), \sigma(\ell)), 2^N)\\
+  %     &\irOverwrite(\sigma(\ell), \irBV(v), k)
+  %     \end{aligned}\right)
+\]
+
+\[
+  \semE{H}(u, v) = 
+  \irSum_{k=1}^{k=2}
     \left(\begin{aligned}
       &\frac{1}{\sqrt{2}} * \irAmp(v)\\
-      &\irOmega(\irGetBit(\irBV(v), \sigma(\ell)), 2^N)\\
-      &\irOverwrite(\sigma(\ell), \irBV(v), k)
+      &\irOmega(\irGetBit(\irBV(v), u), 2^N)\\
+      &\irOverwrite(u, \irBV(v), k)
       \end{aligned}\right)
+\]
+
+\[
+  \semE{\qafnyUpgrade(A, a, b)}(u, v) = \irUpgrade(\semE{A}, a, b)(u, v)
 \]
 
 where $\irGetBit$ is defined as $\irGetBit(a, j) = \irSlice(a, j, j)$.
