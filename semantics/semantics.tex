@@ -197,10 +197,15 @@ Here, we define a translation $\Tsem{-} : \IRep \ra (\Env \times \mathbb{C}^N \r
       &e_1\\
       &e_2\\
       &e_3
-    \end{aligned}\right)}(\sigma, u)
+    \end{aligned}\right)}(\sigma, v)
     =
     \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}}
-      (\underbrace{\Tsem{e_1}(u_j, \overline{k})}_{\textnormal{Amplitude}} \cdot \underbrace{\Tsem{e_2}(u_j, \overline{k})}_{\textnormal{Phase}} \cdot \underbrace{\ket{\Tsem{e_3}(u_j, \overline{k})}}_{\textnormal{Bitvector}})
+      (\underbrace{\Tsem{e_1}(v_j, \overline{k})}_{\textnormal{Amplitude}} \cdot \underbrace{\Tsem{e_2}(v_j, \overline{k})}_{\textnormal{Phase}} \cdot \underbrace{\ket{\Tsem{e_3}(v_j, \overline{k})}}_{\textnormal{Bitvector}})
+\]
+
+\[
+  \Tsem{\irUpgrade(A, a, b)}(\sigma, v) =
+    \sum_{j=a}^{j=b} \Tsem{A}(\sigma, v_j)
 \]
 
 \noindent
@@ -229,6 +234,14 @@ If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the in
     % m'(j)_2 = \Psem{e_2}(m) \land
     % m'(j)_3 = \Psem{e_3}(m)
 \end{multline*}
+
+\[
+\begin{aligned}
+  \Psem{\irUpgrade(A, &a, b)}(\sigma, (m, m')) =\\
+    &\forall j. (j >= a) \land (j <= b)\\
+      &\implies \Psem{A}(m[j], m'[j])
+\end{aligned}
+\]
 
 We define $\updateMem$ as follows.
 
