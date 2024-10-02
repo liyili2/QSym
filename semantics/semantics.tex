@@ -47,7 +47,9 @@
 \newcommand {\sem} [1] {\llbracket #1 \rrbracket}
 \newcommand {\semE} [1] {\sem{#1}^e}
 \newcommand {\Psem} [1] {\sem{#1}^p}
+\newcommand {\PsemE} [1] {\sem{#1}^{pe}}
 \newcommand {\Tsem} [1] {\sem{#1}^t}
+\newcommand {\TsemE} [1] {\sem{#1}^{te}}
 \newcommand {\Expr} {\textsf{Expr}}
 \newcommand {\Cmd} {\textsf{Stmt}}
 \newcommand {\CmdTy} {\texttt{Stmt}}
@@ -200,19 +202,19 @@ Here, we define a translation $\Tsem{-} : \IRep \ra (\Env \times \mathbb{C}^N \r
     \end{aligned}\right)}(\sigma, v)
     =
     \sum_{j=1}^{2^N}\sum_{\overline{k=a}}^{\overline{k=b}}
-      (\underbrace{\Tsem{e_1}(v_j, \overline{k})}_{\textnormal{Amplitude}} \cdot \underbrace{\Tsem{e_2}(v_j, \overline{k})}_{\textnormal{Phase}} \cdot \underbrace{\ket{\Tsem{e_3}(v_j, \overline{k})}}_{\textnormal{Bitvector}})
+      (\underbrace{\TsemE{e_1}(v_j, \overline{k})}_{\textnormal{Amplitude}} \cdot \underbrace{\TsemE{e_2}(v_j, \overline{k})}_{\textnormal{Phase}} \cdot \underbrace{\ket{\TsemE{e_3}(v_j, \overline{k})}}_{\textnormal{Bitvector}})
 \]
 
 \[
   \Tsem{\irUpgrade(A, a, b)}(\sigma, v) =
-    \sum_{j=a}^{j=b} \Tsem{A}(\sigma, v_j)
+    \sum_{j=a}^{j=b} \TsemE{A}(\sigma, v_j)
 \]
 
 \noindent
 The standard mathematical operations translate directly:
 
 \[
-  \Tsem{a + b}\sigma = \Tsem{a}\sigma + \Tsem{b}\sigma
+  \TsemE{a + b}\sigma = \TsemE{a}\sigma + \TsemE{b}\sigma
 \]
 
 \section{Logical predicate semantics of IR}
@@ -237,9 +239,9 @@ If $m$ is a memory state, then $m[\overline{k}]$ represents the vector at the in
 
 \[
 \begin{aligned}
-  \Psem{\irUpgrade(A, &a, b)}(\sigma, (m, m')) =\\
+  \PsemE{\irUpgrade(A, &a, b)}(\sigma, (m, m')) =\\
     &\forall j. (j >= a) \land (j <= b)\\
-      &\implies \Psem{A}(m[j], m'[j])
+      &\implies \PsemE{A}(m[j], m'[j])
 \end{aligned}
 \]
 
@@ -249,9 +251,9 @@ We define $\updateMem$ as follows.
 \begin{aligned}
   \updateMem(m, m', j, &\overline{k}, e_1, e_2, e_3) =\\
     &\left(m'[\overline{k}] = \left(\begin{aligned}
-                          &\Psem{e_1}(m[j], \overline{k})\\
-                          &\Psem{e_2}(m[j], \overline{k})\\
-                          &\Psem{e_3}(m[j], \overline{k})
+                          &\PsemE{e_1}(m[j], \overline{k})\\
+                          &\PsemE{e_2}(m[j], \overline{k})\\
+                          &\PsemE{e_3}(m[j], \overline{k})
     \end{aligned}\right)\right)
 \end{aligned}
 \]
@@ -260,9 +262,9 @@ We define $\updateMem$ as follows.
 IR expressions are translated as follows
 
 \begin{align*}
-  &\Psem{\irAmp(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_1\\
-  &\Psem{\irPhase(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_2\\
-  &\Psem{\irBV(e)}(v, \overline{k}) = (\Psem{e}(v, \overline{k}))_3
+  &\PsemE{\irAmp(e)}(v, \overline{k}) = (\PsemE{e}(v, \overline{k}))_1\\
+  &\PsemE{\irPhase(e)}(v, \overline{k}) = (\PsemE{e}(v, \overline{k}))_2\\
+  &\PsemE{\irBV(e)}(v, \overline{k}) = (\PsemE{e}(v, \overline{k}))_3
 \end{align*}
 
 When $x$ is the variable representing the old vector, we have $\Psem{x}(v, \overline{k}) = v$. When $y$ is a variable representing the index variable $k_a$ from $\overline{k}$, we have $\Psem{x}(m, \overline{k}) = k_a$.
