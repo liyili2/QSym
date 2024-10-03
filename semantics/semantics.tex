@@ -93,6 +93,7 @@
 \newcommand {\truthVals} {\Omega}
 
 \newcommand {\Qafny} {\textsf{Qafny}}
+\newcommand {\QafnyExpr} {\textsf{QafnyExpr}}
 
 \begin{document}
 
@@ -174,6 +175,8 @@ So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IR
   %     &\irOverwrite(\sigma(\ell), \irBV(v), k)
   %     \end{aligned}\right)
 \]
+
+This in turn uses the semantic function for expressions $\semE{-} : \QafnyExpr \ra (\mathbb{N} \times A \ra \IRep)$:
 
 \[
   \semE{H}(j, v) = 
