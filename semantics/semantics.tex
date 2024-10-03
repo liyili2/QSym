@@ -48,8 +48,10 @@
 \newcommand {\semE} [1] {\sem{#1}^e}
 \newcommand {\Psem} [1] {\sem{#1}^p}
 \newcommand {\PsemE} [1] {\sem{#1}^{pe}}
+\newcommand {\PsemS} [1] {\sem{#1}^{ps}}
 \newcommand {\Tsem} [1] {\sem{#1}^t}
 \newcommand {\TsemE} [1] {\sem{#1}^{te}}
+\newcommand {\TsemS} [1] {\sem{#1}^{ts}}
 \newcommand {\Expr} {\textsf{Expr}}
 \newcommand {\Cmd} {\textsf{Stmt}}
 \newcommand {\CmdTy} {\texttt{Stmt}}
@@ -174,17 +176,17 @@ So, we define a semantic function $\sem{-} : \Qafny \ra (\Env_A \times A \ra \IR
 \]
 
 \[
-  \semE{H}(u, v) = 
+  \semE{H}(j, v) = 
   \irSum_{k=1}^{k=2}
     \left(\begin{aligned}
       &\frac{1}{\sqrt{2}} * \irAmp(v)\\
-      &\irOmega(\irGetBit(\irBV(v), u), 2^N)\\
-      &\irOverwrite(u, \irBV(v), k)
+      &\irOmega(\irGetBit(\irBV(v), j), 2^N)\\
+      &\irOverwrite(j, \irBV(v), k)
       \end{aligned}\right)
 \]
 
 \[
-  \semE{\qafnyUpgrade(A, a, b)}(u, v) = \irUpgrade(\semE{A}, a, b)(u, v)
+  \semE{\qafnyUpgrade(A, a, b)}(j, v) = \irUpgrade(\semE{A}, a, b)(j, v)
 \]
 
 where $\irGetBit$ is defined as $\irGetBit(a, j) = \irSlice(a, j, j)$.
