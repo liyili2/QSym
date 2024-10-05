@@ -9,3 +9,6 @@ docs/semantics.synctex.gz
 
 # # generated smt2 files
 # *.smt2
+semantics/semantics.fdb_latexmk
+semantics/semantics.fls
+semantics/semantics.synctex.gz

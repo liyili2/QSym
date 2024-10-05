@@ -104,7 +104,7 @@
 
 \section{Overview}
 
-In the following, we define a semantics for QSym by providing a function which takes syntactic QSym terms and produces a function from an ``environment'' to a intermediate representation term. This intermediate representation term can then be transformed into either a traditional linear transformation or into a logical predicate. This logical predicate can be fed into an SMT solver. (Fig.~\ref{fig:sem-fns})
+In the following, we define a semantics for QSym by providing a function which takes syntactic QSym terms and produces a function from an ``environment'' to an intermediate representation term. This intermediate representation term can then be transformed into either a traditional linear transformation or into a logical predicate. This logical predicate can be fed into an SMT solver. (Fig.~\ref{fig:sem-fns})
 
 \begin{figure}
   % https://q.uiver.app/#q=WzAsNCxbMCwxLCJcXHRleHRub3JtYWx7UVN5bX0iXSxbMiwxLCJcXHRleHRub3JtYWx7SVJ9Il0sWzQsMCwiXFx0ZXh0bm9ybWFse0xpbmVhciB0cmFuc2Zvcm1hdGlvbn0iXSxbNCwyLCJcXHRleHRub3JtYWx7TG9naWNhbCBwcmVkaWNhdGV9Il0sWzAsMSwiXFxsbGJyYWNrZXQtXFxycmJyYWNrZXQiXSxbMSwyLCJcXGxsYnJhY2tldC1cXHJyYnJhY2tldF50Il0sWzEsMywiXFxsbGJyYWNrZXQtXFxycmJyYWNrZXRecCIsMl1d
@@ -137,7 +137,7 @@ QSym internally uses an intermediate representation. A ``abstract sum'' in the i
 This is the main syntactic form of the IR. Each of the $\overline{k=a}$ at the bottom gives a lower bound for an index called $k$. The corresponding part at the top gives the upper bounds.
 The three expressions are the amplitude, phase and bitvector of the vector represented by the sum body. The entire sum describes the vectors of the new memory state. $a$ and $b$ both must be natural number literals.
 
-The syntax of IR expressions consist of standard arithmetic operations together with the following additional operations:
+The syntax of IR expressions consists of standard arithmetic operations together with the following additional operations:
 
 \begin{itemize}
   \item $\irOmega(j, k)$: This gives roots of unity.
