@@ -20,6 +20,7 @@ import QSym.Logic.Gen
 import QSym.Logic.Memory
 import QSym.Logic.Builtins
 import QSym.Logic.IR as IR
+import QSym.Logic.ToIR
 -- import QSym.Logic.Operation
 -- import QSym.Logic.Builtins
 -- import QSym.Logic.Linear
@@ -44,7 +45,7 @@ import Prettyprinter
 
 import Debug.Trace
 
-astSMT :: Verify -> Int -> AST -> ([Sum], Block Name)
+astSMT :: Verify -> Int -> AST -> ([LoopedSum], Block Name)
 astSMT verify bitSize ast =
   (sums, smtPreamble sqrtArgs <> mkDeclarations block <> block <> smtCheck)
      -- <> smtBlock [symbol "(get-info :reason-unknown)", checkSAT, symbol "(get-unsat-core)"]
@@ -99,7 +100,7 @@ astSMT verify bitSize ast =
 --
 --   pure $ sum (map (selectWithBitVector mem) allPossibilities)
 
-astConstraints :: VerifySatisfies -> Int -> AST -> ([Sum], Block Name)
+astConstraints :: VerifySatisfies -> Int -> AST -> ([LoopedSum], Block Name)
 astConstraints verify bitSize =
   mconcat . map (toplevelSmt verify bitSize)
 
@@ -112,26 +113,26 @@ initialMemory bitSize =
     (currentVar "mem-phase")
     (currentVar "mem-bit-vec")
 
-sumsToSmt :: VerifySatisfies -> Env -> [Sum] -> Block Name
+sumsToSmt :: VerifySatisfies -> Env -> [LoopedSum] -> Block Name
 sumsToSmt verify env sums =
   let bitSize = envBitSize env
       initialMem = initialMemory bitSize
   in
   runGen (sumsToSmtM verify env sums) env initialMem
 
-sumsToSmtM :: VerifySatisfies -> Env -> [Sum] -> Gen (Block Name)
+sumsToSmtM :: VerifySatisfies -> Env -> [LoopedSum] -> Gen (Block Name)
 sumsToSmtM verify env sums = do
   let bitSize = envBitSize env
       initialMem = initialMemory bitSize
       initialDecls = declareMemory bitSize initialMem
-  mainPart <- traverse (sumToSMTGen bitSize) sums
+  mainPart <- traverse (loopedSumToSMTGen bitSize) sums
   lastMem <- get
   fmap ((initialDecls <> mconcat mainPart) <>) (verify initialMem lastMem)
 
 toplevelEnv :: Int -> Toplevel () -> Env
 toplevelEnv bitSize (Toplevel (Inl qm)) = buildEnv bitSize qm
 
-toplevelSmtM :: VerifySatisfies -> Int -> Toplevel () -> Gen ([Sum], Block Name)
+toplevelSmtM :: VerifySatisfies -> Int -> Toplevel () -> Gen ([LoopedSum], Block Name)
 toplevelSmtM verify bitSize toplevel@(Toplevel (Inl qm)) =
   case qmBody qm of
     Just block -> do
@@ -139,106 +140,28 @@ toplevelSmtM verify bitSize toplevel@(Toplevel (Inl qm)) =
       block <- sumsToSmtM verify (toplevelEnv bitSize toplevel) sums
       pure (sums, block)
 
-toplevelSmt :: VerifySatisfies -> Int -> Toplevel () -> ([Sum], Block Name)
+toplevelSmt :: VerifySatisfies -> Int -> Toplevel () -> ([LoopedSum], Block Name)
 toplevelSmt satisfies bitSize toplevel =
   let env = toplevelEnv bitSize toplevel
       initialMem = initialMemory bitSize
   in
   runGen (toplevelSmtM satisfies bitSize toplevel) env initialMem
 
-blockListConstraints :: [Stmt ()] -> Gen [Sum]
--- blockListConstraints [] = pure mempty
-blockListConstraints xs = mconcat <$> traverse blockConstraints xs
 
--- TODO: Separate out the `State` part from `Gen` and use the part without
--- it here.
-blockConstraints :: Stmt () -> Gen [Sum]
-blockConstraints (SAssert {}) = pure mempty -- TODO: Should we handle this?
-blockConstraints (SCall f xs) = error "SCall"
-blockConstraints (SVar {}) = error "SVar: unimplemented" -- TODO: Implement
-blockConstraints (_ ::=: EMeasure _) = pure mempty -- TODO: Implement
+unrollLoop :: Int -> LoopedSum -> Gen (Block Name)
+unrollLoop bitSize (NoLoop x) = sumToSMTGen bitSize x
+unrollLoop bitSize (ForIn var range body) = undefined --genForLoop x undefined body
 
-blockConstraints (_ ::=: _) = error "::=: unimplemented" -- TODO: Implement
-
-blockConstraints (Partition [lhs] :*=: EQft b) = do
-  (physStart, physEnd) <- rangeToPhysicalIndices lhs
-  pure [qft b physStart physEnd]
-
--- TODO: Generalize to applying Hadamard to more than one location
-blockConstraints (Partition [lhs] :*=: EHad) = do
-  (physStart, physEnd) <- rangeToPhysicalIndices lhs
-  pure [hadamard physStart]
-
-  -- genOperationBlock (hadamard physStart)
-blockConstraints (SDafny _) = pure mempty
-
--- TODO: Generalize this
-blockConstraints (SIf guardExp@(GEPartition part Nothing) part' (Qafny.Block body)) = do
-  bodyConstraints <- blockListConstraints body
-
-  let Partition [controlRange] = part
-  (physStartControl, physEndControl) <- rangeToPhysicalIndices controlRange
-
-  pure $ map (withControlBit physStartControl) bodyConstraints
-
-blockConstraints (x :*=: ELambda (LambdaF { bBases = [param], ePhase = phase, eBases = [lambdaBody :: Exp ()] })) = do
-  let Partition [bodyRange] = x
-  (physStartBody, physEndBody) <- rangeToPhysicalIndices bodyRange
-
-  let bodySum = convertLambda param physStartBody physEndBody lambdaBody
-      updatedPhaseSum = withPhaseFunction (convertPhaseExp param phase) bodySum
-
-  pure [bodySum]
-
-blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
-    -- TODO: Implement the control here
-  blockListConstraints body
-
-blockConstraints (SFor _ _ _ (GEPartition (Partition [Qafny.Range x (ENum start) (ENum end)]) _) _ _ (Qafny.Block body)) =
-  genForLoop x (start, end) body
-
-blockConstraints s = error $ "unimplemented: " ++ show s
-
-genForLoop :: Var -> (Int, Int) -> [Stmt ()] -> Gen [Sum]
-genForLoop x (start, end) body
-  | start > end = pure []
-  | otherwise = do
-      let body' = subst [(x, ENum start)] body
-      sums <- blockListConstraints body'
-
-      rest <- genForLoop x (start+1, end) body
-      pure (sums <> rest)
-
-convertPhaseExp :: Var -> PhaseExp -> (Expr Int -> Expr Int)
-convertPhaseExp param PhaseWildCard e = e
-convertPhaseExp param PhaseZ e = e
-convertPhaseExp param (PhaseOmega x y) e =
-  trace ("PhaseOmega " ++ show (x, y)) e
-
-convertLambda :: Var -> Int -> Int -> Exp () -> Sum
-convertLambda param startQubit endQubit body =
-  unaryIntOp (convertLambdaBody param body) startQubit endQubit
-
-convertLambdaBody :: Var -> Exp () -> (Expr Int -> Expr Int)
-convertLambdaBody param (ENum i) _ = intLit i
-convertLambdaBody param (EVar v) arg
-  | v == param = arg
-  | otherwise = error $ "convertLambdaBody: EVar " ++ show v
-convertLambdaBody param (EOp1 op x) arg = convertOp1 param op x arg
-convertLambdaBody param (EOp2 op x y) arg = convertOp2 param op x y arg
-
-convertOp1 :: Var -> Op1 -> Exp () -> (Expr Int -> Expr Int)
-convertOp1 param ONeg x arg = neg (convertLambdaBody param x arg)
-
-convertOp2 :: Var -> Op2 -> Exp () -> Exp () -> (Expr Int -> Expr Int)
-convertOp2 param op x y arg =
-  case op of
-    OAdd -> go IR.add
-    OSub -> go IR.sub
-    OMul -> go IR.mul
-    OMod -> go IR.modulo
-  where
-    go f = f (convertLambdaBody param x arg) (convertLambdaBody param y arg)
+-- TODO: Finish
+genForLoop :: Int -> Var -> (Int, Int) -> [LoopedSum] -> Gen (Block Name)
+genForLoop bitSize x (start, end) body = undefined
+  -- | start > end = pure []
+  -- | otherwise = do
+  --     let body' = subst [(x, ENum start)] body
+  --     sums <- blockListConstraints body'
+  --
+  --     rest <- genForLoop x (start+1, end) body
+  --     pure (sums <> rest)
 
 -- TODO: Move to another module --
 
@@ -256,6 +179,13 @@ fromMemEntry (MemEntry x y z) =
   mkVec (IR.mkSMT x)
         (IR.mkSMT y)
         (IR.mkSMT z)
+
+loopedSumToSMTGen :: Int -> LoopedSum -> Gen (Block Name)
+loopedSumToSMTGen = unrollLoop
+-- loopedSumToSMTGen bitSize (NoLoop s) = sumToSMTGen bitSize s
+-- loopedSumToSMTGen bitSize (ForIn var range body) =
+--   mconcat <$> traverse (unrollLoop bitSize var range) body
+--   -- sumToSMTGen bitSize s
 
 sumToSMTGen :: Int -> Sum -> Gen (Block Name)
 sumToSMTGen bitSize sum = do

@@ -14,6 +14,8 @@ module QSym.Logic.IR
   ,Sum
   ,pattern Sum
   ,mkSum
+  ,LoopedSum (..)
+  ,overLooped
 
   ,realToSMT
   ,bitVecToSMT
@@ -69,6 +71,8 @@ import Data.Ratio
 import qualified QSym.Logic.SMT as SMT
 import QSym.Logic.SMT (SMT, BitVector, Sqrts (..))
 
+import qualified Qafny.Syntax.AST as Qafny
+
 import Control.Lens.Plated
 import Data.Data
 import GHC.Generics
@@ -91,6 +95,14 @@ data Nat = Z | S Nat
 -- data Ixs n where
 --   IZ :: Ixs Z
 --   (:|) :: Expr Int -> Ixs n -> Ixs (S n)
+
+data LoopedSum
+  = ForIn String Qafny.Range [LoopedSum]
+  | NoLoop Sum
+
+overLooped :: (Sum -> Sum) -> LoopedSum -> LoopedSum
+overLooped f (NoLoop x) = NoLoop (f x)
+overLooped f (ForIn x range body) = ForIn x range $ map (overLooped f) body
 
 data Sum where
   MkSum ::
@@ -128,6 +140,15 @@ mkSum bounds f =
 instance Sqrts Sum where
   getSqrts (MkSum bounds f) =
     getSqrts $ f (Var "unused") (map intLit bounds)
+
+instance Sqrts LoopedSum where
+  getSqrts (NoLoop x) = getSqrts x
+  getSqrts (ForIn _ _ body) = concatMap getSqrts body
+
+instance Pretty LoopedSum where
+  pretty (NoLoop x) = pretty x
+  pretty (ForIn var range body) =
+    pretty "for" <+> pretty var <+> pretty "in" <+> pretty (show range) <+> pretty body
 
 withPhaseFunction :: (Expr Int -> Expr Int) -> Sum -> Sum
 withPhaseFunction phaseF0 (MkSum bounds sumF) =
