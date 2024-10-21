@@ -27,7 +27,7 @@ module QSym.Logic.IR
   ,cCondition
   ,cBody
 
-  ,Expr
+  ,Expr (..)
   ,var
   ,mkSMT
   ,unMkVec
@@ -35,6 +35,8 @@ module QSym.Logic.IR
   ,EVec
   ,EBitVec
   ,EReal
+
+  ,isTrue
 
   ,mul
   ,add
@@ -202,7 +204,6 @@ type family SmtTy a where
   SmtTy EBitVec = BitVector Name
   SmtTy EVec = ()
 
--- (Do not export the value constructors for Expr.)
 data Expr b where
   Var :: String -> Expr a
   MkSMT :: SmtTy a -> Expr a
@@ -302,6 +303,10 @@ instance Sqrts (Expr a) where
       go e = pure e
 
 deriving instance (Pretty (SmtTy a), Show (SmtTy a)) => Show (Expr a)
+
+isTrue :: Expr Bool -> Bool
+isTrue (BoolLit b) = b
+isTrue _ = False
 
 var :: String -> Expr a
 var = Var

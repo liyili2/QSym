@@ -69,6 +69,7 @@ library
                      QSym.Utils
                      QSym.ASTLogic
                      QSym.Logic.Memory
+                     QSym.Logic.Backend.Dafny
                      QSym.Logic.Builtins
                      QSym.Logic.Syntax
                      QSym.Logic.IR
@@ -133,6 +134,7 @@ executable QSym
                    QSym.Monad
                    QSym.Utils
                    QSym.ASTLogic
+                   QSym.Logic.Backend.Dafny
                    QSym.Logic.GenLogic
                    QSym.Logic.Syntax
                    QSym.Logic.GenConstraint
