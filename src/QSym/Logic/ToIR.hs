@@ -55,7 +55,7 @@ blockConstraints (SIf (GClass boolExp) part (Qafny.Block body)) =
 
 blockConstraints (SFor _ _ _ (GEPartition (Partition [range@(Qafny.Range x (ENum start) (ENum end))]) _) _ _ (Qafny.Block body)) = do
   bodyConstraints <- blockListConstraints body
-  pure [ForIn x range bodyConstraints]
+  pure [ForIn range bodyConstraints]
 
 blockConstraints s = error $ "unimplemented: " ++ show s
 

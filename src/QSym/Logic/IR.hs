@@ -17,6 +17,8 @@ module QSym.Logic.IR
   ,LoopedSum (..)
   ,overLooped
 
+  ,SmtTy
+
   ,realToSMT
   ,bitVecToSMT
 
@@ -99,12 +101,12 @@ data Nat = Z | S Nat
 --   (:|) :: Expr Int -> Ixs n -> Ixs (S n)
 
 data LoopedSum
-  = ForIn String Qafny.Range [LoopedSum]
+  = ForIn Qafny.Range [LoopedSum]
   | NoLoop Sum
 
 overLooped :: (Sum -> Sum) -> LoopedSum -> LoopedSum
 overLooped f (NoLoop x) = NoLoop (f x)
-overLooped f (ForIn x range body) = ForIn x range $ map (overLooped f) body
+overLooped f (ForIn range body) = ForIn range $ map (overLooped f) body
 
 data Sum where
   MkSum ::
@@ -145,12 +147,12 @@ instance Sqrts Sum where
 
 instance Sqrts LoopedSum where
   getSqrts (NoLoop x) = getSqrts x
-  getSqrts (ForIn _ _ body) = concatMap getSqrts body
+  getSqrts (ForIn _ body) = concatMap getSqrts body
 
 instance Pretty LoopedSum where
   pretty (NoLoop x) = pretty x
-  pretty (ForIn var range body) =
-    pretty "for" <+> pretty var <+> pretty "in" <+> pretty (show range) <+> pretty body
+  pretty (ForIn (Qafny.Range var (Qafny.ENum start) (Qafny.ENum end)) body) =
+    pretty "for" <+> pretty var <+> pretty "in" <+> pretty (start, end) <+> pretty body
 
 withPhaseFunction :: (Expr Int -> Expr Int) -> Sum -> Sum
 withPhaseFunction phaseF0 (MkSum bounds sumF) =

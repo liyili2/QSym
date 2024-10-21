@@ -11,6 +11,7 @@ import qualified Data.Text as Text
 import QSym.Monad
 import QSym.Interpret
 import QSym.Syntax
+import QSym.Logic.Backend.Dafny
 import QSym.Logic.GenConstraint (Verify (..), VerifySatisfies, astSMT, Name)
 import QSym.Logic.Gen (Gen)
 import QSym.Logic.SMTBackend
@@ -123,6 +124,8 @@ main = do
   let (sums, smt) = either error (astSMT (Satisfies (testVerify test)) (testQubitCount test)) qafny_ast
 
   print $ pretty sums
+
+  print $ show (loopedSumsToFunction "testFn" (testQubitCount test) sums)
 
   -- either error (print . pretty) smt
 

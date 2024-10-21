@@ -150,7 +150,7 @@ toplevelSmt satisfies bitSize toplevel =
 
 unrollLoop :: Int -> LoopedSum -> Gen (Block Name)
 unrollLoop bitSize (NoLoop x) = sumToSMTGen bitSize x
-unrollLoop bitSize (ForIn var range body) = undefined --genForLoop x undefined body
+unrollLoop bitSize (ForIn range body) = undefined --genForLoop x undefined body
 
 -- TODO: Finish
 genForLoop :: Int -> Var -> (Int, Int) -> [LoopedSum] -> Gen (Block Name)

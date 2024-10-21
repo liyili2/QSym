@@ -9,22 +9,119 @@ module QSym.Logic.Backend.Dafny
 import QSym.Logic.IR hiding (getBitRange, invertBitVec)
 import QSym.Logic.Memory
 
+import qualified Qafny.Syntax.AST as Qafny
+
 import Control.Monad.State
 
 import Prettyprinter
 
+type MemTypeDecl ann = (Doc ann, Doc ann, Doc ann)
+
+-- TODO: implement loops
+getSum :: LoopedSum -> Sum
+getSum (NoLoop x) = x
+
+loopedSumsToFunction :: String -> Int -> [LoopedSum] -> Doc ann
+loopedSumsToFunction fnName bitSize looped = sumListToFunction fnName bitSize (map getSum looped)
+  -- let (body, decls) = runFresh (loopedSumListToDafny bitSize sums)
+  -- in
+  -- mkMemFunction fnName decls body
+
+sumListToFunction :: String -> Int -> [Sum] -> Doc ann
+sumListToFunction fnName bitSize sums =
+  let (body, decls) = runFresh (sumListToDafny bitSize sums)
+  in
+  mkMemFunction fnName decls body
+
+mkMemFunction :: String -> [MemTypeDecl ann] -> Doc ann -> Doc ann
+mkMemFunction fnName params body =
+  vsep
+    [pretty "function" <+> pretty fnName <> parens (typeDeclListParams params)
+    ,braces (indent 2 body)
+    ]
+
+typeDeclListParams :: [MemTypeDecl ann] -> Doc ann
+typeDeclListParams = hsep . punctuate (pretty ",") . concatMap typeDeclParams
+
+typeDeclParams :: MemTypeDecl ann -> [Doc ann]
+typeDeclParams (x, y, z) = punctuate (pretty ",") [x, y, z]
+
+loopedSumToDafny :: Doc ann -> Doc ann -> Int -> LoopedSum -> Fresh (Int, Doc ann)
+loopedSumToDafny oldMem newMem bitSize (NoLoop x) = sumToDafny oldMem newMem bitSize x
+loopedSumToDafny oldMem newMem bitSize (ForIn range loopedSums) =
+  loopedSumListToDafny oldMem newMem bitSize range loopedSums
+
+loopedSumListToDafny :: Doc ann -> Doc ann -> Int -> Qafny.Range -> [LoopedSum] -> Fresh (Int, Doc ann)
+loopedSumListToDafny oldMem newMem bitSize (Qafny.Range var (Qafny.ENum start) (Qafny.ENum end)) loopedSums = do
+  results <- traverse (loopedSumToDafny oldMem newMem bitSize) loopedSums
+  let (memSizes, sumsCode) = unzip results
+
+  let sumsBody = vcat sumsCode
+
+  theFor <- genForWithVar (pretty var) (start, end) $ \i ->
+    let invariant = mempty -- TODO
+    in
+    pure (invariant, sumsBody)
+
+  pure (head memSizes, theFor) -- TODO: Is head correct?
+
+sumListToDafny :: Int -> [Sum] -> Fresh (Doc ann, [MemTypeDecl ann])
+sumListToDafny bitSize =
+  go 0
+  where
+    go currMemId [] = pure (mempty, mempty)
+    go currMemId (sum:restSums) = do
+      let oldMemBaseName = mkMemBaseName currMemId
+          newMemBaseName = mkMemBaseName currMemId
+
+      (memSize, sumCode) <- sumToDafny oldMemBaseName newMemBaseName bitSize sum
+
+      let currDecl = mkMemDecls newMemBaseName memSize
+
+      (restCode, restDecls) <- go (currMemId+1) restSums
+      pure (vsep [sumCode, restCode]
+           ,currDecl : restDecls)
+
 -- TODO: Invariants
--- TODO: We need an initial pass to determine how nested the bit vectors
--- should be. We did this with the SMT backend as well.
-sumToDafny :: Doc ann -> Doc ann -> Int -> Sum -> Fresh (Doc ann)
-sumToDafny oldMem newMem bitSize (Sum bounds f) =
-  genFor' (0, bitSize) invariants $ \oldMemIx ->
-    genFors (map (1,) bounds) invariants $ \newIxs ->
-      let controlledVec = f (var (show oldMemIx)) (map (var . show) newIxs)
-      in
-      pure $ translateControlledVec newMem controlledVec
+sumToDafny :: Doc ann -> Doc ann -> Int -> Sum -> Fresh (Int, Doc ann)
+sumToDafny oldMem newMem bitSize (Sum bounds f) = do
+    doc <- docM
+    let memSize = length bounds
+    pure (memSize, doc)
   where
     invariants = mempty -- TODO: what do we do here?
+    docM =
+      genFor' (0, bitSize) invariants $ \oldMemIx ->
+        genFors (map (1,) bounds) invariants $ \newIxs ->
+          let controlledVec = f (var (show oldMemIx)) (map (var . show) newIxs)
+          in
+          pure (translateControlledVec newMem controlledVec)
+
+mkMemBaseName :: Int -> Doc ann
+mkMemBaseName memId = pretty "mem" <> pretty memId <> pretty "_"
+
+mkMemDecls :: Doc ann -> Int -> MemTypeDecl ann
+mkMemDecls memName size =
+  (mkDecl memName (mkBitVecType size)
+  ,mkDecl memName (mkAmpType size)
+  ,mkDecl memName (mkPhaseType size)
+  )
+
+mkDecl :: Doc ann -> Doc ann -> Doc ann
+mkDecl var ty = var <> pretty ":" <+> ty
+
+mkBitVecType :: Int -> Doc ann
+mkBitVecType = mkVecType "bv1"
+
+mkAmpType :: Int -> Doc ann
+mkAmpType = mkVecType "float"
+
+mkPhaseType :: Int -> Doc ann
+mkPhaseType = mkVecType "float"
+
+mkVecType :: String -> Int -> Doc ann
+mkVecType elemType 0            = pretty elemType
+mkVecType elemType nestingDepth = pretty "seq" <> pretty "<" <> mkVecType elemType (nestingDepth-1) <> pretty ">"
 
 translateControlledVec :: Doc ann -> Controlled EVec -> Doc ann
 translateControlledVec newMem (Controlled cond body) =
@@ -39,7 +136,7 @@ translateControlCond cond rest
 genMemoryUpdate :: Doc ann -> Doc ann -> Doc ann
 genMemoryUpdate newMem updateExpr = newMem =: updateExpr
 
-genExpr :: Expr a -> Doc ann
+genExpr :: Pretty (SmtTy a) => Expr a -> Doc ann
 genExpr (BoolLit True) = pretty "true"
 genExpr (BoolLit False) = pretty "false"
 genExpr (Equal a b) = binOp "==" (genExpr a) (genExpr b)
@@ -75,6 +172,7 @@ genExpr (InvertBitVec x) =
 genExpr (ToInt x) = genExpr x
 genExpr (FromInt x) = genExpr x
 genExpr (IntLit x) = pretty x
+genExpr e = error $ "unimplemented: " ++ show (pretty e)
 
 overwriteBitVec :: Doc ann -> Int -> Doc ann -> Doc ann
 overwriteBitVec origBV startIx newBV =
@@ -99,13 +197,13 @@ invertBitVecDef =
         (indent 2 (pretty "seq(|bitVector|, i requires 0 <= i < |bitVector| => if bitVector[i] == 0b1 then 0b0 else 0b1)"))
     ]
 
-genAnds :: [Expr a] -> Doc ann
+genAnds :: Pretty (SmtTy a) => [Expr a] -> Doc ann
 genAnds = genOps "&&" (BoolLit True)
 
-genOrs :: [Expr a] -> Doc ann
+genOrs :: Pretty (SmtTy a) => [Expr a] -> Doc ann
 genOrs = genOps "||" (BoolLit False)
 
-genOps :: String -> Expr a -> [Expr b] -> Doc ann
+genOps :: (Pretty (SmtTy a), Pretty (SmtTy b)) => String -> Expr a -> [Expr b] -> Doc ann
 genOps op z [] = genExpr z
 genOps op z [x] = genExpr x
 genOps op z (x:xs) = binOp op (genExpr x) (genOps op z xs)
@@ -153,16 +251,21 @@ genFor ::
   (Int, Int) ->
   (Doc ann -> Fresh (Doc ann, Doc ann)) -> -- (invariant, body)
   Fresh (Doc ann)
-genFor (start, end) f = do
+genFor bounds f = do
   x <- fresh
 
-  let varX = var' x
+  genForWithVar x bounds f
 
+genForWithVar :: 
+  Doc ann ->
+  (Int, Int) ->
+  (Doc ann -> Fresh (Doc ann, Doc ann)) -> -- (invariant, body)
+  Fresh (Doc ann)
+genForWithVar varX (start, end) f = do
   (invariant, body) <- f varX
-
   pure $ vsep
     [stmt $ varX =: pretty start
-    ,while (x .< pretty end)
+    ,while (varX .< pretty end)
       invariant
       body
     ]
