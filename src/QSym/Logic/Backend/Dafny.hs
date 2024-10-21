@@ -114,10 +114,10 @@ mkBitVecType :: Int -> Doc ann
 mkBitVecType = mkVecType "bv1"
 
 mkAmpType :: Int -> Doc ann
-mkAmpType = mkVecType "float"
+mkAmpType = mkVecType "real"
 
 mkPhaseType :: Int -> Doc ann
-mkPhaseType = mkVecType "float"
+mkPhaseType = mkVecType "real"
 
 mkVecType :: String -> Int -> Doc ann
 mkVecType elemType 0            = pretty elemType
@@ -125,7 +125,7 @@ mkVecType elemType nestingDepth = pretty "seq" <> pretty "<" <> mkVecType elemTy
 
 translateControlledVec :: Doc ann -> Controlled EVec -> Doc ann
 translateControlledVec newMem (Controlled cond body) =
-  translateControlCond cond (genMemoryUpdate newMem (genExpr body))
+  translateControlCond cond (vsep (mkAssignments newMem body))
 
 translateControlCond :: Expr Bool -> Doc ann -> Doc ann
 translateControlCond cond rest
@@ -133,8 +133,15 @@ translateControlCond cond rest
   | otherwise =
       genIf (genExpr cond) rest
 
-genMemoryUpdate :: Doc ann -> Doc ann -> Doc ann
-genMemoryUpdate newMem updateExpr = newMem =: updateExpr
+-- genMemoryUpdate :: Doc ann -> Doc ann -> Doc ann
+-- genMemoryUpdate newMem updateExpr = newMem =: updateExpr
+
+mkAssignments :: Doc ann -> Expr EVec -> [Doc ann]
+mkAssignments newMem e =
+  [getAmpName newMem =: genExpr (GetAmp e)
+  ,getPhaseName newMem =: genExpr (GetPhase e)
+  ,getBitVecName newMem =: genExpr (GetBitVec e)
+  ]
 
 genExpr :: Pretty (SmtTy a) => Expr a -> Doc ann
 genExpr (BoolLit True) = pretty "true"
@@ -150,9 +157,9 @@ genExpr (Sqrt a) = pretty "sqrt" <> parens (pretty a)
 genExpr (AmpFactor n) = pretty "((1/sqrt(2))^" <> pretty n <> pretty ")"
 genExpr (Var x) = pretty x
 
-genExpr (GetAmp (Var x)) = pretty (getAmpName x)
-genExpr (GetPhase (Var x)) = pretty (getPhaseName x)
-genExpr (GetBitVec (Var x)) = pretty (getBitVecName x)
+genExpr (GetAmp (Var x)) = getAmpName (pretty x)
+genExpr (GetPhase (Var x)) = getPhaseName (pretty x)
+genExpr (GetBitVec (Var x)) = getBitVecName (pretty x)
 
 genExpr (GetAmp (MkVec x _ _)) = genExpr x
 genExpr (GetPhase (MkVec _ y _)) = genExpr y
@@ -172,7 +179,27 @@ genExpr (InvertBitVec x) =
 genExpr (ToInt x) = genExpr x
 genExpr (FromInt x) = genExpr x
 genExpr (IntLit x) = pretty x
+genExpr (ScalarMult x y) =
+  genExpr
+    (MkVec (Mul x (GetAmp y))
+           (GetPhase y)
+           (GetBitVec y))
+
+genExpr (Omega a b) =
+  undefined
+  -- pretty "realExp" <> parens (pretty "2" <+> pretty "*" <+> pretty "pi" <
+
 genExpr e = error $ "unimplemented: " ++ show (pretty e)
+
+omegaSpec :: Doc ann
+omegaSpec =
+  vsep
+  [pretty "function realExp(r: real, e: int): real decreases if e > 0 then e else -e {"
+  ,pretty "if e == 0 then r"
+  ,pretty "else if e < 0 then realExp(r/10.0, e+1)"
+  ,pretty "else realExp(r*10.0, e-1)"
+  .pretty "}"
+  ]
 
 overwriteBitVec :: Doc ann -> Int -> Doc ann -> Doc ann
 overwriteBitVec origBV startIx newBV =
@@ -208,14 +235,14 @@ genOps op z [] = genExpr z
 genOps op z [x] = genExpr x
 genOps op z (x:xs) = binOp op (genExpr x) (genOps op z xs)
 
-getBitVecName :: String -> String
-getBitVecName = (<> "BitVec")
+getBitVecName :: Doc ann -> Doc ann
+getBitVecName = (<> pretty "BitVec")
 
-getPhaseName :: String -> String
-getPhaseName = (<> "Phase")
+getPhaseName :: Doc ann -> Doc ann
+getPhaseName = (<> pretty "Phase")
 
-getAmpName :: String -> String
-getAmpName = (<> "Amp")
+getAmpName :: Doc ann -> Doc ann
+getAmpName = (<> pretty "Amp")
 
 genIf :: Doc ann -> Doc ann -> Doc ann
 genIf c t =
