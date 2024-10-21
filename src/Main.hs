@@ -125,12 +125,13 @@ main = do
 
   print $ pretty sums
 
-  print $ show (loopedSumsToFunction "testFn" (testQubitCount test) sums)
+  putStrLn $ show (loopedSumsToFunction "testFn" (testQubitCount test) sums)
 
   -- either error (print . pretty) smt
 
   -- print $ pretty smt
-  executeSMTLoudly z3Config smt
+
+  -- executeSMTLoudly z3Config smt
   pure ()
 
 vectorExactlyEqual :: Int -> Memory -> Int -> Maybe (SMT Name Int) -> Maybe (SMT Name Int) -> SMT Name Decl

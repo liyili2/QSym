@@ -44,7 +44,7 @@ typeDeclListParams :: [MemTypeDecl ann] -> Doc ann
 typeDeclListParams = hsep . punctuate (pretty ",") . concatMap typeDeclParams
 
 typeDeclParams :: MemTypeDecl ann -> [Doc ann]
-typeDeclParams (x, y, z) = punctuate (pretty ",") [x, y, z]
+typeDeclParams (x, y, z) = [x, y, z]
 
 loopedSumToDafny :: Doc ann -> Doc ann -> Int -> LoopedSum -> Fresh (Int, Doc ann)
 loopedSumToDafny oldMem newMem bitSize (NoLoop x) = sumToDafny oldMem newMem bitSize x
@@ -153,6 +153,7 @@ genExpr (Not a) = pretty "!" <+> parens (genExpr a)
 genExpr (Add a b) = binOp "+" (genExpr a) (genExpr b)
 genExpr (Mul a b) = binOp "*" (genExpr a) (genExpr b)
 genExpr (Sub a b) = binOp "-" (genExpr a) (genExpr b)
+genExpr (Mod a b) = binOp "%" (genExpr a) (genExpr b)
 genExpr (Sqrt a) = pretty "sqrt" <> parens (pretty a)
 genExpr (AmpFactor n) = pretty "((1/sqrt(2))^" <> pretty n <> pretty ")"
 genExpr (Var x) = pretty x
@@ -179,6 +180,13 @@ genExpr (InvertBitVec x) =
 genExpr (ToInt x) = genExpr x
 genExpr (FromInt x) = genExpr x
 genExpr (IntLit x) = pretty x
+
+genExpr (FromBitVec x) =
+  pretty "Seq.Concat" <> parens (genExpr x) <+> pretty "as" <+> pretty "bv32"
+
+genExpr (ToBitVec size x) =
+  pretty "toBitVec" <> parens (hsep (punctuate (pretty ",") [pretty size, genExpr x]))
+
 genExpr (ScalarMult x y) =
   genExpr
     (MkVec (Mul x (GetAmp y))
@@ -186,20 +194,9 @@ genExpr (ScalarMult x y) =
            (GetBitVec y))
 
 genExpr (Omega a b) =
-  undefined
-  -- pretty "realExp" <> parens (pretty "2" <+> pretty "*" <+> pretty "pi" <
+  parens (pretty "2" <+> pretty "*" <+> pretty "pi" <+> pretty "*" <+> genExpr a <+> pretty "/" <+> genExpr b)
 
 genExpr e = error $ "unimplemented: " ++ show (pretty e)
-
-omegaSpec :: Doc ann
-omegaSpec =
-  vsep
-  [pretty "function realExp(r: real, e: int): real decreases if e > 0 then e else -e {"
-  ,pretty "if e == 0 then r"
-  ,pretty "else if e < 0 then realExp(r/10.0, e+1)"
-  ,pretty "else realExp(r*10.0, e-1)"
-  .pretty "}"
-  ]
 
 overwriteBitVec :: Doc ann -> Int -> Doc ann -> Doc ann
 overwriteBitVec origBV startIx newBV =
